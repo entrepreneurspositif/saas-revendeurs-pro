@@ -2,8 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from '@libsql/client';
 import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import dns from 'dns';
-import fs from 'fs';
-import path from 'path';
 
 // Fix Node.js DNS resolution order on Windows for external APIs like canboso.com
 if (typeof window === 'undefined') {
@@ -21,57 +19,13 @@ function createPrismaClient(): PrismaClient {
   const tursoUrl = process.env.TURSO_DATABASE_URL || DEFAULT_TURSO_URL;
   const tursoToken = process.env.TURSO_AUTH_TOKEN || DEFAULT_TURSO_TOKEN;
 
-  // 1. If Turso Cloud DB credentials are available, use LibSQL Adapter
-  if (tursoUrl && tursoToken) {
-    const libsql = createClient({
-      url: tursoUrl,
-      authToken: tursoToken,
-    });
-    const adapter = new PrismaLibSQL(libsql);
-    return new PrismaClient({ adapter } as any);
-  }
-
-  // 2. Fallback local / Vercel /tmp SQLite
-  let dbUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
-
-  if (process.env.VERCEL || process.env.VERCEL_ENV) {
-    const tmpDbPath = '/tmp/dev.db';
-    try {
-      if (!fs.existsSync(tmpDbPath)) {
-        const candidatePaths = [
-          path.join(process.cwd(), 'prisma', 'dev.db'),
-          path.join(process.cwd(), 'dev.db'),
-          path.join(__dirname, '..', '..', 'prisma', 'dev.db'),
-          '/var/task/prisma/dev.db',
-          '/var/task/dev.db',
-        ];
-
-        let copied = false;
-        for (const src of candidatePaths) {
-          if (fs.existsSync(src)) {
-            fs.copyFileSync(src, tmpDbPath);
-            copied = true;
-            break;
-          }
-        }
-
-        if (!copied) {
-          fs.writeFileSync(tmpDbPath, '');
-        }
-      }
-      dbUrl = `file:${tmpDbPath}`;
-    } catch (err) {
-      console.error('Error preparing Vercel /tmp SQLite db:', err);
-    }
-  }
-
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: dbUrl,
-      },
-    },
+  // Use LibSQL adapter unconditionally for Turso cloud DB
+  const libsql = createClient({
+    url: tursoUrl,
+    authToken: tursoToken,
   });
+  const adapter = new PrismaLibSQL(libsql);
+  return new PrismaClient({ adapter } as any);
 }
 
 const globalForPrisma = globalThis as unknown as {
