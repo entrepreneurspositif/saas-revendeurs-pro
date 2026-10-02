@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Supplier {
+  id               String            @id @default(cuid())
+  name             String
+  type             String            @default("canboso")
+  apiUrl           String
+  apiKey           String
+  isActive         Boolean           @default(true)
+  reliabilityScore Float             @default(99.0)
+  balance          Float             @default(0.0)
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  supplierProducts SupplierProduct[]
+  orders           Order[]
+}
+
+model SupplierProduct {
+  id             String    @id @default(cuid())
+  supplierId     String
+  externalId     String
+  name           String
+  description    String?
+  productType    String?
+  costPrice      Float
+  currency       String    @default("USD")
+  stock          Int       @default(0)
+  sold           Int       @default(0)
+  image          String?
+  emoji          String?
+  isAvailable    Boolean   @default(true)
+  lastSyncedAt   DateTime  @default(now())
+  supplier       Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  masterProducts Product[]
+
+  @@unique([supplierId, externalId])
+}
+
+model Product {
+  id                      String           @id @default(cuid())
+  title                   String
+  slug                    String           @unique
+  description             String?
+  category                String           @default("Général")
+  sellingPrice            Float
+  currency                String           @default("USD")
+  isActive                Boolean          @default(true)
+  activeSupplierId        String?
+  activeSupplierProductId String?
+  imageUrl                String?
+  badge                   String?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  activeSupplierProduct   SupplierProduct? @relation(fields: [activeSupplierProductId], references: [id], onDelete: SetNull)
+  orders                  Order[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  role          String   @default("CUSTOMER")
+  walletBalance Float    @default(100.0)
+  createdAt     DateTime @default(now())
+  orders        Order[]
+}
+
+model Order {
+  id                   String    @id @default(cuid())
+  userId               String
+  productId            String
+  productTitle         String
+  supplierId           String?
+  supplierProductId    String?
+  ticketCode           String    @unique @default(cuid())
+  quantity             Int       @default(1)
+  unitCostPrice        Float
+  unitSellingPrice     Float
+  totalAmount          Float
+  profitMargin         Float
+  status               String    @default("PENDING_PAYMENT")
+  deliveredCredentials String?
+  paymentInstructions  String?
+  errorMessage         String?
+  idempotencyKey       String
+  supplierOrderRef     String?
+  supportStatus        String    @default("OPEN")
+  createdAt            DateTime  @default(now())
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product              Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier             Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  messages             ChatMessage[]
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  ticketCode String
+  sender     String   // "CUSTOMER" or "ADMIN"
+  text       String
+  createdAt  DateTime @default(now())
+
+  order      Order    @relation(fields: [ticketCode], references: [ticketCode], onDelete: Cascade)
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model OtpOrder {
+  id                  String   @id @default(cuid())
+  ticketCode          String   @unique @default(cuid())
+  tzid                Int      @default(0)
+  phone               String   @default("")
+  service             String
+  country             String   @default("1")
+  costPrice           Float    @default(0)
+  sellingPrice        Float    @default(0)
+  status              String   @default("PENDING_PAYMENT")
+  paymentInstructions String?
+  errorMessage        String?
+  smsCode             String?
+  fullSms             String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ProductRequest {
+  id           String   @id @default(cuid())
+  customerName String
+  contactInfo  String
+  productName  String
+  description  String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PromoCode {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  discountType      String    @default("PERCENTAGE")
+  discountValue     Float
+  minPurchaseAmount Float     @default(0.0)
+  maxUses           Int?
+  usedCount         Int       @default(0)
+  isActive          Boolean   @default(true)
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
