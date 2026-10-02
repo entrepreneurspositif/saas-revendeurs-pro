@@ -14,11 +14,14 @@ if (typeof window === 'undefined') {
   }
 }
 
-function createPrismaClient(): PrismaClient {
-  const tursoUrl = process.env.TURSO_DATABASE_URL;
-  const tursoToken = process.env.TURSO_AUTH_TOKEN;
+const DEFAULT_TURSO_URL = "libsql://revente-db-entrepreneurspositifs.aws-eu-west-1.turso.io";
+const DEFAULT_TURSO_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA5NjA3NTksImlkIjoiMDFhMGZkM2EtYTUwMS03YmY2LTliMmYtZDQzMTAzY2YwMjM1Iiwia2lkIjoia3lETFZaaENEZkVxeWs0OXlkX1FaYzNPMm5PVjB6TEpmeEFFN29HZ3dnMCIsInJpZCI6ImI4NDIyMDE3LTE4NWEtNDc4OS1iNGRjLTY0Y2Q4ZGZhMGQ0MiJ9._ZHMYECGHRN_MQkceyHc60wR06pmOMJlmtDqhOXL4yM6-rXLiwKX23dWQ7Y3GP2WppU6xutHGDSPgz3PmGBPDQ";
 
-  // 1. If Turso Cloud DB credentials are provided, use LibSQL Adapter
+function createPrismaClient(): PrismaClient {
+  const tursoUrl = process.env.TURSO_DATABASE_URL || DEFAULT_TURSO_URL;
+  const tursoToken = process.env.TURSO_AUTH_TOKEN || DEFAULT_TURSO_TOKEN;
+
+  // 1. If Turso Cloud DB credentials are available, use LibSQL Adapter
   if (tursoUrl && tursoToken) {
     const libsql = createClient({
       url: tursoUrl,
@@ -28,7 +31,7 @@ function createPrismaClient(): PrismaClient {
     return new PrismaClient({ adapter } as any);
   }
 
-  // 2. Otherwise fallback to local / Vercel /tmp SQLite file
+  // 2. Fallback local / Vercel /tmp SQLite
   let dbUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
 
   if (process.env.VERCEL || process.env.VERCEL_ENV) {
