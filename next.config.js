@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    outputFileTracingIncludes: {
-      '/api/**/*': ['./prisma/dev.db'],
-    },
+    serverComponentsExternalPackages: [
+      '@libsql/client',
+      '@prisma/adapter-libsql',
+      '@prisma/client',
+    ],
   },
 };
 
