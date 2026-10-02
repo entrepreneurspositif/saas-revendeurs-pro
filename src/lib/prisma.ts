@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { createClient } from '@libsql/client';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 import dns from 'dns';
 import fs from 'fs';
 import path from 'path';
@@ -12,8 +14,22 @@ if (typeof window === 'undefined') {
   }
 }
 
-function getDatabaseUrl(): string | undefined {
-  if (typeof window !== 'undefined') return undefined;
+function createPrismaClient(): PrismaClient {
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  const tursoToken = process.env.TURSO_AUTH_TOKEN;
+
+  // 1. If Turso Cloud DB credentials are provided, use LibSQL Adapter
+  if (tursoUrl && tursoToken) {
+    const libsql = createClient({
+      url: tursoUrl,
+      authToken: tursoToken,
+    });
+    const adapter = new PrismaLibSql(libsql as any);
+    return new PrismaClient({ adapter } as any);
+  }
+
+  // 2. Otherwise fallback to local / Vercel /tmp SQLite file
+  let dbUrl = process.env.DATABASE_URL || 'file:./prisma/dev.db';
 
   if (process.env.VERCEL || process.env.VERCEL_ENV) {
     const tmpDbPath = '/tmp/dev.db';
@@ -37,37 +53,28 @@ function getDatabaseUrl(): string | undefined {
         }
 
         if (!copied) {
-          // If no initial db found, touch an empty file in /tmp so SQLite opens cleanly
           fs.writeFileSync(tmpDbPath, '');
         }
       }
-      return `file:${tmpDbPath}`;
+      dbUrl = `file:${tmpDbPath}`;
     } catch (err) {
       console.error('Error preparing Vercel /tmp SQLite db:', err);
     }
   }
 
-  return process.env.DATABASE_URL || 'file:./prisma/dev.db';
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: dbUrl,
+      },
+    },
+  });
 }
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const dbUrl = getDatabaseUrl();
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient(
-    dbUrl
-      ? {
-          datasources: {
-            db: {
-              url: dbUrl,
-            },
-          },
-        }
-      : undefined
-  );
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
