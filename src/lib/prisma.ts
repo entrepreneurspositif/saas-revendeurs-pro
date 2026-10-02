@@ -19,9 +19,26 @@ function getDatabaseUrl(): string | undefined {
     const tmpDbPath = '/tmp/dev.db';
     try {
       if (!fs.existsSync(tmpDbPath)) {
-        const sourceDbPath = path.join(process.cwd(), 'prisma', 'dev.db');
-        if (fs.existsSync(sourceDbPath)) {
-          fs.copyFileSync(sourceDbPath, tmpDbPath);
+        const candidatePaths = [
+          path.join(process.cwd(), 'prisma', 'dev.db'),
+          path.join(process.cwd(), 'dev.db'),
+          path.join(__dirname, '..', '..', 'prisma', 'dev.db'),
+          '/var/task/prisma/dev.db',
+          '/var/task/dev.db',
+        ];
+
+        let copied = false;
+        for (const src of candidatePaths) {
+          if (fs.existsSync(src)) {
+            fs.copyFileSync(src, tmpDbPath);
+            copied = true;
+            break;
+          }
+        }
+
+        if (!copied) {
+          // If no initial db found, touch an empty file in /tmp so SQLite opens cleanly
+          fs.writeFileSync(tmpDbPath, '');
         }
       }
       return `file:${tmpDbPath}`;
