@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { createClient } from '@libsql/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import dns from 'dns';
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +24,7 @@ function createPrismaClient(): PrismaClient {
       url: tursoUrl,
       authToken: tursoToken,
     });
-    const adapter = new PrismaLibSql(libsql as any);
+    const adapter = new PrismaLibSQL(libsql);
     return new PrismaClient({ adapter } as any);
   }
 
