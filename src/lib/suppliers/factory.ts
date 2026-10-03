@@ -1,6 +1,7 @@
 import { ISupplierDriver } from './types';
 import { CanbosoDriver } from './canbosoDriver';
 import { InsightXProDriver } from './insightxproDriver';
+import { HubxStoreDriver } from './hubxStoreDriver';
 import { GenericSupplierDriver } from './genericDriver';
 
 export function createSupplierDriver(supplier: {
@@ -13,6 +14,17 @@ export function createSupplierDriver(supplier: {
   const urlLower = (supplier.apiUrl || '').toLowerCase();
   const nameLower = (supplier.name || '').toLowerCase();
   const keyLower = (supplier.apiKey || '').toLowerCase();
+
+  if (
+    typeLower === 'hubxstore' ||
+    typeLower === 'railway' ||
+    urlLower.includes('railway.app') ||
+    urlLower.includes('hubx') ||
+    nameLower.includes('hubx') ||
+    keyLower.startsWith('rsk_')
+  ) {
+    return new HubxStoreDriver(supplier.apiUrl, supplier.apiKey);
+  }
 
   if (
     typeLower === 'insightxpro' ||
