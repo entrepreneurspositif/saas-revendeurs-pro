@@ -882,12 +882,42 @@ export default function StorefrontPage() {
                     </p>
                   </div>
                 ) : ticketLookupResult.status === 'PENDING_PAYMENT' ? (
-                  <div className="space-y-2">
-                    <p className="text-amber-300 font-medium">
-                      Votre paiement est actuellement en cours de vérification par l'administrateur.
-                    </p>
-                    <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 whitespace-pre-wrap font-sans">
-                      {ticketLookupResult.paymentInstructions}
+                  <div className="space-y-3">
+                    {/* FeexPay Instant Automated Payment Box */}
+                    <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Payer Instantanément via FeexPay</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          MTN, Moov, Wave, CB
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handlePayWithFeexPay(ticketLookupResult.ticketCode)}
+                        disabled={payingWithFeexPay}
+                        className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                      >
+                        {payingWithFeexPay ? (
+                          <>
+                            <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Connexion à FeexPay...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                            <span>Payer par FeexPay ({Math.round(ticketLookupResult.totalAmount * 650).toLocaleString()} FCFA)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Autre Option : Instructions de Paiement Manuel</span>
+                      <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 whitespace-pre-wrap font-sans">
+                        {ticketLookupResult.paymentInstructions}
+                      </div>
                     </div>
                   </div>
                 ) : (
