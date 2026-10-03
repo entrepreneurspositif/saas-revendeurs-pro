@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const callbackUrl = `${protocol}://${host}/api/feexpay/callback`;
 
-    const checkoutUrl = `https://checkout.feexpay.me/?id=${config.shopId}&token=${config.apiKey}&amount=${amountXof}&custom_id=${encodeURIComponent(ticketCode)}&callback_url=${encodeURIComponent(callbackUrl)}`;
+    const checkoutUrl = `https://checkout.feexpay.me/checkout/card-details?orderId=${encodeURIComponent(ticketCode)}&ref=${encodeURIComponent(ticketCode)}&id=${config.shopId}&shop=${config.shopId}&token=${config.apiKey}&apiKey=${config.apiKey}&amount=${amountXof}&custom_id=${encodeURIComponent(ticketCode)}&callback_url=${encodeURIComponent(callbackUrl)}`;
 
     return NextResponse.json({
       success: true,
