@@ -43,6 +43,7 @@ export default function OtpServicesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(900);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [payingWithFeexPay, setPayingWithFeexPay] = useState<boolean>(false);
 
   // Ticket Lookup State
   const [lookupCode, setLookupCode] = useState<string>('');
@@ -136,6 +137,36 @@ export default function OtpServicesPage() {
       alert(e.message || 'Erreur réseau');
     } finally {
       setOrdering(false);
+    }
+  };
+
+  const handlePayWithFeexPay = async (ticketCode: string) => {
+    if (!ticketCode) return;
+    setPayingWithFeexPay(true);
+    try {
+      const res = await fetch('/api/feexpay/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Erreur lors de l\'initialisation FeexPay.');
+        return;
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+
+      const checkoutUrl = `https://feexpay.me/pay?id=${data.shopId}&token=${data.apiKey}&amount=${data.amountXOF}&custom_id=${encodeURIComponent(data.ticketCode)}&callback_url=${encodeURIComponent(data.callbackUrl)}`;
+      window.location.href = checkoutUrl;
+    } catch (e: any) {
+      alert(e.message || 'Erreur réseau lors de la connexion à FeexPay.');
+    } finally {
+      setPayingWithFeexPay(false);
     }
   };
 
@@ -666,6 +697,36 @@ export default function OtpServicesPage() {
                 </span>
               </div>
 
+              {/* FeexPay Instant Payment Option */}
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Paiement Instantané FeexPay</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    MTN, Moov, Wave, CB
+                  </span>
+                </div>
+                <button
+                  onClick={() => handlePayWithFeexPay(activeOrder.ticketCode)}
+                  disabled={payingWithFeexPay}
+                  className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                >
+                  {payingWithFeexPay ? (
+                    <>
+                      <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Connexion FeexPay...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                      <span>Payer par FeexPay ({Math.round((activeOrder.sellingPrice || activeOrder.totalAmount || 0.45) * 650).toLocaleString()} FCFA)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               <div>
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
                   Code Ticket à Rappeler dans votre Virement :
@@ -684,7 +745,7 @@ export default function OtpServicesPage() {
 
               {activeOrder.paymentInstructions && (
                 <div className="space-y-1.5 pt-1">
-                  <span className="text-xs font-extrabold text-white">Instructions de Règlement :</span>
+                  <span className="text-xs font-extrabold text-slate-300">Autre Option : Instructions de Règlement Manuel</span>
                   <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 whitespace-pre-wrap font-sans leading-relaxed max-h-48 overflow-y-auto">
                     {activeOrder.paymentInstructions}
                   </div>

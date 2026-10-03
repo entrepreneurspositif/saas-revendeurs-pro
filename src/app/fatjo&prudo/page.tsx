@@ -124,6 +124,50 @@ export default function AdminDashboardPage() {
   const [savingPricingRules, setSavingPricingRules] = useState<boolean>(false);
   const [pricingMsg, setPricingMsg] = useState<{ message: string; success: boolean } | null>(null);
 
+  // FeexPay Admin State
+  const [feexpayApiKey, setFeexpayApiKey] = useState<string>('fp_yK5LTDuJYFkx3t6ElDkrC1wfC9ZIgOJ6ua3rCNj8pktir1oBExlVDRkQvOGidNZW');
+  const [feexpayShopId, setFeexpayShopId] = useState<string>('673db7093c2872d9f60742de');
+  const [feexpayEnabled, setFeexpayEnabled] = useState<boolean>(true);
+  const [savingFeexPay, setSavingFeexPay] = useState<boolean>(false);
+  const [feexpayMsg, setFeexpayMsg] = useState<{ message: string; success: boolean } | null>(null);
+
+  const fetchFeexPayConfig = async () => {
+    try {
+      const res = await fetch('/api/admin/feexpay');
+      const data = await res.json();
+      if (data.success && data.feexpay) {
+        setFeexpayApiKey(data.feexpay.apiKey || '');
+        setFeexpayShopId(data.feexpay.shopId || '');
+        setFeexpayEnabled(data.feexpay.enabled);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSaveFeexPay = async (action?: string) => {
+    setSavingFeexPay(true);
+    setFeexpayMsg(null);
+    try {
+      const res = await fetch('/api/admin/feexpay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: feexpayApiKey,
+          shopId: feexpayShopId,
+          enabled: feexpayEnabled,
+          action,
+        }),
+      });
+      const data = await res.json();
+      setFeexpayMsg({ message: data.message, success: data.success });
+    } catch (e: any) {
+      setFeexpayMsg({ message: e.message || 'Erreur d\'enregistrement', success: false });
+    } finally {
+      setSavingFeexPay(false);
+    }
+  };
+
   const fetchPricingRules = async () => {
     try {
       const res = await fetch('/api/admin/pricing-rules');
@@ -2807,18 +2851,106 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* TAB 4: PAYMENT INSTRUCTIONS CONFIG */}
+        {/* TAB 4: PAYMENT INSTRUCTIONS CONFIG & FEEXPAY */}
         {activeTab === 'payment_config' && (
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800/80 space-y-4 max-w-3xl">
-            <div>
-              <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
-                <FileText className="w-5 h-5 text-indigo-400" />
-                <span>Configuration des Instructions de Paiement</span>
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Saisissez les numéros de paiement (Mobile Money, virement bancaire, crypto) qui s'afficheront sur le ticket du client.
-              </p>
+          <div className="space-y-6 max-w-4xl">
+            {/* FeexPay Payment Gateway Box */}
+            <div className="glass-panel p-6 rounded-3xl border border-emerald-500/30 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                    <Zap className="w-5 h-5 text-emerald-400 fill-emerald-400/20" />
+                    <span>Passerelle de Paiement FeexPay (Mobile Money & CB)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Permet aux clients de payer automatiquement via MTN, Moov, Wave, Orange Money ou Carte Bancaire.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${feexpayEnabled ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}`}>
+                    {feexpayEnabled ? '🟢 FeexPay Actif' : '🔴 FeexPay Désactivé'}
+                  </span>
+                </div>
+              </div>
+
+              {feexpayMsg && (
+                <div className={`p-3.5 rounded-2xl text-xs font-bold flex items-center space-x-2 ${feexpayMsg.success ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'}`}>
+                  <Check className="w-4 h-4" />
+                  <span>{feexpayMsg.message}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    Clé Privée FeexPay (Private Key)
+                  </label>
+                  <input
+                    type="text"
+                    value={feexpayApiKey}
+                    onChange={(e) => setFeexpayApiKey(e.target.value)}
+                    placeholder="fp_yK5LTDuJYF..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    Identifiant FeexPay (Shop ID)
+                  </label>
+                  <input
+                    type="text"
+                    value={feexpayShopId}
+                    onChange={(e) => setFeexpayShopId(e.target.value)}
+                    placeholder="673db7093c2872d9..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feexpayEnabled}
+                    onChange={(e) => setFeexpayEnabled(e.target.checked)}
+                    className="w-4 h-4 accent-emerald-500 rounded"
+                  />
+                  <span className="text-xs font-bold text-slate-300">Activer le paiement automatique FeexPay sur le site & OTP</span>
+                </label>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveFeexPay('test')}
+                    disabled={savingFeexPay}
+                    className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold text-xs"
+                  >
+                    Tester la passerelle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveFeexPay()}
+                    disabled={savingFeexPay}
+                    className="px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5"
+                  >
+                    {savingFeexPay ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <span>Enregistrer FeexPay</span>}
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Manual Payment Instructions Box */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-800/80 space-y-4">
+              <div>
+                <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                  <FileText className="w-5 h-5 text-indigo-400" />
+                  <span>Configuration des Instructions de Paiement Manuel</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Saisissez les numéros de paiement manuel (Mobile Money, virement bancaire, crypto) qui s'afficheront sur le ticket du client.
+                </p>
+              </div>
 
             {instructionsSavedMessage && (
               <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2">
@@ -2858,6 +2990,7 @@ export default function AdminDashboardPage() {
               </div>
             </form>
           </div>
+        </div>
         )}
 
         {/* TAB 5: VISUAL THEMES SELECTOR */}
