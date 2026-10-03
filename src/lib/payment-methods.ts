@@ -1,0 +1,72 @@
+import { prisma } from '@/lib/prisma';
+import { getPaymentInstructions } from '@/lib/payment-instructions';
+import { getFeexPayConfig } from '@/lib/feexpay';
+
+export interface PaymentGatewayConfig {
+  manual: {
+    enabled: boolean;
+    instructions: string;
+  };
+  feexpay: {
+    enabled: boolean;
+    apiKey: string;
+    shopId: string;
+  };
+  custom: {
+    enabled: boolean;
+    name: string;
+    apiKey: string;
+    siteId: string;
+    checkoutUrl: string;
+    instructions: string;
+  };
+}
+
+export async function getAllPaymentMethods(): Promise<PaymentGatewayConfig> {
+  const settings = await prisma.setting.findMany({
+    where: {
+      key: {
+        in: [
+          'manual_payment_enabled',
+          'feexpay_enabled',
+          'feexpay_api_key',
+          'feexpay_shop_id',
+          'custom_gateway_enabled',
+          'custom_gateway_name',
+          'custom_gateway_api_key',
+          'custom_gateway_site_id',
+          'custom_gateway_checkout_url',
+          'custom_gateway_instructions',
+        ],
+      },
+    },
+  });
+
+  const map = settings.reduce((acc, curr) => {
+    acc[curr.key] = curr.value?.trim();
+    return acc;
+  }, {} as Record<string, string>);
+
+  const manualInstructions = await getPaymentInstructions();
+  const feexpayConfig = await getFeexPayConfig();
+
+  return {
+    manual: {
+      enabled: map['manual_payment_enabled'] !== 'false',
+      instructions: manualInstructions,
+    },
+    feexpay: {
+      enabled: feexpayConfig.enabled,
+      apiKey: feexpayConfig.apiKey,
+      shopId: feexpayConfig.shopId,
+    },
+    custom: {
+      enabled: map['custom_gateway_enabled'] === 'true',
+      name: map['custom_gateway_name'] || 'CinetPay / Autre Passerelle',
+      apiKey: map['custom_gateway_api_key'] || '',
+      siteId: map['custom_gateway_site_id'] || '',
+      checkoutUrl: map['custom_gateway_checkout_url'] || '',
+      instructions: map['custom_gateway_instructions'] || 'Paiement sécurisé via passerelle partenaire',
+    },
+  };
+}

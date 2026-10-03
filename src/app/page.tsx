@@ -33,6 +33,7 @@ import {
   ArrowUpDown,
   Filter,
   FileText,
+  Globe,
 } from 'lucide-react';
 
 import { useCurrency } from '@/components/CurrencyContext';
@@ -55,6 +56,26 @@ export default function StorefrontPage() {
   const [creatingTicket, setCreatingTicket] = useState<boolean>(false);
   const [createdTicketResult, setCreatedTicketResult] = useState<any | null>(null);
   const [payingWithFeexPay, setPayingWithFeexPay] = useState<boolean>(false);
+  const [payingWithCustomGateway, setPayingWithCustomGateway] = useState<boolean>(false);
+
+  // Dynamic Active Payment Methods State
+  const [paymentMethods, setPaymentMethods] = useState<any>({
+    manual: { enabled: true, instructions: '' },
+    feexpay: { enabled: true },
+    custom: { enabled: false, name: 'Passerelle 2' },
+  });
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const res = await fetch('/api/payment-methods');
+      const data = await res.json();
+      if (data.success && data.methods) {
+        setPaymentMethods(data.methods);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Ticket Lookup Modal State
   const [showLookupModal, setShowLookupModal] = useState<boolean>(false);
@@ -91,7 +112,36 @@ export default function StorefrontPage() {
 
   useEffect(() => {
     fetchProducts();
+    fetchPaymentMethods();
   }, []);
+
+  const handlePayWithCustomGateway = async (ticketCode: string) => {
+    if (!ticketCode) return;
+    setPayingWithCustomGateway(true);
+    try {
+      const res = await fetch('/api/custom-gateway/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Erreur lors de l\'initialisation de la passerelle.');
+        return;
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      alert(`Passerelle ${data.gatewayName || ''} activée pour le ticket ${data.ticketCode}.`);
+    } catch (e: any) {
+      alert(e.message || 'Erreur de connexion à la passerelle.');
+    } finally {
+      setPayingWithCustomGateway(false);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -717,50 +767,91 @@ export default function StorefrontPage() {
                       </div>
                     </div>
 
-                    {/* FeexPay Instant Automated Payment Box */}
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/40 space-y-3 shadow-lg shadow-emerald-500/5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                          <span className="font-extrabold text-xs text-white">Paiement Automatique Instantané</span>
+                    {/* FeexPay Automated Payment Box */}
+                    {paymentMethods?.feexpay?.enabled && (
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/40 space-y-3 shadow-lg shadow-emerald-500/5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="font-extrabold text-xs text-white">Paiement Automatique Instantané</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            FeexPay (MTN, Moov, Wave, CB)
+                          </span>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          FeexPay (MTN, Moov, Wave, CB)
-                        </span>
+
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          Payez automatiquement par Mobile Money ou Carte Bancaire. Vos accès seront livrés <b>automatiquement en 1-clic</b> dès la confirmation.
+                        </p>
+
+                        <button
+                          onClick={() => handlePayWithFeexPay(createdTicketResult.ticketCode)}
+                          disabled={payingWithFeexPay}
+                          className="w-full py-3 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                        >
+                          {payingWithFeexPay ? (
+                            <>
+                              <RefreshCcw className="w-4 h-4 animate-spin" />
+                              <span>Connexion à FeexPay...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-4 h-4 fill-current text-slate-950" />
+                              <span>Payer par FeexPay ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
+                            </>
+                          )}
+                        </button>
                       </div>
+                    )}
 
-                      <p className="text-[11px] text-slate-300 leading-relaxed">
-                        Payez automatiquement par Mobile Money ou Carte Bancaire. Vos accès seront livrés <b>automatiquement en 1-clic</b> dès la confirmation.
-                      </p>
+                    {/* Custom 2nd Gateway Automated Payment Box */}
+                    {paymentMethods?.custom?.enabled && (
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-sky-500/40 space-y-3 shadow-lg shadow-sky-500/5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
+                            <span className="font-extrabold text-xs text-white">Payer via {paymentMethods.custom.name}</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                            Passerelle Partenaire
+                          </span>
+                        </div>
 
-                      <button
-                        onClick={() => handlePayWithFeexPay(createdTicketResult.ticketCode)}
-                        disabled={payingWithFeexPay}
-                        className="w-full py-3 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
-                      >
-                        {payingWithFeexPay ? (
-                          <>
-                            <RefreshCcw className="w-4 h-4 animate-spin" />
-                            <span>Connexion à FeexPay...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-4 h-4 fill-current text-slate-950" />
-                            <span>Payer par FeexPay ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {paymentMethods.custom.instructions || `Effectuez votre paiement via ${paymentMethods.custom.name}.`}
+                        </p>
+
+                        <button
+                          onClick={() => handlePayWithCustomGateway(createdTicketResult.ticketCode)}
+                          disabled={payingWithCustomGateway}
+                          className="w-full py-3 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all"
+                        >
+                          {payingWithCustomGateway ? (
+                            <>
+                              <RefreshCcw className="w-4 h-4 animate-spin" />
+                              <span>Connexion en cours...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Globe className="w-4 h-4" />
+                              <span>Payer par {paymentMethods.custom.name} ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
                     {/* Manual Payment Instructions Box */}
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
-                      <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                        <span className="font-bold text-slate-300">Autre Option : Instructions de Paiement Manuel (${createdTicketResult.totalAmount.toFixed(2)})</span>
+                    {paymentMethods?.manual?.enabled && (
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                        <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                          <span className="font-bold text-slate-300">Instructions de Paiement Manuel (${createdTicketResult.totalAmount.toFixed(2)})</span>
+                        </div>
+                        <pre className="text-slate-300 whitespace-pre-wrap font-sans leading-relaxed text-[11px] bg-slate-900 p-3 rounded-xl border border-slate-800/80">
+                          {createdTicketResult.paymentInstructions}
+                        </pre>
                       </div>
-                      <pre className="text-slate-300 whitespace-pre-wrap font-sans leading-relaxed text-[11px] bg-slate-900 p-3 rounded-xl border border-slate-800/80">
-                        {createdTicketResult.paymentInstructions}
-                      </pre>
-                    </div>
+                    )}
 
                     <button
                       onClick={() => setSelectedProduct(null)}

@@ -44,6 +44,26 @@ export default function OtpServicesPage() {
   const [timeRemaining, setTimeRemaining] = useState<number>(900);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [payingWithFeexPay, setPayingWithFeexPay] = useState<boolean>(false);
+  const [payingWithCustomGateway, setPayingWithCustomGateway] = useState<boolean>(false);
+
+  // Dynamic Active Payment Methods State
+  const [paymentMethods, setPaymentMethods] = useState<any>({
+    manual: { enabled: true, instructions: '' },
+    feexpay: { enabled: true },
+    custom: { enabled: false, name: 'Passerelle 2' },
+  });
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const res = await fetch('/api/payment-methods');
+      const data = await res.json();
+      if (data.success && data.methods) {
+        setPaymentMethods(data.methods);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Ticket Lookup State
   const [lookupCode, setLookupCode] = useState<string>('');
@@ -71,6 +91,7 @@ export default function OtpServicesPage() {
 
   useEffect(() => {
     fetchTariffs(selectedCountry);
+    fetchPaymentMethods();
   }, [selectedCountry]);
 
   // Live polling for active OTP Order (handles PENDING_PAYMENT & WAITING_SMS)
@@ -167,6 +188,34 @@ export default function OtpServicesPage() {
       alert(e.message || 'Erreur réseau lors de la connexion à FeexPay.');
     } finally {
       setPayingWithFeexPay(false);
+    }
+  };
+
+  const handlePayWithCustomGateway = async (ticketCode: string) => {
+    if (!ticketCode) return;
+    setPayingWithCustomGateway(true);
+    try {
+      const res = await fetch('/api/custom-gateway/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Erreur lors de l\'initialisation de la passerelle.');
+        return;
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      alert(`Passerelle ${data.gatewayName || ''} activée pour le ticket ${data.ticketCode}.`);
+    } catch (e: any) {
+      alert(e.message || 'Erreur de connexion à la passerelle.');
+    } finally {
+      setPayingWithCustomGateway(false);
     }
   };
 
@@ -698,58 +747,97 @@ export default function OtpServicesPage() {
               </div>
 
               {/* FeexPay Instant Payment Option */}
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Paiement Instantané FeexPay</span>
-                  </span>
-                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    MTN, Moov, Wave, CB
-                  </span>
-                </div>
-                <button
-                  onClick={() => handlePayWithFeexPay(activeOrder.ticketCode)}
-                  disabled={payingWithFeexPay}
-                  className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
-                >
-                  {payingWithFeexPay ? (
-                    <>
-                      <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Connexion FeexPay...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
-                      <span>Payer par FeexPay ({Math.round((activeOrder.sellingPrice || activeOrder.totalAmount || 0.45) * 650).toLocaleString()} FCFA)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
-                  Code Ticket à Rappeler dans votre Virement :
-                </span>
-                <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
-                  <span className="font-mono font-black text-lg text-sky-400">{activeOrder.ticketCode}</span>
+              {paymentMethods.feexpay?.enabled && (
+                <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Paiement Instantané FeexPay</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      MTN, Moov, Wave, CB
+                    </span>
+                  </div>
                   <button
-                    onClick={() => copyToClipboard(activeOrder.ticketCode, 'modal-ticket')}
-                    className="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-bold text-xs flex items-center space-x-1 border border-sky-500/30 transition-all"
+                    onClick={() => handlePayWithFeexPay(activeOrder.ticketCode)}
+                    disabled={payingWithFeexPay}
+                    className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
                   >
-                    {copiedId === 'modal-ticket' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedId === 'modal-ticket' ? 'Copié !' : 'Copier'}</span>
+                    {payingWithFeexPay ? (
+                      <>
+                        <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Connexion FeexPay...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                        <span>Payer par FeexPay ({Math.round((activeOrder.sellingPrice || activeOrder.totalAmount || 0.45) * 650).toLocaleString()} FCFA)</span>
+                      </>
+                    )}
                   </button>
                 </div>
-              </div>
+              )}
 
-              {activeOrder.paymentInstructions && (
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-xs font-extrabold text-slate-300">Autre Option : Instructions de Règlement Manuel</span>
-                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 whitespace-pre-wrap font-sans leading-relaxed max-h-48 overflow-y-auto">
-                    {activeOrder.paymentInstructions}
+              {/* Custom Gateway Option */}
+              {paymentMethods.custom?.enabled && (
+                <div className="bg-slate-900/90 p-3.5 rounded-xl border border-sky-500/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                      <span>{paymentMethods.custom.name || 'Passerelle Personnalisée'}</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
+                      Paiement en ligne
+                    </span>
                   </div>
+                  <button
+                    onClick={() => handlePayWithCustomGateway(activeOrder.ticketCode)}
+                    disabled={payingWithCustomGateway}
+                    className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all"
+                  >
+                    {payingWithCustomGateway ? (
+                      <>
+                        <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Initialisation...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                        <span>Payer via {paymentMethods.custom.name || 'Passerelle 2'}</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+              )}
+
+              {/* Manual Payment Option */}
+              {paymentMethods.manual?.enabled && (
+                <>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
+                      Code Ticket à Rappeler dans votre Virement :
+                    </span>
+                    <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
+                      <span className="font-mono font-black text-lg text-sky-400">{activeOrder.ticketCode}</span>
+                      <button
+                        onClick={() => copyToClipboard(activeOrder.ticketCode, 'modal-ticket')}
+                        className="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-bold text-xs flex items-center space-x-1 border border-sky-500/30 transition-all"
+                      >
+                        {copiedId === 'modal-ticket' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedId === 'modal-ticket' ? 'Copié !' : 'Copier'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {activeOrder.paymentInstructions && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-xs font-extrabold text-slate-300">Autre Option : Instructions de Règlement Manuel</span>
+                      <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 whitespace-pre-wrap font-sans leading-relaxed max-h-48 overflow-y-auto">
+                        {activeOrder.paymentInstructions}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

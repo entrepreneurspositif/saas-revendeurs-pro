@@ -124,47 +124,70 @@ export default function AdminDashboardPage() {
   const [savingPricingRules, setSavingPricingRules] = useState<boolean>(false);
   const [pricingMsg, setPricingMsg] = useState<{ message: string; success: boolean } | null>(null);
 
-  // FeexPay Admin State
+  // Payment Gateways Admin State
+  const [manualPaymentEnabled, setManualPaymentEnabled] = useState<boolean>(true);
   const [feexpayApiKey, setFeexpayApiKey] = useState<string>('fp_yK5LTDuJYFkx3t6ElDkrC1wfC9ZIgOJ6ua3rCNj8pktir1oBExlVDRkQvOGidNZW');
   const [feexpayShopId, setFeexpayShopId] = useState<string>('673db7093c2872d9f60742de');
   const [feexpayEnabled, setFeexpayEnabled] = useState<boolean>(true);
-  const [savingFeexPay, setSavingFeexPay] = useState<boolean>(false);
-  const [feexpayMsg, setFeexpayMsg] = useState<{ message: string; success: boolean } | null>(null);
 
-  const fetchFeexPayConfig = async () => {
+  // Custom 3rd Gateway Admin State
+  const [customGatewayEnabled, setCustomGatewayEnabled] = useState<boolean>(false);
+  const [customGatewayName, setCustomGatewayName] = useState<string>('CinetPay / Autre Passerelle');
+  const [customGatewayApiKey, setCustomGatewayApiKey] = useState<string>('');
+  const [customGatewaySiteId, setCustomGatewaySiteId] = useState<string>('');
+  const [customGatewayCheckoutUrl, setCustomGatewayCheckoutUrl] = useState<string>('');
+  const [customGatewayInstructions, setCustomGatewayInstructions] = useState<string>('');
+
+  const [savingPaymentGateways, setSavingPaymentGateways] = useState<boolean>(false);
+  const [paymentGatewaysMsg, setPaymentGatewaysMsg] = useState<{ message: string; success: boolean } | null>(null);
+
+  const fetchAllPaymentMethodsAdmin = async () => {
     try {
-      const res = await fetch('/api/admin/feexpay');
+      const res = await fetch('/api/admin/payment-methods');
       const data = await res.json();
-      if (data.success && data.feexpay) {
-        setFeexpayApiKey(data.feexpay.apiKey || '');
-        setFeexpayShopId(data.feexpay.shopId || '');
-        setFeexpayEnabled(data.feexpay.enabled);
+      if (data.success && data.methods) {
+        setManualPaymentEnabled(data.methods.manual.enabled);
+        setFeexpayEnabled(data.methods.feexpay.enabled);
+        setFeexpayApiKey(data.methods.feexpay.apiKey || '');
+        setFeexpayShopId(data.methods.feexpay.shopId || '');
+        setCustomGatewayEnabled(data.methods.custom.enabled);
+        setCustomGatewayName(data.methods.custom.name || 'CinetPay / Autre Passerelle');
+        setCustomGatewayApiKey(data.methods.custom.apiKey || '');
+        setCustomGatewaySiteId(data.methods.custom.siteId || '');
+        setCustomGatewayCheckoutUrl(data.methods.custom.checkoutUrl || '');
+        setCustomGatewayInstructions(data.methods.custom.instructions || '');
       }
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleSaveFeexPay = async (action?: string) => {
-    setSavingFeexPay(true);
-    setFeexpayMsg(null);
+  const handleSavePaymentGateways = async () => {
+    setSavingPaymentGateways(true);
+    setPaymentGatewaysMsg(null);
     try {
-      const res = await fetch('/api/admin/feexpay', {
+      const res = await fetch('/api/admin/payment-methods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          apiKey: feexpayApiKey,
-          shopId: feexpayShopId,
-          enabled: feexpayEnabled,
-          action,
+          manualEnabled: manualPaymentEnabled,
+          feexpayEnabled,
+          feexpayApiKey,
+          feexpayShopId,
+          customEnabled: customGatewayEnabled,
+          customName: customGatewayName,
+          customApiKey: customGatewayApiKey,
+          customSiteId: customGatewaySiteId,
+          customCheckoutUrl: customGatewayCheckoutUrl,
+          customInstructions: customGatewayInstructions,
         }),
       });
       const data = await res.json();
-      setFeexpayMsg({ message: data.message, success: data.success });
+      setPaymentGatewaysMsg({ message: data.message, success: data.success });
     } catch (e: any) {
-      setFeexpayMsg({ message: e.message || 'Erreur d\'enregistrement', success: false });
+      setPaymentGatewaysMsg({ message: e.message || 'Erreur d\'enregistrement', success: false });
     } finally {
-      setSavingFeexPay(false);
+      setSavingPaymentGateways(false);
     }
   };
 
@@ -2851,34 +2874,56 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* TAB 4: PAYMENT INSTRUCTIONS CONFIG & FEEXPAY */}
+        {/* TAB 4: PAYMENT INSTRUCTIONS CONFIG & MULTI-GATEWAYS */}
         {activeTab === 'payment_config' && (
           <div className="space-y-6 max-w-4xl">
-            {/* FeexPay Payment Gateway Box */}
+            {paymentGatewaysMsg && (
+              <div className={`p-4 rounded-2xl text-xs font-bold flex items-center space-x-2 ${paymentGatewaysMsg.success ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'}`}>
+                <Check className="w-4 h-4" />
+                <span>{paymentGatewaysMsg.message}</span>
+              </div>
+            )}
+
+            {/* Global Save Button */}
+            <div className="flex justify-between items-center bg-slate-900 p-4.5 rounded-3xl border border-slate-800">
+              <div>
+                <h3 className="text-sm font-extrabold text-white">Gestion des Modes de Paiement & Passerelles</h3>
+                <p className="text-[11px] text-slate-400">Activez/Désactivez le paiement manuel, FeexPay, ou ajoutez une passerelle supplémentaire.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSavePaymentGateways}
+                disabled={savingPaymentGateways}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black text-xs shadow-lg shadow-sky-500/20 flex items-center space-x-1.5 disabled:opacity-50"
+              >
+                {savingPaymentGateways ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <span>Enregistrer Tous les Modes</span>}
+              </button>
+            </div>
+
+            {/* 1. Passerelle 1 : FeexPay */}
             <div className="glass-panel p-6 rounded-3xl border border-emerald-500/30 space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
                     <Zap className="w-5 h-5 text-emerald-400 fill-emerald-400/20" />
-                    <span>Passerelle de Paiement FeexPay (Mobile Money & CB)</span>
+                    <span>Passerelle 1 : FeexPay (Mobile Money & CB)</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Permet aux clients de payer automatiquement via MTN, Moov, Wave, Orange Money ou Carte Bancaire.
+                    Paiement automatique instantané via MTN, Moov, Wave, Orange Money ou Carte Bancaire.
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feexpayEnabled}
+                    onChange={(e) => setFeexpayEnabled(e.target.checked)}
+                    className="w-5 h-5 accent-emerald-500 rounded"
+                  />
                   <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${feexpayEnabled ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}`}>
                     {feexpayEnabled ? '🟢 FeexPay Actif' : '🔴 FeexPay Désactivé'}
                   </span>
-                </div>
+                </label>
               </div>
-
-              {feexpayMsg && (
-                <div className={`p-3.5 rounded-2xl text-xs font-bold flex items-center space-x-2 ${feexpayMsg.success ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'}`}>
-                  <Check className="w-4 h-4" />
-                  <span>{feexpayMsg.message}</span>
-                </div>
-              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
@@ -2907,36 +2952,98 @@ export default function AdminDashboardPage() {
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center space-x-3 cursor-pointer">
+            {/* 2. Passerelle 2 : Passerelle Personnalisée (CinetPay, Paydunya, Frikipay, Stripe...) */}
+            <div className="glass-panel p-6 rounded-3xl border border-sky-500/30 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                    <Globe className="w-5 h-5 text-sky-400" />
+                    <span>Passerelle 2 : Ajouter Une Autre Passerelle (CinetPay, Paydunya, Frikipay...)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Configurez une passerelle partenaire supplémentaire pour étendre vos moyens de paiement.
+                  </p>
+                </div>
+                <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={feexpayEnabled}
-                    onChange={(e) => setFeexpayEnabled(e.target.checked)}
-                    className="w-4 h-4 accent-emerald-500 rounded"
+                    checked={customGatewayEnabled}
+                    onChange={(e) => setCustomGatewayEnabled(e.target.checked)}
+                    className="w-5 h-5 accent-sky-500 rounded"
                   />
-                  <span className="text-xs font-bold text-slate-300">Activer le paiement automatique FeexPay sur le site & OTP</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${customGatewayEnabled ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}`}>
+                    {customGatewayEnabled ? '🟢 Passerelle 2 Active' : '🔴 Passerelle 2 Désactivée'}
+                  </span>
                 </label>
+              </div>
 
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSaveFeexPay('test')}
-                    disabled={savingFeexPay}
-                    className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold text-xs"
-                  >
-                    Tester la passerelle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveFeexPay()}
-                    disabled={savingFeexPay}
-                    className="px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5"
-                  >
-                    {savingFeexPay ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <span>Enregistrer FeexPay</span>}
-                  </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    Nom de la Passerelle
+                  </label>
+                  <input
+                    type="text"
+                    value={customGatewayName}
+                    onChange={(e) => setCustomGatewayName(e.target.value)}
+                    placeholder="Ex: CinetPay, Paydunya, Frikipay, Stripe"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-sky-500"
+                  />
                 </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    Identifiant Marchand / Site ID
+                  </label>
+                  <input
+                    type="text"
+                    value={customGatewaySiteId}
+                    onChange={(e) => setCustomGatewaySiteId(e.target.value)}
+                    placeholder="Ex: 584920"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    Clé API / Token Secrète
+                  </label>
+                  <input
+                    type="text"
+                    value={customGatewayApiKey}
+                    onChange={(e) => setCustomGatewayApiKey(e.target.value)}
+                    placeholder="Clé API ou jeton d'accès"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-sky-400 focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                    URL de Paiement Direct / Lien Checkout
+                  </label>
+                  <input
+                    type="text"
+                    value={customGatewayCheckoutUrl}
+                    onChange={(e) => setCustomGatewayCheckoutUrl(e.target.value)}
+                    placeholder="Ex: https://checkout.cinetpay.com/pay?site_id={siteId}&code={ticketCode}"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-slate-300 focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                  Instructions d'accompagnement pour cette passerelle
+                </label>
+                <textarea
+                  rows={3}
+                  value={customGatewayInstructions}
+                  onChange={(e) => setCustomGatewayInstructions(e.target.value)}
+                  placeholder="Ex: Cliquez sur le bouton ci-dessous pour payer via notre passerelle partenaire..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-300 focus:outline-none focus:border-sky-500"
+                />
               </div>
             </div>
 
