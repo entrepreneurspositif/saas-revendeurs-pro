@@ -70,7 +70,7 @@ export default function AdminDashboardPage() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState<{ message: string; success: boolean } | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules'>('tickets');
   const [productRequests, setProductRequests] = useState<any[]>([]);
 
   // OnlineSIM OTP State
@@ -111,6 +111,81 @@ export default function AdminDashboardPage() {
   const [promoExpiresAt, setPromoExpiresAt] = useState<string>('');
   const [savingPromo, setSavingPromo] = useState<boolean>(false);
   const [promoMsg, setPromoMsg] = useState<{ message: string; success: boolean } | null>(null);
+
+  // Pricing Rules State
+  const [pricingRules, setPricingRules] = useState<any[]>([
+    { id: 'rule_1', minPrice: 0, maxPrice: 5, marginPercent: 75 },
+    { id: 'rule_2', minPrice: 5.01, maxPrice: 20, marginPercent: 50 },
+    { id: 'rule_3', minPrice: 20.01, maxPrice: 50, marginPercent: 40 },
+    { id: 'rule_4', minPrice: 50.01, maxPrice: 100, marginPercent: 30 },
+    { id: 'rule_5', minPrice: 100.01, maxPrice: 999999, marginPercent: 20 },
+  ]);
+  const [savingPricingRules, setSavingPricingRules] = useState<boolean>(false);
+  const [pricingMsg, setPricingMsg] = useState<{ message: string; success: boolean } | null>(null);
+
+  const fetchPricingRules = async () => {
+    try {
+      const res = await fetch('/api/admin/pricing-rules');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.rules) && data.rules.length > 0) {
+        setPricingRules(data.rules);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSavePricingRules = async (applyToProducts: boolean) => {
+    setSavingPricingRules(true);
+    setPricingMsg(null);
+    try {
+      const res = await fetch('/api/admin/pricing-rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules: pricingRules, applyToProducts }),
+      });
+      const data = await res.json();
+      setPricingMsg({
+        message: data.message || 'Règles enregistrées.',
+        success: data.success,
+      });
+      if (data.success && applyToProducts) {
+        fetchAdminData();
+      }
+    } catch (e: any) {
+      setPricingMsg({ message: e.message || 'Erreur d\'enregistrement', success: false });
+    } finally {
+      setSavingPricingRules(false);
+    }
+  };
+
+  const handleAddPricingRule = () => {
+    const lastRule = pricingRules[pricingRules.length - 1];
+    const newMin = lastRule ? Number((Number(lastRule.maxPrice) + 0.01).toFixed(2)) : 0;
+    setPricingRules([
+      ...pricingRules,
+      {
+        id: `rule_${Date.now()}`,
+        minPrice: newMin,
+        maxPrice: Number((newMin + 50).toFixed(2)),
+        marginPercent: 25,
+      },
+    ]);
+  };
+
+  const handleDeletePricingRule = (id: string) => {
+    if (pricingRules.length <= 1) {
+      alert('Vous devez conserver au moins une règle de marge !');
+      return;
+    }
+    setPricingRules(pricingRules.filter((r) => r.id !== id));
+  };
+
+  const handleRuleUpdate = (id: string, field: string, val: number) => {
+    setPricingRules(
+      pricingRules.map((r) => (r.id === id ? { ...r, [field]: val } : r))
+    );
+  };
 
   const fetchPromoCodes = async () => {
     try {
@@ -647,6 +722,7 @@ export default function AdminDashboardPage() {
       fetchMarketingSettings();
       fetchPromoCodes();
       fetchTelegramConfig();
+      fetchPricingRules();
     } catch (e) {
       console.error(e);
     } finally {
@@ -1391,6 +1467,14 @@ export default function AdminDashboardPage() {
           description: "Comparateur d'offres",
           badge: null,
           badgeColor: null,
+        },
+        {
+          id: 'pricing_rules',
+          label: 'Marges & Tarification',
+          icon: Percent,
+          description: 'Marge % par tranche de prix',
+          badge: `${pricingRules.length} tranche(s)`,
+          badgeColor: 'indigo',
         },
       ],
     },
@@ -2511,6 +2595,157 @@ export default function AdminDashboardPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: PRICING MARGIN RULES CONFIG */}
+        {activeTab === 'pricing_rules' && (
+          <div className="glass-panel p-6 rounded-3xl border border-slate-800/80 space-y-6 max-w-5xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-white flex items-center space-x-2">
+                  <Percent className="w-6 h-6 text-indigo-400" />
+                  <span>Configuration des Marges & Pourcentages de Vente</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                  Définissez la marge bénéficiaire (%) à appliquer automatiquement selon la tranche de prix d'achat du produit. Ces règles s'appliquent lors de la synchronisation avec les fournisseurs et peuvent être réappliquées à tout le catalogue.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddPricingRule}
+                className="px-4 py-2.5 rounded-2xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold text-xs flex items-center space-x-2 transition-all self-start sm:self-auto"
+              >
+                <span>+ Ajouter une tranche</span>
+              </button>
+            </div>
+
+            {pricingMsg && (
+              <div className={`p-4 rounded-2xl border text-xs flex items-center space-x-3 ${
+                pricingMsg.success
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                  : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+              }`}>
+                {pricingMsg.success ? <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />}
+                <span className="font-semibold">{pricingMsg.message}</span>
+              </div>
+            )}
+
+            {/* Rules Table */}
+            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] font-black tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th className="px-4 py-3">Prix d'Achat Min ($)</th>
+                    <th className="px-4 py-3">Prix d'Achat Max ($)</th>
+                    <th className="px-4 py-3">Marge Bénéficiaire (%)</th>
+                    <th className="px-4 py-3">Exemple de Calcul</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {pricingRules.map((rule, idx) => {
+                    const sampleCost = Number(rule.minPrice) > 0 ? Number(rule.minPrice) : 2.0;
+                    const sampleSelling = (sampleCost * (1 + Number(rule.marginPercent) / 100)).toFixed(2);
+                    return (
+                      <tr key={rule.id || idx} className="hover:bg-slate-900/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={rule.minPrice}
+                              onChange={(e) => handleRuleUpdate(rule.id, 'minPrice', parseFloat(e.target.value) || 0)}
+                              className="w-28 bg-slate-900 border border-slate-800 rounded-xl pl-7 pr-3 py-1.5 text-white font-bold text-xs focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={rule.maxPrice}
+                              onChange={(e) => handleRuleUpdate(rule.id, 'maxPrice', parseFloat(e.target.value) || 0)}
+                              className="w-28 bg-slate-900 border border-slate-800 rounded-xl pl-7 pr-3 py-1.5 text-white font-bold text-xs focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 font-bold">+</span>
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={rule.marginPercent}
+                              onChange={(e) => handleRuleUpdate(rule.id, 'marginPercent', parseFloat(e.target.value) || 0)}
+                              className="w-24 bg-slate-900 border border-slate-800 rounded-xl pl-7 pr-6 py-1.5 text-emerald-300 font-extrabold text-xs focus:outline-none focus:border-emerald-500"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 font-bold">%</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-300">
+                          <div className="bg-slate-900 px-3 py-1.5 rounded-xl text-[11px] font-mono border border-slate-800/80 inline-block">
+                            Achat <span className="text-amber-400">${sampleCost.toFixed(2)}</span> &rarr; Vente <span className="text-emerald-400 font-bold">${sampleSelling}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePricingRule(rule.id)}
+                            className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-all"
+                            title="Supprimer cette tranche"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+              <div className="text-xs text-slate-400">
+                💡 <span className="font-semibold text-slate-300">Astuce :</span> Les tranches s'appliquent automatiquement sur les nouveaux produits et les synchronisations.
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  disabled={savingPricingRules}
+                  onClick={() => handleSavePricingRules(false)}
+                  className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs flex items-center space-x-2 transition-all disabled:opacity-50"
+                >
+                  {savingPricingRules ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 text-emerald-400" />}
+                  <span>Enregistrer les règles</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={savingPricingRules}
+                  onClick={() => handleSavePricingRules(true)}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-xs flex items-center space-x-2 shadow-lg shadow-indigo-500/25 transition-all disabled:opacity-50"
+                >
+                  {savingPricingRules ? (
+                    <RefreshCcw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>Enregistrer & Réappliquer à TOUS les produits</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
