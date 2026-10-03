@@ -17,7 +17,14 @@ const DEFAULT_TURSO_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLC
 
 function createPrismaClient(): PrismaClient {
   let tursoUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || DEFAULT_TURSO_URL;
-  const tursoToken = process.env.TURSO_AUTH_TOKEN || DEFAULT_TURSO_TOKEN;
+  let tursoToken = process.env.TURSO_AUTH_TOKEN || DEFAULT_TURSO_TOKEN;
+
+  if (!tursoUrl || tursoUrl.includes('[SENSITIVE]') || !tursoUrl.includes('://')) {
+    tursoUrl = DEFAULT_TURSO_URL;
+  }
+  if (!tursoToken || tursoToken.includes('[SENSITIVE]')) {
+    tursoToken = DEFAULT_TURSO_TOKEN;
+  }
 
   if (tursoUrl.startsWith('libsql://')) {
     tursoUrl = tursoUrl.replace('libsql://', 'https://');

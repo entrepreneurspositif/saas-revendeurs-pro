@@ -45,6 +45,8 @@ import {
   Gift,
   Trash2,
   Bell,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -401,8 +403,25 @@ export default function AdminDashboardPage() {
   // Product Filters & Sorting State
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
+  const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('ALL');
   const [productStatusFilter, setProductStatusFilter] = useState<'ALL' | 'ACTIVE' | 'DISABLED' | 'IN_STOCK' | 'OUT_OF_STOCK'>('ALL');
   const [productSortBy, setProductSortBy] = useState<'NEWEST' | 'OLDEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'MARGIN_DESC' | 'TITLE_ASC' | 'TITLE_DESC'>('NEWEST');
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setImageState: (val: string) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("L'image est trop volumineuse (maximum 5 Mo). Veuillez choisir une autre image.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setImageState(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Order Filters & Sorting State
   const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING_PAYMENT' | 'COMPLETED' | 'CANCELLED' | 'FAILED'>('ALL');
@@ -1103,6 +1122,15 @@ export default function AdminDashboardPage() {
       if (productStatusFilter === 'OUT_OF_STOCK' && p.stock > 0) return false;
 
       if (selectedCategory !== 'Tous' && p.category !== selectedCategory) return false;
+
+      if (selectedSupplierFilter !== 'ALL') {
+        if (selectedSupplierFilter === 'MANUAL') {
+          if (p.activeSupplierId || p.activeSupplier) return false;
+        } else {
+          const suppId = p.activeSupplierId || p.activeSupplier?.id;
+          if (suppId !== selectedSupplierFilter) return false;
+        }
+      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
@@ -2131,6 +2159,21 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Fournisseur:</span>
+                  <select
+                    value={selectedSupplierFilter}
+                    onChange={(e) => setSelectedSupplierFilter(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3.5 py-2 font-bold focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="ALL">Tous les fournisseurs</option>
+                    <option value="MANUAL">Vente Manuelle (Sans API)</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-2">
                   <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Trier:</span>
                   <select
                     value={productSortBy}
@@ -2218,14 +2261,25 @@ export default function AdminDashboardPage() {
                             </td>
 
                             <td className="px-5 py-4 max-w-xs">
-                              <div className="font-extrabold text-white text-xs leading-snug">{p.title}</div>
-                              <div className="flex items-center space-x-1.5 mt-0.5">
-                                <span className="text-[10px] text-slate-400 font-bold">{p.category}</span>
-                                {p.badge && (
-                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                    {p.badge}
-                                  </span>
+                              <div className="flex items-center space-x-3">
+                                {p.imageUrl ? (
+                                  <img src={p.imageUrl} alt={p.title} className="w-8 h-8 rounded-lg object-cover border border-slate-700 bg-slate-950 flex-shrink-0" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-500 font-bold text-xs flex-shrink-0">
+                                    📦
+                                  </div>
                                 )}
+                                <div className="min-w-0">
+                                  <div className="font-extrabold text-white text-xs leading-snug truncate">{p.title}</div>
+                                  <div className="flex items-center space-x-1.5 mt-0.5">
+                                    <span className="text-[10px] text-slate-400 font-bold">{p.category}</span>
+                                    {p.badge && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                        {p.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </td>
 
@@ -4618,15 +4672,53 @@ export default function AdminDashboardPage() {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                  URL de l'Image du Produit (Optionnel - Pour affichage sur la page Exclusifs)
+                  Image du Produit (Téléverser un fichier ou Lien URL)
                 </label>
-                <input
-                  type="url"
-                  placeholder="Ex: https://domaine.com/images/produit.jpg"
-                  value={newProdImageUrl}
-                  onChange={(e) => setNewProdImageUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Collez une URL d'image ou téléversez ci-dessous..."
+                      value={newProdImageUrl}
+                      onChange={(e) => setNewProdImageUrl(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    />
+                    {newProdImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setNewProdImageUrl('')}
+                        className="p-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl text-xs font-bold transition-colors"
+                        title="Effacer l'image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <label className="cursor-pointer px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl flex items-center space-x-2 border border-slate-700 transition-all shadow-sm">
+                      <Upload className="w-4 h-4 text-emerald-400" />
+                      <span>Téléverser une image...</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleImageFileUpload(e, setNewProdImageUrl)}
+                      />
+                    </label>
+                    <span className="text-[10px] text-slate-400">PNG, JPG, WEBP (Max 5 Mo)</span>
+                  </div>
+
+                  {newProdImageUrl && (
+                    <div className="flex items-center space-x-3 bg-slate-950 p-2.5 rounded-2xl border border-slate-800 mt-2">
+                      <img src={newProdImageUrl} alt="Aperçu du produit" className="w-12 h-12 rounded-xl object-cover border border-slate-700 bg-slate-900 flex-shrink-0" />
+                      <div className="text-[11px] text-emerald-400 font-bold flex items-center space-x-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Image prête pour le produit</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -4713,15 +4805,53 @@ export default function AdminDashboardPage() {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                  URL de l'Image du Produit (Optionnel)
+                  Image du Produit (Téléverser un fichier ou Lien URL)
                 </label>
-                <input
-                  type="url"
-                  placeholder="Ex: https://domaine.com/images/produit.jpg"
-                  value={editImageUrl}
-                  onChange={(e) => setEditImageUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Collez une URL d'image ou téléversez ci-dessous..."
+                      value={editImageUrl}
+                      onChange={(e) => setEditImageUrl(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                    {editImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditImageUrl('')}
+                        className="p-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl text-xs font-bold transition-colors"
+                        title="Effacer l'image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <label className="cursor-pointer px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl flex items-center space-x-2 border border-slate-700 transition-all shadow-sm">
+                      <Upload className="w-4 h-4 text-indigo-400" />
+                      <span>Téléverser une nouvelle image...</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleImageFileUpload(e, setEditImageUrl)}
+                      />
+                    </label>
+                    <span className="text-[10px] text-slate-400">PNG, JPG, WEBP (Max 5 Mo)</span>
+                  </div>
+
+                  {editImageUrl && (
+                    <div className="flex items-center space-x-3 bg-slate-950 p-2.5 rounded-2xl border border-slate-800 mt-2">
+                      <img src={editImageUrl} alt="Aperçu du produit" className="w-12 h-12 rounded-xl object-cover border border-slate-700 bg-slate-900 flex-shrink-0" />
+                      <div className="text-[11px] text-indigo-300 font-bold flex items-center space-x-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Image mise à jour</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between bg-slate-950 p-4 rounded-2xl border border-slate-800">
