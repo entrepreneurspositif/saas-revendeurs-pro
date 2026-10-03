@@ -204,7 +204,7 @@ export default function StorefrontPage() {
         return;
       }
 
-      const checkoutUrl = `https://feexpay.me/pay?id=${data.shopId}&token=${data.apiKey}&amount=${data.amountXOF}&custom_id=${encodeURIComponent(data.ticketCode)}&callback_url=${encodeURIComponent(data.callbackUrl)}`;
+      const checkoutUrl = `https://checkout.feexpay.me/?id=${data.shopId}&token=${data.apiKey}&amount=${data.amountXOF}&custom_id=${encodeURIComponent(data.ticketCode)}&callback_url=${encodeURIComponent(data.callbackUrl)}`;
       window.location.href = checkoutUrl;
     } catch (e: any) {
       alert(e.message || 'Erreur réseau lors de la connexion à FeexPay.');

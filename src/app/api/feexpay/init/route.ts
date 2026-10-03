@@ -57,33 +57,7 @@ export async function POST(req: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const callbackUrl = `${protocol}://${host}/api/feexpay/callback`;
 
-    // Attempt direct API payment request creation if FeexPay endpoint responds
-    let paymentUrl = '';
-    try {
-      const apiRes = await fetch('https://api.feexpay.me/v1/merchant/request/payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          token: config.apiKey,
-          id: config.shopId,
-          amount: amountXof,
-          currency: 'XOF',
-          callback_url: callbackUrl,
-          custom_id: ticketCode,
-          description: description,
-        }),
-      });
-
-      const apiData = await apiRes.json();
-      if (apiData && (apiData.payment_url || apiData.url || apiData.checkout_url)) {
-        paymentUrl = apiData.payment_url || apiData.url || apiData.checkout_url;
-      }
-    } catch (e) {
-      console.warn('FeexPay REST direct request fallback to SDK parameters:', e);
-    }
+    const checkoutUrl = `https://checkout.feexpay.me/?id=${config.shopId}&token=${config.apiKey}&amount=${amountXof}&custom_id=${encodeURIComponent(ticketCode)}&callback_url=${encodeURIComponent(callbackUrl)}`;
 
     return NextResponse.json({
       success: true,
@@ -94,7 +68,7 @@ export async function POST(req: NextRequest) {
       shopId: config.shopId,
       apiKey: config.apiKey,
       callbackUrl,
-      paymentUrl,
+      paymentUrl: checkoutUrl,
       message: 'Paramètres de paiement FeexPay générés avec succès.',
     });
   } catch (error: any) {
