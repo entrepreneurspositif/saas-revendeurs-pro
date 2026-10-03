@@ -34,13 +34,91 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    // 1. HANDLE INLINE BUTTON CALLBACK QUERY (1-Click Admin Validation/Cancel)
+    // Helper to edit existing Telegram message
+    const editTelegramMsg = async (chatId: number | string, messageId: number, text: string, replyMarkup?: any) => {
+      if (!botToken) return;
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            text,
+            parse_mode: 'HTML',
+            reply_markup: replyMarkup,
+          }),
+        });
+      } catch (e) {
+        console.error('Error editing telegram message:', e);
+      }
+    };
+
+    const answerCallbackQuery = async (callbackQueryId: string, text?: string) => {
+      if (!botToken) return;
+      try {
+        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_query_id: callbackQueryId,
+            text: text || '',
+          }),
+        });
+      } catch (e) {
+        console.error('Error answering callback query:', e);
+      }
+    };
+
+    // Main Menu Component Generator
+    const getMainMenu = () => {
+      const text = `
+<b>🤖 BOT OFFICIEL — ENTREPRENEURS POSITIFS</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bienvenue sur votre assistant automatique de revente d'abonnements & numéros virtuels !
+
+<b>💡 Services & Fonctionnalités disponibles :</b>
+• 🔍 <b>Suivi de Ticket :</b> Saisissez ou envoyez votre Code Ticket.
+• 📦 <b>Catalogue Produits :</b> Consultez nos offres et abonnements.
+• 📱 <b>Services SMS OTP :</b> Numéros virtuels pour vérifications.
+• 📊 <b>Statistiques :</b> Vue d'ensemble de la plateforme.
+• 💬 <b>Support 24/7 :</b> Assistance client et aide directes.
+
+👇 <i>Sélectionnez une option ci-dessous ou tapez directement un code ticket :</i>
+`.trim();
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: '🔍 Suivre un Ticket', callback_data: 'menu_suivi' },
+            { text: '📦 Catalogue Produits', callback_data: 'menu_catalogue' },
+          ],
+          [
+            { text: '📱 Services SMS OTP', callback_data: 'menu_otp' },
+            { text: '📊 Statistiques', callback_data: 'menu_stats' },
+          ],
+          [
+            { text: '💬 Support & Aide', callback_data: 'menu_support' },
+            { text: '🌐 Ouvrir le Site Web', url: 'https://revente-abonnement.vercel.app' },
+          ],
+        ],
+      };
+
+      return { text, keyboard };
+    };
+
+    // 1. HANDLE INLINE BUTTON CALLBACK QUERY
     if (body.callback_query) {
       const callbackQuery = body.callback_query;
-      const callbackData = callbackQuery.data; // e.g. 'val_TK-123456' or 'can_TK-123456'
+      const callbackData = callbackQuery.data;
       const chatId = callbackQuery.message?.chat?.id;
       const messageId = callbackQuery.message?.message_id;
 
+      await answerCallbackQuery(callbackQuery.id);
+
+      if (!chatId) return NextResponse.json({ success: true });
+
+      // Action A: Admin Order Validation / Cancellation (1-Click)
       if (callbackData && (callbackData.startsWith('val_') || callbackData.startsWith('can_'))) {
         const isValidate = callbackData.startsWith('val_');
         const ticketCode = callbackData.replace(/^(val_|can_)/, '').trim();
@@ -48,7 +126,6 @@ export async function POST(req: NextRequest) {
         let statusResultText = '';
         let deliveredCredentialsText = '';
 
-        // Check if OTP Ticket
         if (ticketCode.toUpperCase().startsWith('OTP-')) {
           const otpOrder = await prisma.otpOrder.findFirst({
             where: {
@@ -74,7 +151,6 @@ export async function POST(req: NextRequest) {
             statusResultText = `⚠️ Ticket OTP <code>${ticketCode}</code> introuvable.`;
           }
         } else {
-          // Standard Product Order
           const order = await prisma.order.findFirst({
             where: {
               OR: [{ ticketCode }, { id: ticketCode }],
@@ -102,7 +178,6 @@ export async function POST(req: NextRequest) {
             });
             statusResultText = `❌ Commande <code>${order.ticketCode}</code> (${order.productTitle}) annulée/refusée par l'administrateur.`;
           } else {
-            // Validate & execute supplier purchase
             const suppProd = order.product?.activeSupplierProduct;
             if (suppProd && suppProd.supplier) {
               const supplier = suppProd.supplier;
@@ -134,7 +209,6 @@ export async function POST(req: NextRequest) {
                   },
                 });
 
-                // Update stock
                 await prisma.supplierProduct.update({
                   where: { id: suppProd.id },
                   data: {
@@ -147,7 +221,6 @@ export async function POST(req: NextRequest) {
                 statusResultText = `✅ Commande <code>${order.ticketCode}</code> (${order.productTitle}) exécutée avec succès auprès de ${supplier.name} !`;
               }
             } else {
-              // Manual product without supplier API
               await prisma.order.update({
                 where: { id: order.id },
                 data: { status: 'COMPLETED' },
@@ -157,67 +230,253 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Answer Telegram Callback Spinner
-        if (botToken) {
-          await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              callback_query_id: callbackQuery.id,
-              text: statusResultText.replace(/<[^>]*>/g, ''),
-            }),
-          });
-
-          // Edit Original Telegram Message
-          if (chatId && messageId) {
-            let updatedText = `${callbackQuery.message?.text}\n\n<b>📌 ACTION ADMIN :</b> ${statusResultText}`;
-            if (deliveredCredentialsText) {
-              updatedText += `\n\n<b>🔑 CODES / IDENTIFIANTS LIVRÉS :</b>\n<code>${deliveredCredentialsText}</code>`;
-            }
-
-            await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                message_id: messageId,
-                text: updatedText,
-                parse_mode: 'HTML',
-              }),
-            });
+        if (messageId) {
+          let updatedText = `${callbackQuery.message?.text}\n\n<b>📌 ACTION ADMIN :</b> ${statusResultText}`;
+          if (deliveredCredentialsText) {
+            updatedText += `\n\n<b>🔑 CODES / IDENTIFIANTS LIVRÉS :</b>\n<code>${deliveredCredentialsText}</code>`;
           }
+          await editTelegramMsg(chatId, messageId, updatedText);
         }
 
         return NextResponse.json({ success: true, message: statusResultText });
       }
+
+      // Action B: Menu Navigation Callbacks
+      if (callbackData === 'menu_start') {
+        const { text, keyboard } = getMainMenu();
+        if (messageId) {
+          await editTelegramMsg(chatId, messageId, text, keyboard);
+        } else {
+          await sendTelegramMsg(chatId, text, keyboard);
+        }
+        return NextResponse.json({ success: true });
+      }
+
+      if (callbackData === 'menu_suivi') {
+        const text = `
+<b>🔍 RECHERCHE & SUIVI DE TICKET</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Pour consulter l'état de votre commande et obtenir vos identifiants ou votre code SMS :
+
+👉 Envoyez simplement le <b>Code Ticket</b> dans ce chat (ex: <code>clx123456</code> ou <code>OTP-987654</code>).
+👉 Ou tapez : <code>/suivi VOTRE_CODE</code>
+
+<i>Vos informations s'afficheront instantanément dès que l'administrateur valide le paiement.</i>
+`.trim();
+        const keyboard = {
+          inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
+        };
+        if (messageId) await editTelegramMsg(chatId, messageId, text, keyboard);
+        else await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      if (callbackData === 'menu_catalogue') {
+        const products = await prisma.product.findMany({
+          where: { isActive: true },
+          take: 8,
+          orderBy: { title: 'asc' },
+        });
+
+        let text = `<b>📦 CATALOGUE DES PRODUITS POPULAIRES</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        if (products.length === 0) {
+          text += `<i>Aucun produit disponible pour le moment.</i>`;
+        } else {
+          products.forEach((p, idx) => {
+            text += `${idx + 1}. <b>${p.title}</b>\n   💰 Prix : <code>$${p.sellingPrice.toFixed(2)} USD</code>\n   📂 Catégorie : ${p.category || 'Général'}\n\n`;
+          });
+          text += `🌐 <i>Consultez tous nos abonnements en stock sur notre site web.</i>`;
+        }
+
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '🌐 Voir tous les produits sur le site', url: 'https://revente-abonnement.vercel.app' }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+        if (messageId) await editTelegramMsg(chatId, messageId, text, keyboard);
+        else await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      if (callbackData === 'menu_otp') {
+        const text = `
+<b>📱 SERVICES DE NUMÉROS VIRTUELS (SMS OTP)</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Obtenez des numéros virtuels temporaires pour la vérification SMS de vos comptes :
+
+• 🟢 <b>WhatsApp & Telegram</b>
+• 🤖 <b>OpenAI / ChatGPT</b>
+• 🔵 <b>Google & YouTube</b>
+• 🎵 <b>TikTok & Instagram</b>
+• 🎬 <b>Netflix, Spotify, & Plus</b>
+
+👉 Tapez <code>/otp</code> pour voir les tarifs ou commander directement vos numéros sur la plateforme web.
+`.trim();
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '📱 Accéder à la page OTP', url: 'https://revente-abonnement.vercel.app/otp' }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+        if (messageId) await editTelegramMsg(chatId, messageId, text, keyboard);
+        else await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      if (callbackData === 'menu_stats') {
+        const [totalProducts, totalOrders, completedOrders, totalOtpOrders, suppliersCount] = await Promise.all([
+          prisma.product.count({ where: { isActive: true } }),
+          prisma.order.count(),
+          prisma.order.count({ where: { status: 'COMPLETED' } }),
+          prisma.otpOrder.count(),
+          prisma.supplier.count({ where: { isActive: true } }),
+        ]);
+
+        const text = `
+<b>📊 STATISTIQUES GLOBALES DE LA PLATEFORME</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 📦 <b>Produits Actifs :</b> <code>${totalProducts}</code>
+• 🛍️ <b>Commandes Totales :</b> <code>${totalOrders}</code>
+• ✅ <b>Commandes Livrées :</b> <code>${completedOrders}</code>
+• 📱 <b>Commandes OTP SMS :</b> <code>${totalOtpOrders}</code>
+• 🔌 <b>Fournisseurs Connectés :</b> <code>${suppliersCount}</code>
+
+<i>Ces données sont synchronisées en temps réel avec la base de données.</i>
+`.trim();
+        const keyboard = {
+          inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
+        };
+        if (messageId) await editTelegramMsg(chatId, messageId, text, keyboard);
+        else await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      if (callbackData === 'menu_support') {
+        const text = `
+<b>💬 SUPPORT CLIENT & ASSISTANCE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Besoin d'aide avec une commande ou une relecture de ticket ?
+
+• 🌐 <b>Centre d'aide sur le site :</b> Support par ticket en ligne
+• ⚡ <b>Temps de réponse moyen :</b> Moins de 15 minutes
+
+<i>N'hésitez pas à nous envoyer vos questions ou votre code ticket à tout moment !</i>
+`.trim();
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '💬 Accéder au Support Web', url: 'https://revente-abonnement.vercel.app' }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+        if (messageId) await editTelegramMsg(chatId, messageId, text, keyboard);
+        else await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
     }
 
-    // 2. HANDLE INCOMING TEXT MESSAGES (Customer Order Tracking / Suivi de Ticket)
+    // 2. HANDLE INCOMING TEXT MESSAGES & COMMANDS
     if (body.message && body.message.text) {
       const userMessage = body.message.text.trim();
       const chatId = body.message.chat.id;
 
-      if (userMessage === '/start' || userMessage === '/help') {
-        const welcomeText = `
-<b>🤖 Bot Officiel de Suivi de Commande & Support</b>
-
-Bienvenue ! Vous pouvez consulter l'état de votre commande et récupérer vos identifiants ou codes de livraison en envoyant simplement votre <b>Code de Ticket</b>.
-
-<b>Exemples de recherche :</b>
-• Envoyez : <code>clx123456</code>
-• Ou tapez : <code>/ticket clx123456</code>
-
-<i>Dès la validation de votre paiement par l'administrateur, vos identifiants et codes de livraison s'afficheront immédiatement ici.</i>
-`.trim();
-        await sendTelegramMsg(chatId, welcomeText);
-        return NextResponse.json({ success: true, message: 'Message de bienvenue envoyé.' });
+      // Command: /start, /help, /menu
+      if (userMessage === '/start' || userMessage === '/help' || userMessage === '/menu') {
+        const { text, keyboard } = getMainMenu();
+        await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
       }
 
-      // Extract ticket code from message (e.g. "/ticket CODE" or just "CODE")
+      // Command: /catalogue or /produits
+      if (userMessage.startsWith('/catalogue') || userMessage.startsWith('/produits')) {
+        const products = await prisma.product.findMany({
+          where: { isActive: true },
+          take: 8,
+          orderBy: { title: 'asc' },
+        });
+
+        let text = `<b>📦 CATALOGUE DES PRODUITS POPULAIRES</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        products.forEach((p, idx) => {
+          text += `${idx + 1}. <b>${p.title}</b>\n   💰 Prix : <code>$${p.sellingPrice.toFixed(2)} USD</code>\n   📂 Catégorie : ${p.category || 'Général'}\n\n`;
+        });
+
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '🌐 Voir tous les produits sur le site', url: 'https://revente-abonnement.vercel.app' }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+        await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      // Command: /otp
+      if (userMessage.startsWith('/otp')) {
+        const text = `
+<b>📱 SERVICES SMS OTP & NUMÉROS VIRTUELS</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Obtenez un numéro temporaire pour valider n'importe quel service (WhatsApp, Telegram, OpenAI, Google...).
+
+Accédez directement à la section dédiée aux numéros virtuels pour générer votre SMS instantanément.
+`.trim();
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '📱 Aller sur le module OTP', url: 'https://revente-abonnement.vercel.app/otp' }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+        await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      // Command: /stats or /admin
+      if (userMessage.startsWith('/stats') || userMessage.startsWith('/admin')) {
+        const [totalProducts, totalOrders, completedOrders, totalOtpOrders, suppliersCount] = await Promise.all([
+          prisma.product.count({ where: { isActive: true } }),
+          prisma.order.count(),
+          prisma.order.count({ where: { status: 'COMPLETED' } }),
+          prisma.otpOrder.count(),
+          prisma.supplier.count({ where: { isActive: true } }),
+        ]);
+
+        const text = `
+<b>📊 STATISTIQUES GLOBALES DE LA PLATEFORME</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 📦 <b>Produits Actifs :</b> <code>${totalProducts}</code>
+• 🛍️ <b>Commandes Totales :</b> <code>${totalOrders}</code>
+• ✅ <b>Commandes Livrées :</b> <code>${completedOrders}</code>
+• 📱 <b>Commandes OTP SMS :</b> <code>${totalOtpOrders}</code>
+• 🔌 <b>Fournisseurs Connectés :</b> <code>${suppliersCount}</code>
+`.trim();
+        const keyboard = {
+          inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
+        };
+        await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      // Command: /support or /contact
+      if (userMessage.startsWith('/support') || userMessage.startsWith('/contact')) {
+        const text = `
+<b>💬 SUPPORT CLIENT & ASSISTANCE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Besoin d'aide ? Vous pouvez nous contacter directement sur notre site ou suivre l'avancement de votre ticket en envoyant simplement le code ici.
+`.trim();
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: '🌐 Ouvrir le Site Web', url: 'https://revente-abonnement.vercel.app' }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+        await sendTelegramMsg(chatId, text, keyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      // 3. TICKET SEARCH BY CODE (/suivi CODE or raw CODE text)
       const candidateCode = userMessage.replace(/^\/(ticket|suivi|order)\s*/i, '').trim();
 
       if (candidateCode.length >= 3) {
-        // Search standard product order first
+        // Search product order
         const order = await findOrderByCodeOrId(candidateCode, true);
 
         if (order) {
@@ -227,7 +486,7 @@ Bienvenue ! Vous pouvez consulter l'état de votre commande et récupérer vos i
 
           let responseText = `
 <b>🎟️ SUIVI DU TICKET DE COMMANDE</b>
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 <b>Produit :</b> ${order.productTitle}
 <b>Code Ticket :</b> <code>${order.ticketCode}</code>
 <b>Montant :</b> $${order.totalAmount.toFixed(2)} USD
@@ -241,7 +500,10 @@ Bienvenue ! Vous pouvez consulter l'état de votre commande et récupérer vos i
             responseText += `\n\n<b>💳 INSTRUCTIONS DE PAIEMENT :</b>\n${order.paymentInstructions || 'Veuillez effectuer votre règlement pour valider le ticket.'}`;
           }
 
-          await sendTelegramMsg(chatId, responseText);
+          const keyboard = {
+            inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
+          };
+          await sendTelegramMsg(chatId, responseText, keyboard);
           return NextResponse.json({ success: true, message: 'Suivi de ticket envoyé.' });
         }
 
@@ -260,7 +522,7 @@ Bienvenue ! Vous pouvez consulter l'état de votre commande et récupérer vos i
 
           let responseText = `
 <b>📱 SUIVI DU TICKET OTP</b>
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 <b>Service :</b> ${otpOrder.service.toUpperCase()} (${otpOrder.country})
 <b>Code Ticket :</b> <code>${otpOrder.ticketCode}</code>
 <b>Téléphone :</b> <code>${otpOrder.phone || 'Génération en cours'}</code>
@@ -272,15 +534,22 @@ Bienvenue ! Vous pouvez consulter l'état de votre commande et récupérer vos i
             responseText += `\n\n<b>💬 CODE SMS REÇU :</b>\n<code>${otpOrder.smsCode || otpOrder.fullSms}</code>`;
           }
 
-          await sendTelegramMsg(chatId, responseText);
+          const keyboard = {
+            inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
+          };
+          await sendTelegramMsg(chatId, responseText, keyboard);
           return NextResponse.json({ success: true, message: 'Suivi OTP envoyé.' });
         }
 
-        // If code searched specifically with /ticket but not found
-        if (userMessage.toLowerCase().startsWith('/ticket') || candidateCode.length >= 8) {
+        // If code searched specifically with /suivi or /ticket but not found
+        if (userMessage.toLowerCase().startsWith('/ticket') || userMessage.toLowerCase().startsWith('/suivi') || candidateCode.length >= 8) {
+          const keyboard = {
+            inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
+          };
           await sendTelegramMsg(
             chatId,
-            `⚠️ Aucun ticket trouvé avec le code <code>${candidateCode}</code>. Vérifiez votre code et réessayez.`
+            `⚠️ Aucun ticket trouvé avec le code <code>${candidateCode}</code>. Vérifiez votre code et réessayez.`,
+            keyboard
           );
           return NextResponse.json({ success: true, message: 'Ticket non trouvé.' });
         }

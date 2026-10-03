@@ -85,8 +85,25 @@ export async function POST(req: NextRequest) {
 
         const webhookRes = await fetch(`https://api.telegram.org/bot${cleanToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
         const webhookData = await webhookRes.json();
+
+        // Auto-register Telegram Commands Menu
+        await fetch(`https://api.telegram.org/bot${cleanToken}/setMyCommands`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            commands: [
+              { command: 'start', description: '🚀 Menu principal & Tableau de bord' },
+              { command: 'suivi', description: '🔍 Suivre un ticket (ex: /suivi TK-123)' },
+              { command: 'catalogue', description: '📦 Voir les produits & abonnements' },
+              { command: 'otp', description: '📱 Numéros virtuels & SMS OTP' },
+              { command: 'support', description: '💬 Support client & Assistance' },
+              { command: 'stats', description: '📊 Statistiques globales de la boutique' },
+            ],
+          }),
+        });
+
         if (webhookData.ok) {
-          webhookMsg = ' Webhook Telegram (1-clic & suivi) connecté avec succès !';
+          webhookMsg = ' Webhook Telegram & Menu interactif enregistrés avec succès !';
         }
       } catch (e: any) {
         console.error('Webhook set error:', e);
