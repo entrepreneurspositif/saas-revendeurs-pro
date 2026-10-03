@@ -60,8 +60,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const cleanToken = String(botToken || '').trim();
     const updates = [
-      { key: 'telegram_bot_token', value: String(botToken || '').trim() },
+      { key: 'telegram_bot_token', value: cleanToken },
       { key: 'telegram_chat_id', value: String(chatId || '').trim() },
       { key: 'telegram_enabled', value: enabled ? 'true' : 'false' },
     ];
@@ -74,9 +75,27 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Auto-register Telegram Webhook URL
+    let webhookMsg = '';
+    if (cleanToken && enabled) {
+      try {
+        const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const webhookUrl = `${protocol}://${host}/api/telegram/webhook`;
+
+        const webhookRes = await fetch(`https://api.telegram.org/bot${cleanToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
+        const webhookData = await webhookRes.json();
+        if (webhookData.ok) {
+          webhookMsg = ' Webhook Telegram (1-clic & suivi) connecté avec succès !';
+        }
+      } catch (e: any) {
+        console.error('Webhook set error:', e);
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Configuration Telegram enregistrée avec succès.',
+      message: `Configuration Telegram enregistrée avec succès.${webhookMsg}`,
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
