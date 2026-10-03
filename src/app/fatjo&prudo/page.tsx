@@ -47,6 +47,7 @@ import {
   Bell,
   Upload,
   Image as ImageIcon,
+  Globe,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -185,6 +186,54 @@ export default function AdminDashboardPage() {
     setPricingRules(
       pricingRules.map((r) => (r.id === id ? { ...r, [field]: val } : r))
     );
+  };
+
+  // Supplier Top-up State
+  const [topupSupplierModal, setTopupSupplierModal] = useState<any | null>(null);
+
+  const getSupplierRechargeInfo = (supplier: any) => {
+    if (!supplier) return null;
+    const nameLower = (supplier.name || '').toLowerCase();
+    const urlLower = (supplier.apiUrl || '').toLowerCase();
+    const keyLower = (supplier.apiKey || '').toLowerCase();
+
+    if (nameLower.includes('canboso') || urlLower.includes('canboso')) {
+      return {
+        title: 'Canboso API',
+        botUrl: 'https://t.me/CanbosoBot',
+        webUrl: 'https://canboso.com',
+        instructions: "Rechargez votre portefeuille Canboso via leur Bot Telegram officiel @CanbosoBot ou sur le site web. Les dépôts USDT / Crypto ou Stars sont crédités en temps réel sur votre clé API.",
+        contact: "@CanbosoBot sur Telegram",
+      };
+    }
+
+    if (nameLower.includes('insight') || urlLower.includes('insight') || keyLower.startsWith('isk_')) {
+      return {
+        title: 'Insight Store Reseller API',
+        botUrl: 'https://t.me/Insightsxstore',
+        webUrl: 'https://api.insightxpro.store',
+        instructions: "Rechargez votre portefeuille Insight Store via leur Bot Telegram @Insightsxstore (Commande /start -> Developer API & Top Up Wallet). Votre solde API sera crédité instantanément.",
+        contact: "@Insightsxstore sur Telegram",
+      };
+    }
+
+    if (nameLower.includes('hubx') || urlLower.includes('railway') || keyLower.startsWith('rsk_')) {
+      return {
+        title: 'Hubxstore Reseller API',
+        botUrl: 'https://t.me/hubxstore_support',
+        webUrl: 'https://open-greeting-glow-production.up.railway.app',
+        instructions: "Effectuez votre rechargement de solde revendeur USDT (TRC20 / BEP20) sur la plateforme Hubxstore ou contactez directement l'assistance revendeur.",
+        contact: "Support Hubxstore",
+      };
+    }
+
+    return {
+      title: supplier.name || 'Fournisseur API',
+      botUrl: null,
+      webUrl: supplier.apiUrl,
+      instructions: "Rendez-vous sur la plateforme ou la boutique de ce fournisseur pour effectuer un virement/dépôt afin de créditer votre solde API.",
+      contact: supplier.apiUrl,
+    };
   };
 
   const fetchPromoCodes = async () => {
@@ -2888,15 +2937,25 @@ export default function AdminDashboardPage() {
                     </div>
                   )}
 
-                  <div className="pt-2 flex items-center justify-between border-t border-slate-850">
-                    <button
-                      onClick={() => handleTestSupplier(supp.id)}
-                      disabled={testingSupplierId === supp.id}
-                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold flex items-center space-x-1.5 transition-colors"
-                    >
-                      <RefreshCcw className={`w-3.5 h-3.5 ${testingSupplierId === supp.id ? 'animate-spin' : ''}`} />
-                      <span>Tester Connexion</span>
-                    </button>
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-850">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleTestSupplier(supp.id)}
+                        disabled={testingSupplierId === supp.id}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold flex items-center space-x-1.5 transition-colors"
+                      >
+                        <RefreshCcw className={`w-3.5 h-3.5 ${testingSupplierId === supp.id ? 'animate-spin' : ''}`} />
+                        <span>Tester Connexion</span>
+                      </button>
+
+                      <button
+                        onClick={() => setTopupSupplierModal(supp)}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center space-x-1 transition-all shadow-md shadow-emerald-600/20"
+                      >
+                        <DollarSign className="w-3.5 h-3.5" />
+                        <span>Recharger</span>
+                      </button>
+                    </div>
 
                     <button
                       onClick={handleSyncCatalog}
@@ -5211,6 +5270,105 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SUPPLIER TOPUP MODAL */}
+      {topupSupplierModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+            <button
+              onClick={() => setTopupSupplierModal(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <div className="flex items-center space-x-2">
+                <DollarSign className="w-6 h-6 text-emerald-400" />
+                <h3 className="text-lg font-extrabold text-white">
+                  Recharger le Compte {topupSupplierModal.name}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Suivez les instructions du fournisseur pour créditer votre portefeuille API.
+              </p>
+            </div>
+
+            {/* Current Balance Display */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-500 block">Solde Actuel en Direct</span>
+                <span className="text-xl font-black text-emerald-400 font-mono">
+                  ${topupSupplierModal.balance !== undefined ? topupSupplierModal.balance.toFixed(2) : '0.00'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleTestSupplier(topupSupplierModal.id);
+                  setTimeout(fetchAdminData, 1000);
+                }}
+                disabled={testingSupplierId === topupSupplierModal.id}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-sky-300 font-bold text-xs flex items-center space-x-1.5 transition-all border border-slate-700"
+              >
+                <RefreshCcw className={`w-3.5 h-3.5 ${testingSupplierId === topupSupplierModal.id ? 'animate-spin' : ''}`} />
+                <span>Vérifier Solde API</span>
+              </button>
+            </div>
+
+            {/* Recharge Instructions */}
+            {(() => {
+              const info = getSupplierRechargeInfo(topupSupplierModal);
+              return (
+                <div className="space-y-3 bg-slate-950/70 p-4 rounded-2xl border border-slate-850 text-xs">
+                  <div className="font-extrabold text-amber-400 text-xs flex items-center space-x-1.5">
+                    <span>📌 Procédure de Rechargement Officielle :</span>
+                  </div>
+                  <p className="text-slate-300 leading-relaxed">
+                    {info?.instructions}
+                  </p>
+                  
+                  <div className="pt-2 flex flex-col space-y-2">
+                    {info?.botUrl && (
+                      <a
+                        href={info.botUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-center flex items-center justify-center space-x-2 shadow-lg shadow-sky-600/20"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>Ouvrir {info.contact}</span>
+                      </a>
+                    )}
+                    {info?.webUrl && (
+                      <a
+                        href={info.webUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-center flex items-center justify-center space-x-2 border border-slate-700"
+                      >
+                        <Globe className="w-4 h-4" />
+                        <span>Accéder au Site Fournisseur</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setTopupSupplierModal(null)}
+                className="px-6 py-2.5 rounded-2xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}
