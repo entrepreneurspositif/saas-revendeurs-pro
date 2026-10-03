@@ -9,11 +9,22 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Fetch bot token for Telegram API responses
-    const botTokenSetting = await prisma.setting.findUnique({
-      where: { key: 'telegram_bot_token' },
+    // Fetch bot settings (Token & Admin Chat ID)
+    const settings = await prisma.setting.findMany({
+      where: {
+        key: {
+          in: ['telegram_bot_token', 'telegram_chat_id'],
+        },
+      },
     });
-    const botToken = botTokenSetting?.value?.trim();
+
+    const settingsMap = settings.reduce((acc, curr) => {
+      acc[curr.key] = curr.value?.trim();
+      return acc;
+    }, {} as Record<string, string>);
+
+    const botToken = settingsMap['telegram_bot_token'];
+    const adminChatId = settingsMap['telegram_chat_id'];
 
     // Helper to send Telegram message
     const sendTelegramMsg = async (chatId: number | string, text: string, replyMarkup?: any) => {
@@ -54,7 +65,7 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    const answerCallbackQuery = async (callbackQueryId: string, text?: string) => {
+    const answerCallbackQuery = async (callbackQueryId: string, text?: string, showAlert: boolean = false) => {
       if (!botToken) return;
       try {
         await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
@@ -63,6 +74,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             callback_query_id: callbackQueryId,
             text: text || '',
+            show_alert: showAlert,
           }),
         });
       } catch (e) {
@@ -70,24 +82,48 @@ export async function POST(req: NextRequest) {
       }
     };
 
+    // Persistent Reply Keyboards (Keyboard Grid at bottom of phone screen)
+    const getCustomerReplyKeyboard = () => ({
+      keyboard: [
+        [{ text: '🔍 Suivi de Ticket' }, { text: '📦 Catalogue' }],
+        [{ text: '📱 Services SMS OTP' }, { text: '💬 Support & Aide' }],
+        [{ text: '🌐 Site Web' }],
+      ],
+      resize_keyboard: true,
+      persistent: true,
+    });
+
+    const getAdminReplyKeyboard = () => ({
+      keyboard: [
+        [{ text: '🔍 Suivi de Ticket' }, { text: '📦 Catalogue' }],
+        [{ text: '📱 Services SMS OTP' }, { text: '💬 Support & Aide' }],
+        [{ text: '📊 Statistiques Admin' }, { text: '🔐 Panneau Admin' }],
+      ],
+      resize_keyboard: true,
+      persistent: true,
+    });
+
     // Main Menu Component Generator
-    const getMainMenu = () => {
-      const text = `
+    const getMainMenu = (isAdmin: boolean) => {
+      let text = `
 <b>🤖 BOT OFFICIEL — ENTREPRENEURS POSITIFS</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Bienvenue sur votre assistant automatique de revente d'abonnements & numéros virtuels !
 
-<b>💡 Services & Fonctionnalités disponibles :</b>
-• 🔍 <b>Suivi de Ticket :</b> Saisissez ou envoyez votre Code Ticket.
+<b>💡 Services & Fonctionnalités :</b>
+• 🔍 <b>Suivi de Ticket :</b> Saisissez votre Code Ticket.
 • 📦 <b>Catalogue Produits :</b> Consultez nos offres et abonnements.
-• 📱 <b>Services SMS OTP :</b> Numéros virtuels pour vérifications.
-• 📊 <b>Statistiques :</b> Vue d'ensemble de la plateforme.
-• 💬 <b>Support 24/7 :</b> Assistance client et aide directes.
-
-👇 <i>Sélectionnez une option ci-dessous ou tapez directement un code ticket :</i>
+• 📱 <b>Services SMS OTP :</b> Numéros virtuels pour SMS.
+• 💬 <b>Support 24/7 :</b> Assistance client directe.
 `.trim();
 
-      const keyboard = {
+      if (isAdmin) {
+        text += `\n• 📊 <b>Espace Admin :</b> Statistiques & validation 1-clic.`;
+      }
+
+      text += `\n\n👇 <i>Utilisez le menu au bas de votre écran ou saisissez votre code ticket :</i>`;
+
+      const inlineKeyboard: { inline_keyboard: any[][] } = {
         inline_keyboard: [
           [
             { text: '🔍 Suivre un Ticket', callback_data: 'menu_suivi' },
@@ -95,16 +131,23 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
           ],
           [
             { text: '📱 Services SMS OTP', callback_data: 'menu_otp' },
-            { text: '📊 Statistiques', callback_data: 'menu_stats' },
-          ],
-          [
             { text: '💬 Support & Aide', callback_data: 'menu_support' },
-            { text: '🌐 Ouvrir le Site Web', url: 'https://revente-abonnement.vercel.app' },
           ],
         ],
       };
 
-      return { text, keyboard };
+      if (isAdmin) {
+        inlineKeyboard.inline_keyboard.push([
+          { text: '📊 Statistiques Admin', callback_data: 'menu_stats' },
+          { text: '🌐 Accéder au Site', url: 'https://revente-abonnement.vercel.app' },
+        ]);
+      } else {
+        inlineKeyboard.inline_keyboard.push([
+          { text: '🌐 Accéder au Site Web', url: 'https://revente-abonnement.vercel.app' },
+        ]);
+      }
+
+      return { text, inlineKeyboard };
     };
 
     // 1. HANDLE INLINE BUTTON CALLBACK QUERY
@@ -114,12 +157,22 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
       const chatId = callbackQuery.message?.chat?.id;
       const messageId = callbackQuery.message?.message_id;
 
-      await answerCallbackQuery(callbackQuery.id);
-
       if (!chatId) return NextResponse.json({ success: true });
+      const isAdmin = adminChatId ? String(chatId) === adminChatId : false;
 
-      // Action A: Admin Order Validation / Cancellation (1-Click)
+      // Action A: Admin Order Validation / Cancellation (Restricted to Admin)
       if (callbackData && (callbackData.startsWith('val_') || callbackData.startsWith('can_'))) {
+        if (!isAdmin) {
+          await answerCallbackQuery(
+            callbackQuery.id,
+            "⚠️ Accès refusé : Seul l'administrateur peut exécuter cette action.",
+            true
+          );
+          return NextResponse.json({ success: true, message: 'Non autorisé' });
+        }
+
+        await answerCallbackQuery(callbackQuery.id);
+
         const isValidate = callbackData.startsWith('val_');
         const ticketCode = callbackData.replace(/^(val_|can_)/, '').trim();
 
@@ -241,13 +294,15 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
         return NextResponse.json({ success: true, message: statusResultText });
       }
 
-      // Action B: Menu Navigation Callbacks
+      await answerCallbackQuery(callbackQuery.id);
+
+      // Menu Navigation Callbacks
       if (callbackData === 'menu_start') {
-        const { text, keyboard } = getMainMenu();
+        const { text, inlineKeyboard } = getMainMenu(isAdmin);
         if (messageId) {
-          await editTelegramMsg(chatId, messageId, text, keyboard);
+          await editTelegramMsg(chatId, messageId, text, inlineKeyboard);
         } else {
-          await sendTelegramMsg(chatId, text, keyboard);
+          await sendTelegramMsg(chatId, text, inlineKeyboard);
         }
         return NextResponse.json({ success: true });
       }
@@ -258,7 +313,7 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Pour consulter l'état de votre commande et obtenir vos identifiants ou votre code SMS :
 
-👉 Envoyez simplement le <b>Code Ticket</b> dans ce chat (ex: <code>clx123456</code> ou <code>OTP-987654</code>).
+👉 Envoyez simplement votre <b>Code Ticket</b> dans ce chat (ex: <code>clx123456</code> ou <code>OTP-987654</code>).
 👉 Ou tapez : <code>/suivi VOTRE_CODE</code>
 
 <i>Vos informations s'afficheront instantanément dès que l'administrateur valide le paiement.</i>
@@ -325,6 +380,18 @@ Obtenez des numéros virtuels temporaires pour la vérification SMS de vos compt
       }
 
       if (callbackData === 'menu_stats') {
+        if (!isAdmin) {
+          if (messageId) {
+            await editTelegramMsg(
+              chatId,
+              messageId,
+              `⚠️ <b>Accès restreint</b> : Cette section est réservée à l'administrateur.`,
+              { inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]] }
+            );
+          }
+          return NextResponse.json({ success: true });
+        }
+
         const [totalProducts, totalOrders, completedOrders, totalOtpOrders, suppliersCount] = await Promise.all([
           prisma.product.count({ where: { isActive: true } }),
           prisma.order.count(),
@@ -334,7 +401,7 @@ Obtenez des numéros virtuels temporaires pour la vérification SMS de vos compt
         ]);
 
         const text = `
-<b>📊 STATISTIQUES GLOBALES DE LA PLATEFORME</b>
+<b>📊 STATISTIQUES GLOBALES (ADMIN)</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 • 📦 <b>Produits Actifs :</b> <code>${totalProducts}</code>
 • 🛍️ <b>Commandes Totales :</b> <code>${totalOrders}</code>
@@ -342,7 +409,7 @@ Obtenez des numéros virtuels temporaires pour la vérification SMS de vos compt
 • 📱 <b>Commandes OTP SMS :</b> <code>${totalOtpOrders}</code>
 • 🔌 <b>Fournisseurs Connectés :</b> <code>${suppliersCount}</code>
 
-<i>Ces données sont synchronisées en temps réel avec la base de données.</i>
+<i>Données synchronisées en temps réel avec la base de données.</i>
 `.trim();
         const keyboard = {
           inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
@@ -375,20 +442,29 @@ Besoin d'aide avec une commande ou une relecture de ticket ?
       }
     }
 
-    // 2. HANDLE INCOMING TEXT MESSAGES & COMMANDS
+    // 2. HANDLE INCOMING TEXT MESSAGES & BUTTON TAPS
     if (body.message && body.message.text) {
-      const userMessage = body.message.text.trim();
+      const rawText = body.message.text.trim();
+      const lowerText = rawText.toLowerCase();
       const chatId = body.message.chat.id;
+      const isAdmin = adminChatId ? String(chatId) === adminChatId : false;
+      const replyKeyboard = isAdmin ? getAdminReplyKeyboard() : getCustomerReplyKeyboard();
 
-      // Command: /start, /help, /menu
-      if (userMessage === '/start' || userMessage === '/help' || userMessage === '/menu') {
-        const { text, keyboard } = getMainMenu();
-        await sendTelegramMsg(chatId, text, keyboard);
+      // Case 1: Start / Menu / Help
+      if (lowerText === '/start' || lowerText === '/help' || lowerText === '/menu' || lowerText.includes('menu')) {
+        const { text, inlineKeyboard } = getMainMenu(isAdmin);
+        const fullKeyboard = {
+          inline_keyboard: inlineKeyboard.inline_keyboard,
+          keyboard: replyKeyboard.keyboard,
+          resize_keyboard: true,
+          persistent: true,
+        };
+        await sendTelegramMsg(chatId, text, fullKeyboard);
         return NextResponse.json({ success: true });
       }
 
-      // Command: /catalogue or /produits
-      if (userMessage.startsWith('/catalogue') || userMessage.startsWith('/produits')) {
+      // Case 2: Catalogue / Produits
+      if (lowerText.includes('catalogue') || lowerText.includes('produit')) {
         const products = await prisma.product.findMany({
           where: { isActive: true },
           take: 8,
@@ -400,37 +476,58 @@ Besoin d'aide avec une commande ou une relecture de ticket ?
           text += `${idx + 1}. <b>${p.title}</b>\n   💰 Prix : <code>$${p.sellingPrice.toFixed(2)} USD</code>\n   📂 Catégorie : ${p.category || 'Général'}\n\n`;
         });
 
-        const keyboard = {
-          inline_keyboard: [
-            [{ text: '🌐 Voir tous les produits sur le site', url: 'https://revente-abonnement.vercel.app' }],
-            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
-          ],
-        };
-        await sendTelegramMsg(chatId, text, keyboard);
+        await sendTelegramMsg(chatId, text, replyKeyboard);
         return NextResponse.json({ success: true });
       }
 
-      // Command: /otp
-      if (userMessage.startsWith('/otp')) {
+      // Case 3: Services SMS OTP
+      if (lowerText.includes('otp') || lowerText.includes('numéro') || lowerText.includes('sms')) {
         const text = `
 <b>📱 SERVICES SMS OTP & NUMÉROS VIRTUELS</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-Obtenez un numéro temporaire pour valider n'importe quel service (WhatsApp, Telegram, OpenAI, Google...).
+Obtenez un numéro temporaire pour valider vos comptes (WhatsApp, Telegram, OpenAI, Google, TikTok...).
 
-Accédez directement à la section dédiée aux numéros virtuels pour générer votre SMS instantanément.
+Accédez directement à la section dédiée aux numéros virtuels pour générer votre SMS instantanément sur notre site.
 `.trim();
-        const keyboard = {
-          inline_keyboard: [
-            [{ text: '📱 Aller sur le module OTP', url: 'https://revente-abonnement.vercel.app/otp' }],
-            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
-          ],
-        };
-        await sendTelegramMsg(chatId, text, keyboard);
+        await sendTelegramMsg(chatId, text, replyKeyboard);
         return NextResponse.json({ success: true });
       }
 
-      // Command: /stats or /admin
-      if (userMessage.startsWith('/stats') || userMessage.startsWith('/admin')) {
+      // Case 4: Support & Aide
+      if (lowerText.includes('support') || lowerText.includes('aide') || lowerText.includes('contact')) {
+        const text = `
+<b>💬 SUPPORT CLIENT & ASSISTANCE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Besoin d'aide ? Vous pouvez nous contacter directement sur notre site ou suivre l'avancement de votre ticket en envoyant simplement le code ici.
+`.trim();
+        await sendTelegramMsg(chatId, text, replyKeyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      // Case 5: Site Web
+      if (lowerText.includes('site web') || lowerText.includes('site')) {
+        const text = `
+<b>🌐 ACCÉDER À LA PLATEFORME WEB</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Retrouvez l'intégralité de nos abonnements, votre tableau de bord et le module OTP en ligne :
+
+👉 https://revente-abonnement.vercel.app
+`.trim();
+        await sendTelegramMsg(chatId, text, replyKeyboard);
+        return NextResponse.json({ success: true });
+      }
+
+      // Case 6: Admin Features (Stats / Panneau Admin)
+      if (lowerText.includes('admin') || lowerText.includes('statistique') || lowerText.includes('stats')) {
+        if (!isAdmin) {
+          await sendTelegramMsg(
+            chatId,
+            `<b>⚠️ ACCÈS RESTREINT</b>\n\nCette section et ces commandes sont réservées exclusivement à l'administrateur du système.`,
+            replyKeyboard
+          );
+          return NextResponse.json({ success: true });
+        }
+
         const [totalProducts, totalOrders, completedOrders, totalOtpOrders, suppliersCount] = await Promise.all([
           prisma.product.count({ where: { isActive: true } }),
           prisma.order.count(),
@@ -440,40 +537,22 @@ Accédez directement à la section dédiée aux numéros virtuels pour générer
         ]);
 
         const text = `
-<b>📊 STATISTIQUES GLOBALES DE LA PLATEFORME</b>
+<b>📊 TABLEAU DE BORD ADMIN</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 • 📦 <b>Produits Actifs :</b> <code>${totalProducts}</code>
 • 🛍️ <b>Commandes Totales :</b> <code>${totalOrders}</code>
 • ✅ <b>Commandes Livrées :</b> <code>${completedOrders}</code>
 • 📱 <b>Commandes OTP SMS :</b> <code>${totalOtpOrders}</code>
 • 🔌 <b>Fournisseurs Connectés :</b> <code>${suppliersCount}</code>
+
+<i>Accès Administrateur validé.</i>
 `.trim();
-        const keyboard = {
-          inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
-        };
-        await sendTelegramMsg(chatId, text, keyboard);
+        await sendTelegramMsg(chatId, text, replyKeyboard);
         return NextResponse.json({ success: true });
       }
 
-      // Command: /support or /contact
-      if (userMessage.startsWith('/support') || userMessage.startsWith('/contact')) {
-        const text = `
-<b>💬 SUPPORT CLIENT & ASSISTANCE</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-Besoin d'aide ? Vous pouvez nous contacter directement sur notre site ou suivre l'avancement de votre ticket en envoyant simplement le code ici.
-`.trim();
-        const keyboard = {
-          inline_keyboard: [
-            [{ text: '🌐 Ouvrir le Site Web', url: 'https://revente-abonnement.vercel.app' }],
-            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
-          ],
-        };
-        await sendTelegramMsg(chatId, text, keyboard);
-        return NextResponse.json({ success: true });
-      }
-
-      // 3. TICKET SEARCH BY CODE (/suivi CODE or raw CODE text)
-      const candidateCode = userMessage.replace(/^\/(ticket|suivi|order)\s*/i, '').trim();
+      // Case 7: Ticket Search by Code (e.g., /suivi TK-123 or raw code like clx123 or OTP-123)
+      const candidateCode = rawText.replace(/^\/(ticket|suivi|order)\s*/i, '').trim();
 
       if (candidateCode.length >= 3) {
         // Search product order
@@ -500,10 +579,7 @@ Besoin d'aide ? Vous pouvez nous contacter directement sur notre site ou suivre 
             responseText += `\n\n<b>💳 INSTRUCTIONS DE PAIEMENT :</b>\n${order.paymentInstructions || 'Veuillez effectuer votre règlement pour valider le ticket.'}`;
           }
 
-          const keyboard = {
-            inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
-          };
-          await sendTelegramMsg(chatId, responseText, keyboard);
+          await sendTelegramMsg(chatId, responseText, replyKeyboard);
           return NextResponse.json({ success: true, message: 'Suivi de ticket envoyé.' });
         }
 
@@ -534,26 +610,28 @@ Besoin d'aide ? Vous pouvez nous contacter directement sur notre site ou suivre 
             responseText += `\n\n<b>💬 CODE SMS REÇU :</b>\n<code>${otpOrder.smsCode || otpOrder.fullSms}</code>`;
           }
 
-          const keyboard = {
-            inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
-          };
-          await sendTelegramMsg(chatId, responseText, keyboard);
+          await sendTelegramMsg(chatId, responseText, replyKeyboard);
           return NextResponse.json({ success: true, message: 'Suivi OTP envoyé.' });
         }
 
-        // If code searched specifically with /suivi or /ticket but not found
-        if (userMessage.toLowerCase().startsWith('/ticket') || userMessage.toLowerCase().startsWith('/suivi') || candidateCode.length >= 8) {
-          const keyboard = {
-            inline_keyboard: [[{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }]],
-          };
+        // Only display "Ticket non trouvé" if candidate code looks like a ticket or was searched with /suivi or /ticket
+        if (rawText.toLowerCase().startsWith('/ticket') || rawText.toLowerCase().startsWith('/suivi') || candidateCode.length >= 8) {
           await sendTelegramMsg(
             chatId,
             `⚠️ Aucun ticket trouvé avec le code <code>${candidateCode}</code>. Vérifiez votre code et réessayez.`,
-            keyboard
+            replyKeyboard
           );
           return NextResponse.json({ success: true, message: 'Ticket non trouvé.' });
         }
       }
+
+      // Default fallback for unknown text: prompt with menu keyboard
+      await sendTelegramMsg(
+        chatId,
+        `💡 Pour suivre une commande, envoyez votre <b>Code Ticket</b>.\nOu utilisez les boutons du clavier ci-dessous pour naviguer.`,
+        replyKeyboard
+      );
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ success: true, message: 'Webhook Telegram traité.' });
