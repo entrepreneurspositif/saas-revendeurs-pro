@@ -190,6 +190,14 @@ export default function AdminDashboardPage() {
 
   // Supplier Top-up State
   const [topupSupplierModal, setTopupSupplierModal] = useState<any | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
+
+  const handleCopyText = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedAddress(true);
+    setTimeout(() => setCopiedAddress(false), 2000);
+  };
 
   const getSupplierRechargeInfo = (supplier: any) => {
     if (!supplier) return null;
