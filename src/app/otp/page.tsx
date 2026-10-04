@@ -92,6 +92,21 @@ export default function OtpServicesPage() {
   useEffect(() => {
     fetchTariffs(selectedCountry);
     fetchPaymentMethods();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ticketParam = params.get('ticket') || params.get('ticketCode') || params.get('code');
+      if (ticketParam) {
+        fetch(`/api/otp/state?ticketCode=${encodeURIComponent(ticketParam)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.order) {
+              setActiveOrder(data.order);
+            }
+          })
+          .catch(console.error);
+      }
+    }
   }, [selectedCountry]);
 
   // Live polling for active OTP Order (handles PENDING_PAYMENT & WAITING_SMS)

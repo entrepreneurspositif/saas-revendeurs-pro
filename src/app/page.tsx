@@ -110,9 +110,40 @@ export default function StorefrontPage() {
     }
   };
 
+  const performLookupByCode = async (code: string) => {
+    if (!code.trim()) return;
+    setLookupTicketCode(code.trim());
+    setShowLookupModal(true);
+    setSearchingTicket(true);
+    setLookupError(null);
+    setTicketLookupResult(null);
+
+    try {
+      const res = await fetch(`/api/tickets/lookup?code=${encodeURIComponent(code.trim())}`);
+      const data = await res.json();
+      if (data.success) {
+        setTicketLookupResult(data.order);
+      } else {
+        setLookupError(data.message || 'Ticket non trouvé');
+      }
+    } catch (e: any) {
+      setLookupError(e.message || 'Erreur de recherche');
+    } finally {
+      setSearchingTicket(false);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchPaymentMethods();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ticketParam = params.get('ticket') || params.get('ticketCode') || params.get('code');
+      if (ticketParam) {
+        performLookupByCode(ticketParam);
+      }
+    }
   }, []);
 
   const handlePayWithCustomGateway = async (ticketCode: string) => {
