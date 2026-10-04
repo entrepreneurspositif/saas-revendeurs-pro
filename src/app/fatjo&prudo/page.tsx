@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ThemeSelector from '@/components/ThemeSelector';
+import AdminAnalyticsSection from '@/components/AdminAnalyticsSection';
 import {
   ShieldCheck,
   TrendingUp,
+  BarChart3,
   Package,
   Layers,
   RefreshCcw,
@@ -71,7 +73,7 @@ export default function AdminDashboardPage() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState<{ message: string; success: boolean } | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules' | 'analytics'>('tickets');
   const [productRequests, setProductRequests] = useState<any[]>([]);
 
   // OnlineSIM OTP State
@@ -1523,6 +1525,14 @@ export default function AdminDashboardPage() {
           description: 'Aperçu & statistiques',
           badge: null,
           badgeColor: null,
+        },
+        {
+          id: 'analytics',
+          label: 'Statistiques & Fréquentation',
+          icon: BarChart3,
+          description: 'Visites, filtres & trafic live',
+          badge: 'Live',
+          badgeColor: 'sky',
         },
       ],
     },
@@ -3717,6 +3727,9 @@ export default function AdminDashboardPage() {
             })()}
           </div>
         )}
+
+        {/* TAB: VISITOR & TRAFFIC ANALYTICS */}
+        {activeTab === 'analytics' && <AdminAnalyticsSection />}
 
         {/* TAB 8: MULTI-SUPPLIER COMPARISON */}
         {activeTab === 'comparison' && (

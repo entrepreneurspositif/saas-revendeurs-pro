@@ -45,6 +45,16 @@ export default function MarketingTracker() {
       if (window.gtag && pixels.googleAnalyticsId) {
         window.gtag('config', pixels.googleAnalyticsId, { page_path: pathname });
       }
+
+      // Internal Analytics Visit Tracker
+      fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: pathname,
+          referrer: document.referrer,
+        }),
+      }).catch((e) => console.error('Internal tracking error:', e));
     }
   }, [pathname, pixels]);
 

@@ -158,3 +158,17 @@ model PromoCode {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
+
+model VisitLog {
+  id        String   @id @default(cuid())
+  path      String
+  userAgent String?
+  ipHash    String?
+  referrer  String?
+  device    String   @default("desktop")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+}
+
