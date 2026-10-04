@@ -4,6 +4,14 @@ import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
 
 export const dynamic = 'force-dynamic';
 
+function sanitizeDescription(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9 _-]/g, '')
+    .trim();
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -30,11 +38,11 @@ export async function POST(req: NextRequest) {
     });
 
     let amountUsd = 0;
-    let description = '';
+    let rawDescription = '';
 
     if (order) {
       amountUsd = order.totalAmount;
-      description = `Achat ${order.productTitle} (${order.ticketCode})`;
+      rawDescription = `Achat ${order.productTitle} ${order.ticketCode}`;
     } else {
       // Check OTP order
       const otpOrder = await prisma.otpOrder.findFirst({
@@ -45,19 +53,55 @@ export async function POST(req: NextRequest) {
 
       if (otpOrder) {
         amountUsd = otpOrder.sellingPrice;
-        description = `Commande SMS OTP ${otpOrder.service.toUpperCase()} (${otpOrder.ticketCode})`;
+        rawDescription = `Commande SMS OTP ${otpOrder.service.toUpperCase()} ${otpOrder.ticketCode}`;
       } else {
         return NextResponse.json({ success: false, message: 'Ticket non trouvé' }, { status: 404 });
       }
     }
 
     const amountXof = convertUsdToXof(amountUsd);
+    const description = sanitizeDescription(rawDescription) || `Commande ${ticketCode}`;
 
     const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const callbackUrl = `${protocol}://${host}/api/feexpay/callback`;
+    const callbackErrorUrl = `${protocol}://${host}/api/feexpay/callback?status=FAILED`;
 
-    const checkoutUrl = `https://checkout.feexpay.me/checkout/card-details?orderId=${encodeURIComponent(ticketCode)}&ref=${encodeURIComponent(ticketCode)}&id=${config.shopId}&shop=${config.shopId}&token=${config.apiKey}&apiKey=${config.apiKey}&amount=${amountXof}&custom_id=${encodeURIComponent(ticketCode)}&callback_url=${encodeURIComponent(callbackUrl)}`;
+    // Call FeexPay V2 API to generate payment link
+    const feexPayRes = await fetch('https://api-v2.feexpay.me/api/feexlinks/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        shop: config.shopId,
+        amount: amountXof,
+        description,
+        paymentMethod: 'ALL',
+        expireIn: 60,
+        range: 0,
+        custom_id: ticketCode,
+        callback_url: callbackUrl,
+        callback_error: callbackErrorUrl,
+      }),
+    });
+
+    const data = await feexPayRes.json().catch(() => ({}));
+
+    if (!feexPayRes.ok || (!data.urlPay && !data.url)) {
+      console.error('FeexPay API V2 Error:', data);
+      return NextResponse.json(
+        {
+          success: false,
+          message: data.message || 'Erreur lors de la génération du lien de paiement FeexPay',
+          details: data,
+        },
+        { status: 400 }
+      );
+    }
+
+    const checkoutUrl = data.urlPay || data.url;
 
     return NextResponse.json({
       success: true,

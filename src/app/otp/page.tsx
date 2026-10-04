@@ -181,9 +181,7 @@ export default function OtpServicesPage() {
         window.location.href = data.paymentUrl;
         return;
       }
-
-      const checkoutUrl = `https://checkout.feexpay.me/checkout/card-details?orderId=${encodeURIComponent(data.ticketCode)}&ref=${encodeURIComponent(data.ticketCode)}&id=${data.shopId}&shop=${data.shopId}&token=${data.apiKey}&apiKey=${data.apiKey}&amount=${data.amountXOF}&custom_id=${encodeURIComponent(data.ticketCode)}&callback_url=${encodeURIComponent(data.callbackUrl)}`;
-      window.location.href = checkoutUrl;
+      alert(data.message || 'Erreur de paiement FeexPay.');
     } catch (e: any) {
       alert(e.message || 'Erreur réseau lors de la connexion à FeexPay.');
     } finally {
