@@ -6,9 +6,18 @@ import { sendTelegramNotification } from '@/lib/telegram';
 export const dynamic = 'force-dynamic';
 
 function extractTicketCode(data: any): string {
-  const direct = data.custom_id || data.customId || data.custom_info || data.customInfo ||
-                 data.ticketCode || data.ticket_code || data.order_id || data.orderId ||
-                 data.reference || data.ref || '';
+  const direct =
+    data.custom_id ||
+    data.customId ||
+    data.custom_info ||
+    data.customInfo ||
+    data.ticketCode ||
+    data.ticket_code ||
+    data.order_id ||
+    data.orderId ||
+    data.reference ||
+    data.ref ||
+    '';
 
   if (direct && String(direct).trim()) {
     const cleanDirect = String(direct).trim();
@@ -26,7 +35,54 @@ function extractTicketCode(data: any): string {
   return String(direct).trim();
 }
 
-async function handleCallback(data: any, isBrowserGet: boolean = false, host: string = '') {
+function isBrowserRequest(req: NextRequest): boolean {
+  const accept = req.headers.get('accept') || '';
+  const secFetchDest = req.headers.get('sec-fetch-dest') || '';
+  const userAgent = req.headers.get('user-agent') || '';
+
+  return (
+    req.method === 'GET' ||
+    accept.includes('text/html') ||
+    secFetchDest === 'document' ||
+    /mozilla|chrome|safari|iphone|android|edge/i.test(userAgent)
+  );
+}
+
+async function processCallback(req: NextRequest) {
+  const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
+  const isBrowser = isBrowserRequest(req);
+
+  // 1. Gather all data sources (URL searchParams, JSON body, FormData)
+  const data: Record<string, any> = {};
+
+  // URL parameters
+  const url = new URL(req.url);
+  url.searchParams.forEach((value, key) => {
+    data[key] = value;
+  });
+
+  // Body data
+  if (req.method === 'POST') {
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const jsonBody = await req.json().catch(() => ({}));
+      Object.assign(data, jsonBody);
+    } else if (contentType.includes('form') || contentType.includes('multipart')) {
+      const formData = await req.formData().catch(() => null);
+      if (formData) {
+        formData.forEach((value, key) => {
+          data[key] = value;
+        });
+      }
+    } else {
+      // Try raw json fallback
+      const jsonBody = await req.json().catch(() => ({}));
+      Object.assign(data, jsonBody);
+    }
+  }
+
   const ticketCode = extractTicketCode(data);
 
   const rawStatus = String(
@@ -40,19 +96,16 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
     rawStatus === 'APPROVED' ||
     rawStatus === '200' ||
     data.status === true ||
-    !rawStatus; // If redirected from FeexPay without explicit status, process as completed
-
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const baseUrl = host ? `${protocol}://${host}` : 'https://revente-abonnement.vercel.app';
+    !rawStatus; // On browser redirect, treat as successful completion if status is unspecified
 
   if (!ticketCode) {
-    if (isBrowserGet) {
-      return NextResponse.redirect(`${baseUrl}/?error=custom_id_missing`);
+    if (isBrowser) {
+      return NextResponse.redirect(`${baseUrl}/?lookup=true`);
     }
-    return NextResponse.json({ success: false, message: 'Identifiant custom_id manquant' }, { status: 400 });
+    return NextResponse.json({ success: false, message: 'Identifiant ticket manquant' }, { status: 400 });
   }
 
-  // 1. CHECK STANDARD PRODUCT ORDER
+  // 2. CHECK STANDARD PRODUCT ORDER
   const order = await prisma.order.findFirst({
     where: {
       OR: [{ ticketCode }, { id: ticketCode }],
@@ -84,9 +137,10 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
         });
 
         if (purchaseRes.success) {
-          const creds = typeof purchaseRes.deliveredCredentials === 'object'
-            ? JSON.stringify(purchaseRes.deliveredCredentials, null, 2)
-            : String(purchaseRes.deliveredCredentials || 'Livré avec succès via FeexPay');
+          const creds =
+            typeof purchaseRes.deliveredCredentials === 'object'
+              ? JSON.stringify(purchaseRes.deliveredCredentials, null, 2)
+              : String(purchaseRes.deliveredCredentials || 'Livré avec succès via FeexPay');
 
           deliveredCredentialsText = creds;
 
@@ -131,7 +185,7 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
       }).catch(console.error);
     }
 
-    if (isBrowserGet) {
+    if (isBrowser) {
       return NextResponse.redirect(`${baseUrl}/?ticket=${encodeURIComponent(order.ticketCode)}&paid=true`);
     }
 
@@ -141,7 +195,7 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
     });
   }
 
-  // 2. CHECK OTP ORDER
+  // 3. CHECK OTP ORDER
   const otpOrder = await prisma.otpOrder.findFirst({
     where: {
       OR: [{ ticketCode: ticketCode.toUpperCase() }, { id: ticketCode }],
@@ -164,7 +218,7 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
       }).catch(console.error);
     }
 
-    if (isBrowserGet) {
+    if (isBrowser) {
       return NextResponse.redirect(`${baseUrl}/otp?ticket=${encodeURIComponent(otpOrder.ticketCode)}&paid=true`);
     }
 
@@ -174,8 +228,8 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
     });
   }
 
-  if (isBrowserGet) {
-    return NextResponse.redirect(`${baseUrl}/?error=ticket_not_found`);
+  if (isBrowser) {
+    return NextResponse.redirect(`${baseUrl}/?ticket=${encodeURIComponent(ticketCode)}&paid=true`);
   }
 
   return NextResponse.json({ success: false, message: 'Ticket non trouvé dans la base' }, { status: 404 });
@@ -183,27 +237,25 @@ async function handleCallback(data: any, isBrowserGet: boolean = false, host: st
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
-    return await handleCallback(body, false, host);
+    return await processCallback(req);
   } catch (error: any) {
     console.error('FeexPay Callback POST Error:', error);
+    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    if (isBrowserRequest(req)) {
+      return NextResponse.redirect(`${protocol}://${host}/?error=callback_failed`);
+    }
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const queryParams: Record<string, string> = {};
-    url.searchParams.forEach((value, key) => {
-      queryParams[key] = value;
-    });
-
-    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
-    return await handleCallback(queryParams, true, host);
+    return await processCallback(req);
   } catch (error: any) {
     console.error('FeexPay Callback GET Error:', error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    return NextResponse.redirect(`${protocol}://${host}/?error=callback_failed`);
   }
 }
