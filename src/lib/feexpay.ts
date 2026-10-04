@@ -30,5 +30,7 @@ export async function getFeexPayConfig(): Promise<FeexPayConfig> {
 export function convertUsdToXof(amountUsd: number): number {
   // Standard conversion 1 USD = 650 XOF / FCFA
   const rate = 650;
-  return Math.round(amountUsd * rate);
+  const rawXof = Math.round(Number(amountUsd || 0) * rate);
+  // FeexPay V2 requires a strict integer of at least 50 XOF
+  return Math.max(50, Math.round(rawXof));
 }

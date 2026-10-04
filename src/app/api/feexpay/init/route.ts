@@ -5,11 +5,14 @@ import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
 export const dynamic = 'force-dynamic';
 
 function sanitizeDescription(str: string): string {
-  return str
+  if (!str) return 'Commande';
+  const clean = str
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9 _-]/g, '')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-zA-Z0-9 _-]/g, '') // Keep letters, numbers, spaces, _ and -
+    .replace(/\s+/g, ' ')            // Collapse extra spaces
     .trim();
+  return clean || 'Commande';
 }
 
 export async function POST(req: NextRequest) {
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     const amountXof = convertUsdToXof(amountUsd);
-    const description = sanitizeDescription(rawDescription) || `Commande ${ticketCode}`;
+    const description = sanitizeDescription(rawDescription);
 
     const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
@@ -91,10 +94,22 @@ export async function POST(req: NextRequest) {
 
     if (!feexPayRes.ok || (!data.urlPay && !data.url)) {
       console.error('FeexPay API V2 Error:', data);
+
+      let errorMsg = data.message || 'Erreur lors de la génération du lien de paiement FeexPay';
+      if (Array.isArray(data.errors) && data.errors.length > 0) {
+        const errorDetails = data.errors
+          .map((e: any) => (e.constraints ? Object.values(e.constraints).join(', ') : ''))
+          .filter(Boolean)
+          .join(' | ');
+        if (errorDetails) {
+          errorMsg = `Erreur FeexPay: ${errorDetails}`;
+        }
+      }
+
       return NextResponse.json(
         {
           success: false,
-          message: data.message || 'Erreur lors de la génération du lien de paiement FeexPay',
+          message: errorMsg,
           details: data,
         },
         { status: 400 }
