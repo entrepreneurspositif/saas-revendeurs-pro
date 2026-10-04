@@ -4,15 +4,14 @@ import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
 
 export const dynamic = 'force-dynamic';
 
-function sanitizeDescription(str: string): string {
-  if (!str) return 'Commande';
-  const clean = str
+function sanitizeDescription(str: string, ticketCode: string): string {
+  const base = (str || 'Commande')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove accents
     .replace(/[^a-zA-Z0-9 _-]/g, '') // Keep letters, numbers, spaces, _ and -
     .replace(/\s+/g, ' ')            // Collapse extra spaces
     .trim();
-  return clean || 'Commande';
+  return `${base} ${ticketCode}`.trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     if (order) {
       amountUsd = order.totalAmount;
-      rawDescription = `Achat ${order.productTitle} ${order.ticketCode}`;
+      rawDescription = `Achat ${order.productTitle}`;
     } else {
       // Check OTP order
       const otpOrder = await prisma.otpOrder.findFirst({
@@ -56,14 +55,14 @@ export async function POST(req: NextRequest) {
 
       if (otpOrder) {
         amountUsd = otpOrder.sellingPrice;
-        rawDescription = `Commande SMS OTP ${otpOrder.service.toUpperCase()} ${otpOrder.ticketCode}`;
+        rawDescription = `Commande SMS OTP ${otpOrder.service.toUpperCase()}`;
       } else {
         return NextResponse.json({ success: false, message: 'Ticket non trouvé' }, { status: 404 });
       }
     }
 
     const amountXof = convertUsdToXof(amountUsd);
-    const description = sanitizeDescription(rawDescription);
+    const description = sanitizeDescription(rawDescription, ticketCode);
 
     const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
