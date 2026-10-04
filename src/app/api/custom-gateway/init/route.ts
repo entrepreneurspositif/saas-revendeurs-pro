@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const callbackUrl = `${protocol}://${host}/api/custom-gateway/callback`;
+    const callbackUrl = `${protocol}://${host}/api/custom-gateway/callback?custom_id=${encodeURIComponent(ticketCode)}&ticketCode=${encodeURIComponent(ticketCode)}`;
 
     let redirectUrl = custom.checkoutUrl;
     if (redirectUrl) {
