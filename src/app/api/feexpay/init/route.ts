@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
 
     const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const callbackUrl = `${protocol}://${host}/api/feexpay/callback`;
-    const callbackErrorUrl = `${protocol}://${host}/api/feexpay/callback?status=FAILED`;
+    const callbackUrl = `${protocol}://${host}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&ticketCode=${encodeURIComponent(ticketCode)}`;
+    const callbackErrorUrl = `${protocol}://${host}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&status=FAILED`;
 
     // Call FeexPay V2 API to generate payment link
     const feexPayRes = await fetch('https://api-v2.feexpay.me/api/feexlinks/generate', {
