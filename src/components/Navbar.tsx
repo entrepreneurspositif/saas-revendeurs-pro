@@ -36,7 +36,7 @@ export default function Navbar() {
                 </span>
               </div>
               <span className="hidden sm:block text-[10px] text-slate-400 font-medium tracking-wide">
-                Plateforme Multi-Fournisseurs
+                Fournisseur Direct & Officiel
               </span>
             </div>
           </Link>
