@@ -130,6 +130,10 @@ export default function AdminDashboardPage() {
   const [feexpayShopId, setFeexpayShopId] = useState<string>('673db7093c2872d9f60742de');
   const [feexpayEnabled, setFeexpayEnabled] = useState<boolean>(true);
 
+  // Moneroo Admin State
+  const [monerooSecretKey, setMonerooSecretKey] = useState<string>('pvk_sandbox_r46iyu|01M43647C70K9342SV9X9NS32M');
+  const [monerooEnabled, setMonerooEnabled] = useState<boolean>(true);
+
   // Custom 3rd Gateway Admin State
   const [customGatewayEnabled, setCustomGatewayEnabled] = useState<boolean>(false);
   const [customGatewayName, setCustomGatewayName] = useState<string>('CinetPay / Autre Passerelle');
@@ -150,6 +154,10 @@ export default function AdminDashboardPage() {
         setFeexpayEnabled(data.methods.feexpay.enabled);
         setFeexpayApiKey(data.methods.feexpay.apiKey || '');
         setFeexpayShopId(data.methods.feexpay.shopId || '');
+        if (data.methods.moneroo) {
+          setMonerooEnabled(data.methods.moneroo.enabled);
+          setMonerooSecretKey(data.methods.moneroo.secretKey || '');
+        }
         setCustomGatewayEnabled(data.methods.custom.enabled);
         setCustomGatewayName(data.methods.custom.name || 'CinetPay / Autre Passerelle');
         setCustomGatewayApiKey(data.methods.custom.apiKey || '');
@@ -174,6 +182,8 @@ export default function AdminDashboardPage() {
           feexpayEnabled,
           feexpayApiKey,
           feexpayShopId,
+          monerooEnabled,
+          monerooSecretKey,
           customEnabled: customGatewayEnabled,
           customName: customGatewayName,
           customApiKey: customGatewayApiKey,
@@ -2954,7 +2964,46 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* 2. Passerelle 2 : Passerelle Personnalisée (CinetPay, Paydunya, Frikipay, Stripe...) */}
+            {/* 2. Passerelle Moneroo (Mobile Money Int. & CB) */}
+            <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                    <ShieldCheck className="w-5 h-5 text-purple-400" />
+                    <span>Passerelle 2 : Moneroo (Mobile Money International & CB)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Acceptation globale automatique (Moov, MTN, Orange, Wave, Carte Bancaire, Crypto).
+                  </p>
+                </div>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={monerooEnabled}
+                    onChange={(e) => setMonerooEnabled(e.target.checked)}
+                    className="w-5 h-5 accent-purple-500 rounded"
+                  />
+                  <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${monerooEnabled ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}`}>
+                    {monerooEnabled ? '🟣 Moneroo Actif' : '🔴 Moneroo Désactivé'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="pt-2">
+                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
+                  Clé Secrète Moneroo (Secret / Private Key)
+                </label>
+                <input
+                  type="text"
+                  value={monerooSecretKey}
+                  onChange={(e) => setMonerooSecretKey(e.target.value)}
+                  placeholder="pvk_sandbox_r46iyu|..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-purple-400 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* 3. Passerelle Passerelle Personnalisée (CinetPay, Paydunya, Frikipay, Stripe...) */}
             <div className="glass-panel p-6 rounded-3xl border border-sky-500/30 space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>

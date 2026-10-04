@@ -44,12 +44,14 @@ export default function OtpServicesPage() {
   const [timeRemaining, setTimeRemaining] = useState<number>(900);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [payingWithFeexPay, setPayingWithFeexPay] = useState<boolean>(false);
+  const [payingWithMoneroo, setPayingWithMoneroo] = useState<boolean>(false);
   const [payingWithCustomGateway, setPayingWithCustomGateway] = useState<boolean>(false);
 
   // Dynamic Active Payment Methods State
   const [paymentMethods, setPaymentMethods] = useState<any>({
     manual: { enabled: true, instructions: '' },
     feexpay: { enabled: true },
+    moneroo: { enabled: true },
     custom: { enabled: false, name: 'Passerelle 2' },
   });
 
@@ -201,6 +203,34 @@ export default function OtpServicesPage() {
       alert(e.message || 'Erreur réseau lors de la connexion à FeexPay.');
     } finally {
       setPayingWithFeexPay(false);
+    }
+  };
+
+  const handlePayWithMoneroo = async (ticketCode: string) => {
+    if (!ticketCode) return;
+    setPayingWithMoneroo(true);
+    try {
+      const res = await fetch('/api/moneroo/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Erreur lors de l\'initialisation Moneroo.');
+        return;
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+      alert(data.message || 'Erreur de paiement Moneroo.');
+    } catch (e: any) {
+      alert(e.message || 'Erreur réseau lors de la connexion à Moneroo.');
+    } finally {
+      setPayingWithMoneroo(false);
     }
   };
 
@@ -785,6 +815,38 @@ export default function OtpServicesPage() {
                       <>
                         <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
                         <span>Payer par FeexPay ({Math.round((activeOrder.sellingPrice || activeOrder.totalAmount || 0.45) * 650).toLocaleString()} FCFA)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Moneroo Payment Option */}
+              {paymentMethods.moneroo?.enabled && (
+                <div className="bg-slate-900/90 p-3.5 rounded-xl border border-purple-500/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                      <span>Payer par Moneroo (Mobile Money Int., CB)</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                      Moneroo
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handlePayWithMoneroo(activeOrder.ticketCode)}
+                    disabled={payingWithMoneroo}
+                    className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white flex items-center justify-center space-x-2 shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
+                  >
+                    {payingWithMoneroo ? (
+                      <>
+                        <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Connexion Moneroo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                        <span>Payer par Moneroo (${(activeOrder.sellingPrice || activeOrder.totalAmount || 0.45).toFixed(2)} USD)</span>
                       </>
                     )}
                   </button>

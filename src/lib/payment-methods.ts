@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getPaymentInstructions } from '@/lib/payment-instructions';
 import { getFeexPayConfig } from '@/lib/feexpay';
+import { getMonerooConfig } from '@/lib/moneroo';
 
 export interface PaymentGatewayConfig {
   manual: {
@@ -11,6 +12,10 @@ export interface PaymentGatewayConfig {
     enabled: boolean;
     apiKey: string;
     shopId: string;
+  };
+  moneroo: {
+    enabled: boolean;
+    secretKey: string;
   };
   custom: {
     enabled: boolean;
@@ -31,6 +36,8 @@ export async function getAllPaymentMethods(): Promise<PaymentGatewayConfig> {
           'feexpay_enabled',
           'feexpay_api_key',
           'feexpay_shop_id',
+          'moneroo_enabled',
+          'moneroo_secret_key',
           'custom_gateway_enabled',
           'custom_gateway_name',
           'custom_gateway_api_key',
@@ -49,6 +56,7 @@ export async function getAllPaymentMethods(): Promise<PaymentGatewayConfig> {
 
   const manualInstructions = await getPaymentInstructions();
   const feexpayConfig = await getFeexPayConfig();
+  const monerooConfig = await getMonerooConfig();
 
   return {
     manual: {
@@ -59,6 +67,10 @@ export async function getAllPaymentMethods(): Promise<PaymentGatewayConfig> {
       enabled: feexpayConfig.enabled,
       apiKey: feexpayConfig.apiKey,
       shopId: feexpayConfig.shopId,
+    },
+    moneroo: {
+      enabled: monerooConfig.enabled,
+      secretKey: monerooConfig.secretKey,
     },
     custom: {
       enabled: map['custom_gateway_enabled'] === 'true',

@@ -56,12 +56,14 @@ export default function StorefrontPage() {
   const [creatingTicket, setCreatingTicket] = useState<boolean>(false);
   const [createdTicketResult, setCreatedTicketResult] = useState<any | null>(null);
   const [payingWithFeexPay, setPayingWithFeexPay] = useState<boolean>(false);
+  const [payingWithMoneroo, setPayingWithMoneroo] = useState<boolean>(false);
   const [payingWithCustomGateway, setPayingWithCustomGateway] = useState<boolean>(false);
 
   // Dynamic Active Payment Methods State
   const [paymentMethods, setPaymentMethods] = useState<any>({
     manual: { enabled: true, instructions: '' },
     feexpay: { enabled: true },
+    moneroo: { enabled: true },
     custom: { enabled: false, name: 'Passerelle 2' },
   });
 
@@ -239,6 +241,34 @@ export default function StorefrontPage() {
       alert(e.message || 'Erreur réseau lors de la connexion à FeexPay.');
     } finally {
       setPayingWithFeexPay(false);
+    }
+  };
+
+  const handlePayWithMoneroo = async (ticketCode: string) => {
+    if (!ticketCode) return;
+    setPayingWithMoneroo(true);
+    try {
+      const res = await fetch('/api/moneroo/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Erreur lors de l\'initialisation de Moneroo.');
+        return;
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+      alert(data.message || 'Erreur de paiement Moneroo.');
+    } catch (e: any) {
+      alert(e.message || 'Erreur réseau lors de la connexion à Moneroo.');
+    } finally {
+      setPayingWithMoneroo(false);
     }
   };
 
@@ -833,6 +863,43 @@ export default function StorefrontPage() {
                       </div>
                     )}
 
+                    {/* Moneroo Automated Payment Box */}
+                    {paymentMethods?.moneroo?.enabled && (
+                      <div className="bg-slate-950 p-4 rounded-2xl border border-purple-500/40 space-y-3 shadow-lg shadow-purple-500/5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
+                            <span className="font-extrabold text-xs text-white">Passerelle Globale Moneroo</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                            Moneroo (Mobile Money Int., CB)
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          Paiement rapide et sécurisé par Mobile Money International, Carte Bancaire ou Crypto via Moneroo.
+                        </p>
+
+                        <button
+                          onClick={() => handlePayWithMoneroo(createdTicketResult.ticketCode)}
+                          disabled={payingWithMoneroo}
+                          className="w-full py-3 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white flex items-center justify-center space-x-2 shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
+                        >
+                          {payingWithMoneroo ? (
+                            <>
+                              <RefreshCcw className="w-4 h-4 animate-spin" />
+                              <span>Connexion à Moneroo...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck className="w-4 h-4 text-white" />
+                              <span>Payer par Moneroo (${createdTicketResult.totalAmount.toFixed(2)} USD)</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Custom 2nd Gateway Automated Payment Box */}
                     {paymentMethods?.custom?.enabled && (
                       <div className="bg-slate-950 p-4 rounded-2xl border border-sky-500/40 space-y-3 shadow-lg shadow-sky-500/5">
@@ -1004,34 +1071,68 @@ export default function StorefrontPage() {
                 ) : ticketLookupResult.status === 'PENDING_PAYMENT' ? (
                   <div className="space-y-3">
                     {/* FeexPay Instant Automated Payment Box */}
-                    <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                          <span>Payer Instantanément via FeexPay</span>
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                          MTN, Moov, Wave, CB
-                        </span>
+                    {paymentMethods?.feexpay?.enabled && (
+                      <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>Payer Instantanément via FeexPay</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            MTN, Moov, Wave, CB
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handlePayWithFeexPay(ticketLookupResult.ticketCode)}
+                          disabled={payingWithFeexPay}
+                          className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
+                        >
+                          {payingWithFeexPay ? (
+                            <>
+                              <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Connexion à FeexPay...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
+                              <span>Payer par FeexPay ({Math.round(ticketLookupResult.totalAmount * 650).toLocaleString()} FCFA)</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handlePayWithFeexPay(ticketLookupResult.ticketCode)}
-                        disabled={payingWithFeexPay}
-                        className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
-                      >
-                        {payingWithFeexPay ? (
-                          <>
-                            <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Connexion à FeexPay...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-3.5 h-3.5 fill-current text-slate-950" />
-                            <span>Payer par FeexPay ({Math.round(ticketLookupResult.totalAmount * 650).toLocaleString()} FCFA)</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    )}
+
+                    {/* Moneroo Instant Automated Payment Box */}
+                    {paymentMethods?.moneroo?.enabled && (
+                      <div className="bg-slate-900/90 p-3.5 rounded-xl border border-purple-500/40 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                            <span>Payer via Moneroo (Mobile Money Int., CB)</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                            Moneroo
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handlePayWithMoneroo(ticketLookupResult.ticketCode)}
+                          disabled={payingWithMoneroo}
+                          className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white flex items-center justify-center space-x-2 shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
+                        >
+                          {payingWithMoneroo ? (
+                            <>
+                              <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Connexion à Moneroo...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                              <span>Payer par Moneroo (${ticketLookupResult.totalAmount.toFixed(2)} USD)</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Autre Option : Instructions de Paiement Manuel</span>
