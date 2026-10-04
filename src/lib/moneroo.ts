@@ -37,6 +37,7 @@ export async function getMonerooConfig(): Promise<MonerooConfig> {
 export interface MonerooInitParams {
   amount: number;
   currency?: string;
+  amountUsd?: number;
   ticketCode: string;
   description?: string;
   customerEmail?: string;
@@ -51,7 +52,7 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
     throw new Error('La clé secrète Moneroo n\'est pas configurée.');
   }
 
-  const currency = (params.currency || 'USD').toUpperCase();
+  const currency = (params.currency || 'XOF').toUpperCase();
   const customerEmail = params.customerEmail || 'client@revente-abonnement.com';
   const customerName = (params.customerName || 'Client Reseller').trim();
   const nameParts = customerName.split(' ');
@@ -78,7 +79,7 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
     },
   };
 
-  const response = await fetch('https://api.moneroo.io/v1/payments/initialize', {
+  let response = await fetch('https://api.moneroo.io/v1/payments/initialize', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${config.secretKey}`,
@@ -88,9 +89,39 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data = await response.json().catch(() => ({}));
 
   if (!response.ok || !data.data?.checkout_url) {
+    const isCurrencyError = String(data.message || '').includes('No payment methods enabled for this currency');
+
+    // If requested currency (e.g. XOF/EUR) is not enabled on Moneroo Dashboard app, retry with USD fallback
+    if (isCurrencyError && currency !== 'USD') {
+      console.warn(`Moneroo currency ${currency} not enabled in dashboard. Retrying with USD fallback...`);
+      const fallbackPayload = {
+        ...payload,
+        amount: params.amountUsd || Math.round(params.amount / 650),
+        currency: 'USD',
+      };
+
+      const fallbackRes = await fetch('https://api.moneroo.io/v1/payments/initialize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.secretKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(fallbackPayload),
+      });
+
+      const fallbackData = await fallbackRes.json().catch(() => ({}));
+      if (fallbackRes.ok && fallbackData.data?.checkout_url) {
+        return {
+          paymentId: fallbackData.data.id,
+          checkoutUrl: fallbackData.data.checkout_url,
+        };
+      }
+    }
+
     console.error('Moneroo API Error:', data);
     const errorMsg = data.message || 'Erreur lors de l\'initialisation de Moneroo';
     throw new Error(errorMsg);

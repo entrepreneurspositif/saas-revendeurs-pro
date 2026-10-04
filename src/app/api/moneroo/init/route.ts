@@ -60,13 +60,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Convert price to FCFA / XOF for Moneroo
+    const amountXof = Math.max(50, Math.round((amountUsd || 0) * 650));
+
     const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const returnUrl = `${protocol}://${host}/api/moneroo/callback?ticketCode=${encodeURIComponent(ticketCode)}`;
 
     const { checkoutUrl, paymentId } = await initializeMonerooPayment({
-      amount: amountUsd,
-      currency: 'USD',
+      amount: amountXof,
+      currency: 'XOF',
+      amountUsd,
       ticketCode,
       description,
       customerEmail,
@@ -77,9 +81,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ticketCode,
+      amountUSD: amountUsd,
+      amountXOF: amountXof,
       paymentId,
       paymentUrl: checkoutUrl,
-      message: 'Paiement Moneroo initialisé avec succès.',
+      message: 'Paiement Moneroo (FCFA) initialisé avec succès.',
     });
   } catch (error: any) {
     console.error('Moneroo Init Error:', error);

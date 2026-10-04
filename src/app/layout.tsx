@@ -8,6 +8,11 @@ import MarketingTracker from '@/components/MarketingTracker';
 export const metadata: Metadata = {
   title: 'Entrepreneurs Positifs - Plateforme de Revente de Produits & Abonnements Digitaux',
   description: 'Abonnements, clés d’API, licences et comptes digitaux avec livraison automatisée multi-fournisseurs.',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export const viewport: Viewport = {

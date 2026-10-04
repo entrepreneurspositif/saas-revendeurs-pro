@@ -893,7 +893,7 @@ export default function StorefrontPage() {
                           ) : (
                             <>
                               <ShieldCheck className="w-4 h-4 text-white" />
-                              <span>Payer par Moneroo (${createdTicketResult.totalAmount.toFixed(2)} USD)</span>
+                              <span>Payer par Moneroo ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
                             </>
                           )}
                         </button>
@@ -1127,7 +1127,7 @@ export default function StorefrontPage() {
                           ) : (
                             <>
                               <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                              <span>Payer par Moneroo (${ticketLookupResult.totalAmount.toFixed(2)} USD)</span>
+                              <span>Payer par Moneroo ({Math.round(ticketLookupResult.totalAmount * 650).toLocaleString()} FCFA)</span>
                             </>
                           )}
                         </button>

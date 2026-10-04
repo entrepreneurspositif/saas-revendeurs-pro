@@ -846,7 +846,7 @@ export default function OtpServicesPage() {
                     ) : (
                       <>
                         <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                        <span>Payer par Moneroo (${(activeOrder.sellingPrice || activeOrder.totalAmount || 0.45).toFixed(2)} USD)</span>
+                        <span>Payer par Moneroo ({Math.round((activeOrder.sellingPrice || activeOrder.totalAmount || 0.45) * 650).toLocaleString()} FCFA)</span>
                       </>
                     )}
                   </button>
