@@ -8,6 +8,8 @@ import {
   ShieldCheck,
   TrendingUp,
   BarChart3,
+  Eye,
+  EyeOff,
   Package,
   Layers,
   RefreshCcw,
@@ -95,6 +97,21 @@ export default function AdminDashboardPage() {
 
   const [savingMarketing, setSavingMarketing] = useState<boolean>(false);
   const [marketingSavedMsg, setMarketingSavedMsg] = useState<string | null>(null);
+
+  // Sensitive Data Mask/Reveal State
+  const [showSensitiveData, setShowSensitiveData] = useState<boolean>(false);
+  const [showFieldSecrets, setShowFieldSecrets] = useState<Record<string, boolean>>({});
+
+  const toggleFieldSecret = (fieldKey: string) => {
+    setShowFieldSecrets((prev) => ({
+      ...prev,
+      [fieldKey]: !prev[fieldKey],
+    }));
+  };
+
+  const isSecretVisible = (fieldKey: string) => {
+    return showSensitiveData || !!showFieldSecrets[fieldKey];
+  };
 
   // UTM Campaign Generator State
   const [utmSource, setUtmSource] = useState<string>('facebook');
@@ -1701,7 +1718,35 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Quick Pilotage & Visites Shortcut Button */}
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3.5 py-2.5 rounded-2xl border text-xs font-black flex items-center space-x-2 transition-all ${
+                activeTab === 'analytics'
+                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white border-sky-400/40 shadow-lg shadow-sky-500/20'
+                  : 'bg-slate-900/90 border-sky-500/30 text-sky-400 hover:bg-slate-800 hover:text-white'
+              }`}
+              title="Accéder directement aux Statistiques de Visites & Pilotage"
+            >
+              <BarChart3 className="w-4 h-4 text-sky-400" />
+              <span>Pilotage & Visites</span>
+            </button>
+
+            {/* Global Sensitive Secrets Mask / Reveal Toggle Button */}
+            <button
+              onClick={() => setShowSensitiveData(!showSensitiveData)}
+              className={`px-3.5 py-2.5 rounded-2xl border text-xs font-extrabold flex items-center space-x-2 transition-all ${
+                showSensitiveData
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-md shadow-amber-500/10'
+                  : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+              }`}
+              title={showSensitiveData ? 'Masquer toutes les clés API et secrets' : 'Afficher les clés API et secrets'}
+            >
+              {showSensitiveData ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+              <span className="hidden sm:inline">{showSensitiveData ? 'Masquer Secrets' : 'Afficher Secrets'}</span>
+            </button>
+
             <button
               onClick={handleSyncCatalog}
               disabled={syncing}
@@ -2950,26 +2995,46 @@ export default function AdminDashboardPage() {
                   <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
                     Clé Privée FeexPay (Private Key)
                   </label>
-                  <input
-                    type="text"
-                    value={feexpayApiKey}
-                    onChange={(e) => setFeexpayApiKey(e.target.value)}
-                    placeholder="fp_yK5LTDuJYF..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('feexpayKey') ? 'text' : 'password'}
+                      value={feexpayApiKey}
+                      onChange={(e) => setFeexpayApiKey(e.target.value)}
+                      placeholder="fp_yK5LTDuJYF..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('feexpayKey')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('feexpayKey') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('feexpayKey') ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
                     Identifiant FeexPay (Shop ID)
                   </label>
-                  <input
-                    type="text"
-                    value={feexpayShopId}
-                    onChange={(e) => setFeexpayShopId(e.target.value)}
-                    placeholder="673db7093c2872d9..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('feexpayShop') ? 'text' : 'password'}
+                      value={feexpayShopId}
+                      onChange={(e) => setFeexpayShopId(e.target.value)}
+                      placeholder="673db7093c2872d9..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('feexpayShop')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('feexpayShop') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('feexpayShop') ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3003,13 +3068,23 @@ export default function AdminDashboardPage() {
                 <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
                   Clé Secrète Moneroo (Secret / Private Key)
                 </label>
-                <input
-                  type="text"
-                  value={monerooSecretKey}
-                  onChange={(e) => setMonerooSecretKey(e.target.value)}
-                  placeholder="pvk_sandbox_r46iyu|..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-purple-400 focus:outline-none focus:border-purple-500"
-                />
+                <div className="relative">
+                  <input
+                    type={isSecretVisible('monerooKey') ? 'text' : 'password'}
+                    value={monerooSecretKey}
+                    onChange={(e) => setMonerooSecretKey(e.target.value)}
+                    placeholder="pvk_sandbox_r46iyu|..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-purple-400 focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleFieldSecret('monerooKey')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    title={isSecretVisible('monerooKey') ? 'Masquer' : 'Afficher'}
+                  >
+                    {isSecretVisible('monerooKey') ? <EyeOff className="w-4 h-4 text-purple-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -3056,26 +3131,46 @@ export default function AdminDashboardPage() {
                   <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
                     Identifiant Marchand / Site ID
                   </label>
-                  <input
-                    type="text"
-                    value={customGatewaySiteId}
-                    onChange={(e) => setCustomGatewaySiteId(e.target.value)}
-                    placeholder="Ex: 584920"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('customSiteId') ? 'text' : 'password'}
+                      value={customGatewaySiteId}
+                      onChange={(e) => setCustomGatewaySiteId(e.target.value)}
+                      placeholder="Ex: 584920"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('customSiteId')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('customSiteId') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('customSiteId') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
                     Clé API / Token Secrète
                   </label>
-                  <input
-                    type="text"
-                    value={customGatewayApiKey}
-                    onChange={(e) => setCustomGatewayApiKey(e.target.value)}
-                    placeholder="Clé API ou jeton d'accès"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-sky-400 focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('customApiKey') ? 'text' : 'password'}
+                      value={customGatewayApiKey}
+                      onChange={(e) => setCustomGatewayApiKey(e.target.value)}
+                      placeholder="Clé API ou jeton d'accès"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-sky-400 focus:outline-none focus:border-sky-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('customApiKey')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('customApiKey') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('customApiKey') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -3232,8 +3327,28 @@ export default function AdminDashboardPage() {
                         <Key className="w-3 h-3" />
                         <span>Clé API:</span>
                       </span>
-                      <code className="font-mono text-slate-300 bg-slate-900 px-2.5 py-1 rounded-lg text-[10px] border border-slate-800">
-                        {supp.apiKey ? `${supp.apiKey.slice(0, 12)}...${supp.apiKey.slice(-4)}` : 'Non renseignée'}
+                      <code className="font-mono text-slate-300 bg-slate-900 px-2.5 py-1 rounded-lg text-[10px] border border-slate-800 inline-flex items-center space-x-1.5">
+                        <span>
+                          {isSecretVisible(supp.id)
+                            ? supp.apiKey || 'Non renseignée'
+                            : supp.apiKey
+                            ? `${supp.apiKey.slice(0, 6)}••••••••`
+                            : 'Non renseignée'}
+                        </span>
+                        {supp.apiKey && (
+                          <button
+                            type="button"
+                            onClick={() => toggleFieldSecret(supp.id)}
+                            className="text-slate-400 hover:text-white"
+                            title={isSecretVisible(supp.id) ? 'Masquer' : 'Afficher'}
+                          >
+                            {isSecretVisible(supp.id) ? (
+                              <EyeOff className="w-3 h-3 text-sky-400" />
+                            ) : (
+                              <Eye className="w-3 h-3 text-slate-400" />
+                            )}
+                          </button>
+                        )}
                       </code>
                     </div>
                   </div>
@@ -3834,13 +3949,23 @@ export default function AdminDashboardPage() {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                     Clé API OnlineSIM (API Key) *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={onlineSimApiKey}
-                    onChange={(e) => setOnlineSimApiKey(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('onlineSimKey') ? 'text' : 'password'}
+                      required
+                      value={onlineSimApiKey}
+                      onChange={(e) => setOnlineSimApiKey(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('onlineSimKey')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('onlineSimKey') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('onlineSimKey') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                   <span className="text-[10px] text-slate-500 block mt-1">
                     Clé secrète de votre compte OnlineSIM pour la réservation et la vérification des SMS.
                   </span>
@@ -4082,13 +4207,23 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
                         ID du Pixel Meta (FBQ)
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: 123456789012345"
-                        value={facebookPixelId}
-                        onChange={(e) => setFacebookPixelId(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
-                      />
+                      <div className="relative">
+                        <input
+                          type={isSecretVisible('facebookPixel') ? 'text' : 'password'}
+                          placeholder="Ex: 123456789012345"
+                          value={facebookPixelId}
+                          onChange={(e) => setFacebookPixelId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-sky-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleFieldSecret('facebookPixel')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          title={isSecretVisible('facebookPixel') ? 'Masquer' : 'Afficher'}
+                        >
+                          {isSecretVisible('facebookPixel') ? <EyeOff className="w-3.5 h-3.5 text-sky-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed">
                       Suit automatiquement les vues de pages (`PageView`) et les conversions pour Facebook & Instagram Ads.
@@ -4111,13 +4246,23 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
                         ID du Pixel TikTok (TTQ)
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: C1234567890ABCDEF"
-                        value={tiktokPixelId}
-                        onChange={(e) => setTiktokPixelId(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-500"
-                      />
+                      <div className="relative">
+                        <input
+                          type={isSecretVisible('tiktokPixel') ? 'text' : 'password'}
+                          placeholder="Ex: C1234567890ABCDEF"
+                          value={tiktokPixelId}
+                          onChange={(e) => setTiktokPixelId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-fuchsia-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleFieldSecret('tiktokPixel')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          title={isSecretVisible('tiktokPixel') ? 'Masquer' : 'Afficher'}
+                        >
+                          {isSecretVisible('tiktokPixel') ? <EyeOff className="w-3.5 h-3.5 text-fuchsia-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed">
                       Optimise vos campagnes publicitaires TikTok Ads (`Pageview`, `CompletePayment`).
@@ -4140,13 +4285,23 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
                         ID de Mesure Google (G-XXXXXX)
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: G-ABC123XYZ"
-                        value={googleAnalyticsId}
-                        onChange={(e) => setGoogleAnalyticsId(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
-                      />
+                      <div className="relative">
+                        <input
+                          type={isSecretVisible('googleAnalytics') ? 'text' : 'password'}
+                          placeholder="Ex: G-ABC123XYZ"
+                          value={googleAnalyticsId}
+                          onChange={(e) => setGoogleAnalyticsId(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleFieldSecret('googleAnalytics')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          title={isSecretVisible('googleAnalytics') ? 'Masquer' : 'Afficher'}
+                        >
+                          {isSecretVisible('googleAnalytics') ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed">
                       Analyse le trafic global, les sources d'acquisition et le comportement du public en temps réel.
@@ -4486,14 +4641,24 @@ export default function AdminDashboardPage() {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                     Token du Bot Telegram (Bot Token) *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: 123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
-                    value={telegramBotToken}
-                    onChange={(e) => setTelegramBotToken(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('telegramToken') ? 'text' : 'password'}
+                      required
+                      placeholder="Ex: 123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
+                      value={telegramBotToken}
+                      onChange={(e) => setTelegramBotToken(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('telegramToken')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('telegramToken') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('telegramToken') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                   <span className="text-[10px] text-slate-500 block mt-1">
                     Token fourni par <b>@BotFather</b> lors de la création de votre Bot Telegram.
                   </span>
@@ -4503,14 +4668,24 @@ export default function AdminDashboardPage() {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                     ID du Chat Admin / Canal (Chat ID) *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: 987654321 ou @VotreCanalAdmin"
-                    value={telegramChatId}
-                    onChange={(e) => setTelegramChatId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type={isSecretVisible('telegramChat') ? 'text' : 'password'}
+                      required
+                      placeholder="Ex: 987654321 ou @VotreCanalAdmin"
+                      value={telegramChatId}
+                      onChange={(e) => setTelegramChatId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleFieldSecret('telegramChat')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      title={isSecretVisible('telegramChat') ? 'Masquer' : 'Afficher'}
+                    >
+                      {isSecretVisible('telegramChat') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
                   <span className="text-[10px] text-slate-500 block mt-1">
                     Votre ID d'utilisateur personnel ou l'identifiant du canal/groupe privé Telegram où vous recevrez les alertes.
                   </span>
@@ -5553,14 +5728,24 @@ export default function AdminDashboardPage() {
 
               <div>
                 <label className="block text-slate-400 font-extrabold uppercase text-[10px] tracking-wider mb-1">Clé API Fournie</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: tgb_2e65bb617446f..."
-                  value={newSupplierKey}
-                  onChange={(e) => setNewSupplierKey(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type={isSecretVisible('newSupplier') ? 'text' : 'password'}
+                    required
+                    placeholder="Ex: tgb_2e65bb617446f..."
+                    value={newSupplierKey}
+                    onChange={(e) => setNewSupplierKey(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-2.5 text-white font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleFieldSecret('newSupplier')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    title={isSecretVisible('newSupplier') ? 'Masquer' : 'Afficher'}
+                  >
+                    {isSecretVisible('newSupplier') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">
