@@ -45,9 +45,19 @@ export default function StorefrontPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [stockFilter, setStockFilter] = useState<'ALL' | 'IN_STOCK'>('ALL');
-  const [sortBy, setSortBy] = useState<'NEWEST' | 'OLDEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'TITLE_ASC' | 'TITLE_DESC'>('NEWEST');
+  const [sortBy, setSortBy] = useState<'RANDOM' | 'NEWEST' | 'OLDEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'TITLE_ASC' | 'TITLE_DESC'>('RANDOM');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(9);
+
+  // Helper for shuffling product array randomly
+  const shuffleArray = (array: any[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
 
   // Purchase / Ticket Modal State
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -103,7 +113,7 @@ export default function StorefrontPage() {
       const res = await fetch('/api/products');
       const data = await res.json();
       if (data.success) {
-        setProducts(data.products || []);
+        setProducts(shuffleArray(data.products || []));
       }
     } catch (e) {
       console.error(e);
@@ -314,6 +324,9 @@ export default function StorefrontPage() {
       return true;
     })
     .sort((a, b) => {
+      if (sortBy === 'RANDOM') {
+        return 0; // Preserve current random order
+      }
       if (sortBy === 'NEWEST') {
         return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
       }
@@ -469,6 +482,7 @@ export default function StorefrontPage() {
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
               >
+                <option value="RANDOM" className="bg-slate-900 text-white">Ordre aléatoire (Découverte)</option>
                 <option value="NEWEST" className="bg-slate-900 text-white">Plus récents</option>
                 <option value="OLDEST" className="bg-slate-900 text-white">Plus anciens</option>
                 <option value="PRICE_ASC" className="bg-slate-900 text-white">Prix: Croissant</option>
@@ -531,11 +545,11 @@ export default function StorefrontPage() {
           )}
         </div>
 
-        {/* Product Cards Grid */}
+        {/* Product Cards Grid - 2 columns on mobile */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="h-72 rounded-3xl bg-slate-900/40 animate-pulse border border-slate-800/60" />
+              <div key={n} className="h-64 sm:h-72 rounded-2xl sm:rounded-3xl bg-slate-900/40 animate-pulse border border-slate-800/60" />
             ))}
           </div>
         ) : paginatedProducts.length === 0 ? (
@@ -557,7 +571,7 @@ export default function StorefrontPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {paginatedProducts.map((product) => {
               const stock = product.stock || 0;
               const isAvailable = product.isAvailable;
@@ -565,46 +579,46 @@ export default function StorefrontPage() {
               return (
                 <div
                   key={product.id}
-                  className="glass-card rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group border border-slate-800/90 hover:border-sky-500/40"
+                  className="glass-card rounded-2xl sm:rounded-3xl p-3 sm:p-6 flex flex-col justify-between relative overflow-hidden group border border-slate-800/90 hover:border-sky-500/40 transition-all"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="px-3 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-800/80 text-slate-300 tracking-wider border border-slate-700/50">
+                    <div className="flex flex-wrap items-center justify-between gap-1 mb-2 sm:mb-3">
+                      <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase bg-slate-800/80 text-slate-300 tracking-wider border border-slate-700/50 truncate max-w-[70px] sm:max-w-none">
                         {product.category}
                       </span>
 
                       {stock > 0 ? (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center space-x-1">
+                        <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center space-x-1 shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                           <span>Stock: {stock}</span>
                         </span>
                       ) : (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center space-x-1">
+                        <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-extrabold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center space-x-1 shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                           <span>Épuisé</span>
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-base font-extrabold text-white group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug mb-2">
+                    <h3 className="text-xs sm:text-base font-extrabold text-white group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug mb-1 sm:mb-2">
                       {product.title}
                     </h3>
 
-                    <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-6">
+                    <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 sm:line-clamp-3 leading-relaxed mb-3 sm:mb-6">
                       {product.description || 'Compte premium avec livraison et activation automatique garantie.'}
                     </p>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between mt-auto">
+                  <div className="pt-2 sm:pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-auto">
                     <div>
-                      <span className="text-[9px] uppercase font-black tracking-wider text-slate-400 block mb-0.5">
+                      <span className="text-[9px] uppercase font-black tracking-wider text-slate-400 hidden sm:block mb-0.5">
                         Prix de vente ({currency})
                       </span>
                       <div className="flex flex-col">
-                        <span className="text-xl font-black text-emerald-400 leading-tight">
+                        <span className="text-xs sm:text-xl font-black text-emerald-400 leading-tight">
                           {formatPrice(product.sellingPrice)}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-bold">
+                        <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold hidden sm:block">
                           {currency === 'FCFA' ? `($${product.sellingPrice.toFixed(2)} USD)` : `(${formatPrice(product.sellingPrice, 'FCFA')})`}
                         </span>
                       </div>
@@ -613,14 +627,14 @@ export default function StorefrontPage() {
                     <button
                       onClick={() => handleOpenPurchase(product)}
                       disabled={!isAvailable}
-                      className={`px-5 py-2.5 rounded-2xl text-xs font-extrabold flex items-center space-x-2 transition-all shadow-lg ${
+                      className={`px-2.5 sm:px-5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-extrabold flex items-center justify-center space-x-1 sm:space-x-2 transition-all shadow-lg w-full sm:w-auto ${
                         isAvailable
                           ? 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black shadow-sky-500/20 hover:scale-[1.02]'
                           : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                       }`}
                     >
-                      <Ticket className="w-4 h-4 stroke-[2.5]" />
-                      <span>{isAvailable ? 'Commander Ticket' : 'Rupture'}</span>
+                      <Ticket className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                      <span>{isAvailable ? 'Commander' : 'Rupture'}</span>
                     </button>
                   </div>
                 </div>
