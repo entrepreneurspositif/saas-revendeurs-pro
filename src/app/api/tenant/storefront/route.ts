@@ -68,14 +68,34 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: 'desc' },
     });
 
+    let planFeatures: string[] = [];
+    try {
+      if (tenant.plan?.features) {
+        planFeatures = typeof tenant.plan.features === 'string'
+          ? JSON.parse(tenant.plan.features)
+          : tenant.plan.features;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const hasExclusiveCatalog =
+      planFeatures.includes('exclusive_products') ||
+      tenant.planId === 'starter' ||
+      tenant.planId === 'pro';
+
     // Filter only enabled products and format for public view
     const publicProducts = products
       .filter((p) => {
+        const isExclusive = !p.activeSupplierProduct || p.badge === 'Exclusif' || p.badge === 'VIP';
+        if (isExclusive && !hasExclusiveCatalog) return false;
+
         const config = customPricesMap.get(p.id);
         if (config && config.isEnabled === false) return false;
         return true;
       })
       .map((p) => {
+        const isExclusive = !p.activeSupplierProduct || p.badge === 'Exclusif' || p.badge === 'VIP';
         const config = customPricesMap.get(p.id);
         const retailPrice = config?.customSellingPrice !== null && config?.customSellingPrice !== undefined && Number(config?.customSellingPrice) > 0
           ? Number(config.customSellingPrice)
@@ -93,14 +113,16 @@ export async function GET(req: NextRequest) {
           sellingPrice: retailPrice,
           currency: p.currency,
           imageUrl: p.imageUrl,
-          badge: p.badge,
+          badge: p.badge || (isExclusive ? 'Exclusif VIP' : null),
           stock: stock,
-          isAvailable: p.isActive && stock > 0 && isSupplierActive,
+          isExclusive,
+          isAvailable: p.isActive && (p.activeSupplierProduct ? (stock > 0 && isSupplierActive) : true),
         };
       });
 
     return NextResponse.json({
       success: true,
+      hasExclusiveCatalog,
       store: {
         id: tenant.id,
         storeName: tenant.storeName,

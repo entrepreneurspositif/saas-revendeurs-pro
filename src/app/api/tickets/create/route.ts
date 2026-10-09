@@ -50,27 +50,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const isExclusive = !product.activeSupplierProductId || product.badge === 'Exclusif' || product.badge === 'VIP';
     const suppProd = product.activeSupplierProduct;
-    if (!suppProd || !suppProd.supplier) {
-      return NextResponse.json(
-        { success: false, message: 'Aucun fournisseur actif configuré pour ce produit.' },
-        { status: 400 }
-      );
-    }
 
-    const supplier = suppProd.supplier;
-    if (!supplier.isActive) {
-      return NextResponse.json(
-        { success: false, message: 'Le fournisseur de ce produit est actuellement indisponible.' },
-        { status: 400 }
-      );
-    }
+    if (!isExclusive) {
+      if (!suppProd || !suppProd.supplier) {
+        return NextResponse.json(
+          { success: false, message: 'Aucun fournisseur actif configuré pour ce produit.' },
+          { status: 400 }
+        );
+      }
 
-    if (suppProd.stock < quantity) {
-      return NextResponse.json(
-        { success: false, message: `Stock insuffisant (Disponible: ${suppProd.stock})` },
-        { status: 400 }
-      );
+      const supplier = suppProd.supplier;
+      if (!supplier.isActive) {
+        return NextResponse.json(
+          { success: false, message: 'Le fournisseur de ce produit est actuellement indisponible.' },
+          { status: 400 }
+        );
+      }
+
+      if (suppProd.stock < quantity) {
+        return NextResponse.json(
+          { success: false, message: `Stock insuffisant (Disponible: ${suppProd.stock})` },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate unique Ticket Code (e.g., TK-784920)
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     const unitSellingPrice = product.sellingPrice;
     let totalSellingPrice = unitSellingPrice * quantity;
-    const unitCostPrice = suppProd.costPrice;
+    const unitCostPrice = suppProd ? suppProd.costPrice : 0;
     const totalCostPrice = unitCostPrice * quantity;
 
     // Apply Promo Code discount if provided & valid
@@ -122,8 +126,8 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         productId: product.id,
         productTitle: product.title,
-        supplierId: supplier.id,
-        supplierProductId: suppProd.id,
+        supplierId: suppProd?.supplier?.id || null,
+        supplierProductId: suppProd?.id || null,
         ticketCode: ticketCode,
         quantity,
         unitCostPrice,

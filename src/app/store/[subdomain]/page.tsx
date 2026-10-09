@@ -50,8 +50,8 @@ export default function TenantStorefrontPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Global Mode Switcher: Products vs OTP
-  const [catalogMode, setCatalogMode] = useState<'PRODUCTS' | 'OTP'>('PRODUCTS');
+  // Global Mode Switcher: Products vs Exclusive vs OTP
+  const [catalogMode, setCatalogMode] = useState<'PRODUCTS' | 'EXCLUSIVE' | 'OTP'>('PRODUCTS');
 
   // Product Filters State
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
@@ -78,7 +78,7 @@ export default function TenantStorefrontPage() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, searchQuery, sortBy, inStockOnly]);
+  }, [selectedCategory, searchQuery, sortBy, inStockOnly, catalogMode]);
 
   useEffect(() => {
     setCurrentOtpPage(1);
@@ -595,9 +595,15 @@ export default function TenantStorefrontPage() {
   }
 
   // Filter & Sort Products
-  const productCategories = ['Tous', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
+  const currentCatalogProducts = products.filter((p) => {
+    if (catalogMode === 'EXCLUSIVE') return Boolean(p.isExclusive);
+    if (catalogMode === 'PRODUCTS') return !p.isExclusive;
+    return true;
+  });
 
-  const filteredProducts = products
+  const productCategories = ['Tous', ...Array.from(new Set(currentCatalogProducts.map((p) => p.category).filter(Boolean)))];
+
+  const filteredProducts = currentCatalogProducts
     .filter((p) => {
       const matchCat = selectedCategory === 'Tous' || p.category === selectedCategory;
       const matchSearch =
@@ -858,30 +864,53 @@ export default function TenantStorefrontPage() {
           </p>
 
           {/* MAIN CATALOG NAVIGATION TABS */}
-          <div className="pt-4 flex items-center justify-center gap-2">
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-2">
             <button
-              onClick={() => setCatalogMode('PRODUCTS')}
+              onClick={() => {
+                setCatalogMode('PRODUCTS');
+                setSelectedCategory('Tous');
+              }}
               style={catalogMode === 'PRODUCTS' ? {
                 backgroundColor: activeBtnColor,
                 color: activeBtnTextColor,
               } : {}}
-              className={`px-5 py-2.5 ${activeBtnRadius} text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-lg ${
+              className={`px-4 sm:px-5 py-2.5 ${activeBtnRadius} text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-lg ${
                 catalogMode === 'PRODUCTS'
                   ? 'ring-2 ring-white/20'
                   : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
               <Package className="w-4 h-4" />
-              <span>Abonnements & Logiciels ({products.length})</span>
+              <span>Abonnements & Logiciels ({products.filter((p) => !p.isExclusive).length})</span>
             </button>
 
+            {products.some((p) => p.isExclusive) && (
+              <button
+                onClick={() => {
+                  setCatalogMode('EXCLUSIVE');
+                  setSelectedCategory('Tous');
+                }}
+                className={`px-4 sm:px-5 py-2.5 ${activeBtnRadius} text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-lg ${
+                  catalogMode === 'EXCLUSIVE'
+                    ? 'bg-gradient-to-r from-amber-500 to-purple-600 text-white ring-2 ring-amber-400/40 font-black shadow-purple-900/40'
+                    : 'bg-slate-900 border border-amber-500/30 text-amber-300 hover:text-amber-200 hover:border-amber-400'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Produits Exclusifs VIP ({products.filter((p) => p.isExclusive).length})</span>
+              </button>
+            )}
+
             <button
-              onClick={() => setCatalogMode('OTP')}
+              onClick={() => {
+                setCatalogMode('OTP');
+                setSelectedCategory('Tous');
+              }}
               style={catalogMode === 'OTP' ? {
                 backgroundColor: activeBtnColor,
                 color: activeBtnTextColor,
               } : {}}
-              className={`px-5 py-2.5 ${activeBtnRadius} text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-lg ${
+              className={`px-4 sm:px-5 py-2.5 ${activeBtnRadius} text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-lg ${
                 catalogMode === 'OTP'
                   ? 'ring-2 ring-white/20 font-black'
                   : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
@@ -899,8 +928,27 @@ export default function TenantStorefrontPage() {
         {/* ============================================================ */}
         {/* MODE 1: PRODUCTS & LICENSES                                  */}
         {/* ============================================================ */}
-        {catalogMode === 'PRODUCTS' && (
+        {(catalogMode === 'PRODUCTS' || catalogMode === 'EXCLUSIVE') && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {/* VIP Exclusive Banner */}
+            {catalogMode === 'EXCLUSIVE' && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-purple-950/40 to-slate-900/60 border border-amber-500/30 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-lg">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    Sélection Privée & Offres Exclusives VIP
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                      Haute Qualité Garantie
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Comptes premium privés, abonnements à vie et accès réservés. Chaque commande bénéficie d'une activation prioritaire et d'un support dédié via votre code ticket.
+                  </p>
+                </div>
+              </div>
+            )}
             {/* Search & Filters Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl">
               {/* Search input */}
@@ -995,7 +1043,12 @@ export default function TenantStorefrontPage() {
                           )}
 
                           {/* Status Badge */}
-                          <div className="absolute top-2 right-2">
+                          <div className="absolute top-2 right-2 flex items-center gap-1">
+                            {p.isExclusive && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-purple-600 text-white shadow-md flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5" /> VIP
+                              </span>
+                            )}
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                                 inStock

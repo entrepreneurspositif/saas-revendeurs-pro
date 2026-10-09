@@ -81,25 +81,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const isExclusive = !product.activeSupplierProductId || product.badge === 'Exclusif' || product.badge === 'VIP';
     const suppProd = product.activeSupplierProduct;
-    if (!suppProd || !suppProd.supplier || !suppProd.supplier.isActive) {
-      return NextResponse.json(
-        { success: false, message: 'Le fournisseur pour ce produit est temporairement indisponible.' },
-        { status: 400 }
-      );
-    }
 
-    if (suppProd.stock < quantity) {
-      return NextResponse.json(
-        { success: false, message: `Stock insuffisant (Disponible: ${suppProd.stock})` },
-        { status: 400 }
-      );
+    if (!isExclusive) {
+      if (!suppProd || !suppProd.supplier || !suppProd.supplier.isActive) {
+        return NextResponse.json(
+          { success: false, message: 'Le fournisseur pour ce produit est temporairement indisponible.' },
+          { status: 400 }
+        );
+      }
+
+      if (suppProd.stock < quantity) {
+        return NextResponse.json(
+          { success: false, message: `Stock insuffisant (Disponible: ${suppProd.stock})` },
+          { status: 400 }
+        );
+      }
     }
 
     // Calculate exact pricing based on SaaS plan discount
+    const suppCost = suppProd ? suppProd.costPrice : 0;
     const planDiscount = tenant.plan?.marginDiscountPercent || 0;
     const calc = calculateSaasPrices({
-      supplierCost: suppProd.costPrice,
+      supplierCost: suppCost,
       baseSellingPrice: product.sellingPrice,
       discountPercent: planDiscount,
       customSellingPrice: customConfig?.customSellingPrice,
@@ -138,8 +143,8 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         productId: product.id,
         productTitle: product.title,
-        supplierId: suppProd.supplier.id,
-        supplierProductId: suppProd.id,
+        supplierId: suppProd?.supplier?.id || null,
+        supplierProductId: suppProd?.id || null,
         ticketCode: ticketCode,
         quantity,
         unitCostPrice,

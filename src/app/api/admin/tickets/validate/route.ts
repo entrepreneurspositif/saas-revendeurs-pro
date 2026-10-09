@@ -36,8 +36,37 @@ export async function POST(req: NextRequest) {
     }
 
     const suppProd = order.product?.activeSupplierProduct;
+
+    // Handle Manual / Exclusive Products (Without automated API supplier)
     if (!suppProd || !suppProd.supplier) {
-      return NextResponse.json({ success: false, message: 'Aucun fournisseur actif lié à ce produit' }, { status: 400 });
+      const credentialsStr = 'Produit exclusif validé par l\'administrateur. Vos accès vous ont été transmis.';
+      const updatedOrder = await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'COMPLETED',
+          deliveredCredentials: credentialsStr,
+        },
+      });
+
+      if (order.tenantId) {
+        sendResellerTelegramNotification({
+          tenantId: order.tenantId,
+          eventType: 'NEW_ORDER',
+          title: `Commande Exclusif Validée (${order.ticketCode})`,
+          ticketCode: order.ticketCode,
+          amount: `$${(order.totalAmount || order.unitSellingPrice || 0).toFixed(2)} USD`,
+          resellerProfit: `$${(order.resellerProfit || 0).toFixed(2)} USD`,
+          details: `Produit Exclusif : ${order.productTitle || order.product?.title || 'Article VIP'}\nStatut : Validé avec succès par le Super Admin !`,
+        }).catch((err) => console.error('Reseller Telegram notification error:', err));
+      }
+
+      return NextResponse.json({
+        success: true,
+        orderId: updatedOrder.id,
+        ticketCode: updatedOrder.ticketCode,
+        deliveredCredentials: credentialsStr,
+        message: 'Paiement validé avec succès ! Commande du produit exclusif approuvée.',
+      });
     }
 
     const supplier = suppProd.supplier;

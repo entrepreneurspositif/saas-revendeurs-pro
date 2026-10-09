@@ -169,8 +169,9 @@ export default function ResellerDashboardPage() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Products Tab State
-  const [resellerCatalogMode, setResellerCatalogMode] = useState<'PRODUCTS' | 'OTP'>('PRODUCTS');
+  const [resellerCatalogMode, setResellerCatalogMode] = useState<'PRODUCTS' | 'EXCLUSIVE' | 'OTP'>('PRODUCTS');
   const [products, setProducts] = useState<any[]>([]);
+  const [hasExclusiveFeature, setHasExclusiveFeature] = useState<boolean>(false);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
   const [searchProduct, setSearchProduct] = useState<string>('');
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>('Tous');
@@ -180,7 +181,7 @@ export default function ResellerDashboardPage() {
 
   useEffect(() => {
     setProductPage(1);
-  }, [searchProduct, productCategoryFilter]);
+  }, [searchProduct, productCategoryFilter, resellerCatalogMode]);
 
   // Reseller OTP Catalog State
   const [otpCountries, setOtpCountries] = useState<any[]>([]);
@@ -415,6 +416,9 @@ export default function ResellerDashboardPage() {
       const data = await res.json();
       if (data.success && data.products) {
         setProducts(data.products);
+        if (data.tenantPlan) {
+          setHasExclusiveFeature(Boolean(data.tenantPlan.hasExclusiveFeature));
+        }
         const prices: Record<string, number> = {};
         const vis: Record<string, boolean> = {};
         data.products.forEach((p: any) => {
@@ -1124,6 +1128,9 @@ export default function ResellerDashboardPage() {
 
   // Filter products
   const filteredProducts = products.filter((p) => {
+    if (resellerCatalogMode === 'EXCLUSIVE' && !p.isExclusive) return false;
+    if (resellerCatalogMode === 'PRODUCTS' && p.isExclusive) return false;
+
     const matchCat = productCategoryFilter === 'Tous' || p.category === productCategoryFilter;
     const matchSearch =
       searchProduct === '' ||
@@ -1471,8 +1478,8 @@ export default function ResellerDashboardPage() {
                 </p>
               </div>
 
-              {/* Sub-tab Switcher: Products vs OTP */}
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1 rounded-2xl">
+              {/* Sub-tab Switcher: Products vs Exclusive vs OTP */}
+              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1 rounded-2xl flex-wrap">
                 <button
                   onClick={() => setResellerCatalogMode('PRODUCTS')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
@@ -1482,7 +1489,19 @@ export default function ResellerDashboardPage() {
                   }`}
                 >
                   <Package className="w-3.5 h-3.5" />
-                  <span>Articles & Abonnements ({products.length})</span>
+                  <span>Articles & Abonnements ({products.filter((p) => !p.isExclusive).length})</span>
+                </button>
+
+                <button
+                  onClick={() => setResellerCatalogMode('EXCLUSIVE')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    resellerCatalogMode === 'EXCLUSIVE'
+                      ? 'bg-gradient-to-r from-amber-500 to-purple-600 text-white shadow-md'
+                      : 'text-amber-400 hover:text-amber-300'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Produits Exclusifs VIP ({products.filter((p) => p.isExclusive).length})</span>
                 </button>
 
                 <button
@@ -1502,8 +1521,45 @@ export default function ResellerDashboardPage() {
               </div>
             </div>
 
-            {resellerCatalogMode === 'PRODUCTS' && (
+            {(resellerCatalogMode === 'PRODUCTS' || resellerCatalogMode === 'EXCLUSIVE') && (
               <div className="space-y-4">
+                {/* Exclusive VIP Banner if mode is EXCLUSIVE */}
+                {resellerCatalogMode === 'EXCLUSIVE' && !hasExclusiveFeature && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-purple-950/40 to-slate-900 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          Option Premium Starter & Pro
+                        </span>
+                        <h3 className="text-sm font-black text-white flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-amber-400" />
+                          Catalogue Produits Exclusifs & VIP
+                        </h3>
+                      </div>
+                      <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                        Ces articles premium à très forte marge (Canva Pro À Vie, Comptes IA Privés, Licences VIP) sont réservés aux abonnés <strong className="text-amber-400">Starter</strong> et <strong className="text-purple-400">Pro</strong>. En formule Free, vos clients ne peuvent pas encore voir ces produits sur votre vitrine.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('subscription')}
+                      className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-900/30 flex items-center gap-1.5 transition-all"
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      <span>Débloquer le catalogue VIP</span>
+                    </button>
+                  </div>
+                )}
+
+                {resellerCatalogMode === 'EXCLUSIVE' && hasExclusiveFeature && (
+                  <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/30 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="text-xs text-slate-300">
+                      <strong className="text-purple-300 font-bold">Catalogue VIP Débloqué :</strong> Ces articles exclusifs sont activés pour votre vitrine avec vos marges personnalisées.
+                    </div>
+                  </div>
+                )}
                 {/* Search & Filter */}
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
@@ -1588,8 +1644,15 @@ export default function ResellerDashboardPage() {
                                   </div>
                                 )}
                                 <div>
-                                  <div className="font-bold text-white max-w-[200px] truncate">
-                                    {p.title}
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="font-bold text-white max-w-[200px] truncate">
+                                      {p.title}
+                                    </div>
+                                    {p.isExclusive && (
+                                      <span className="shrink-0 px-1.5 py-0.2 rounded-md bg-gradient-to-r from-amber-500/20 to-purple-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5">
+                                        <Sparkles className="w-2.5 h-2.5 text-amber-400" /> VIP
+                                      </span>
+                                    )}
                                   </div>
                                   <span className="text-[10px] text-slate-500 font-mono">
                                     {p.stock > 0 ? `${p.stock} en stock` : 'Disponible'}
@@ -1639,19 +1702,29 @@ export default function ResellerDashboardPage() {
                               </span>
                             </td>
                             <td className="py-3 px-3 text-center">
-                              <button
-                                onClick={() => {
-                                  const nextVal = !currentVis;
-                                  setEditedVisibility((prev) => ({ ...prev, [p.id]: nextVal }));
-                                }}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                                  currentVis
-                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                    : 'bg-slate-800 text-slate-500 border border-slate-700'
-                                }`}
-                              >
-                                {currentVis ? 'Actif' : 'Masqué'}
-                              </button>
+                              {p.isExclusive && !hasExclusiveFeature ? (
+                                <button
+                                  onClick={() => setActiveTab('subscription')}
+                                  title="Passez au Plan Starter ou Pro pour activer sur votre vitrine"
+                                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all flex items-center gap-1 mx-auto"
+                                >
+                                  <span>🔒 Plan Starter/Pro</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    const nextVal = !currentVis;
+                                    setEditedVisibility((prev) => ({ ...prev, [p.id]: nextVal }));
+                                  }}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                                    currentVis
+                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                      : 'bg-slate-800 text-slate-500 border border-slate-700'
+                                  }`}
+                                >
+                                  {currentVis ? 'Actif' : 'Masqué'}
+                                </button>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-right">
                               <div className="flex items-center justify-end gap-2">

@@ -57,6 +57,8 @@ export async function GET(req: NextRequest) {
         customSellingPrice: customSellingPrice,
       });
 
+      const isExclusive = !p.activeSupplierProductId || p.badge === 'Exclusif' || p.badge === 'VIP';
+
       return {
         id: p.id,
         title: p.title,
@@ -66,6 +68,7 @@ export async function GET(req: NextRequest) {
         badge: p.badge,
         imageUrl: p.imageUrl,
         stock: p.activeSupplierProduct ? p.activeSupplierProduct.stock : 999,
+        isExclusive,
         // Pricing details for reseller
         baseSellingPrice: calc.baseSellingPrice,
         discountPercent: calc.discountPercent,
@@ -79,12 +82,29 @@ export async function GET(req: NextRequest) {
       };
     });
 
+    let planFeatures: string[] = [];
+    try {
+      if (tenant.plan?.features) {
+        planFeatures = typeof tenant.plan.features === 'string'
+          ? JSON.parse(tenant.plan.features)
+          : tenant.plan.features;
+      }
+    } catch (e) {
+      // ignore JSON parse error
+    }
+
+    const hasExclusiveFeature =
+      planFeatures.includes('exclusive_products') ||
+      tenant.planId === 'starter' ||
+      tenant.planId === 'pro';
+
     return NextResponse.json({
       success: true,
       tenantPlan: {
         id: tenant.planId,
         name: tenant.plan?.name || 'Free',
         discountPercent: discountPercent,
+        hasExclusiveFeature,
       },
       products: formattedProducts,
     });
