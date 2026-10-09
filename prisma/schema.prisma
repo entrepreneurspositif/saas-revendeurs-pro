@@ -62,6 +62,7 @@ model Product {
   updatedAt               DateTime         @updatedAt
   activeSupplierProduct   SupplierProduct? @relation(fields: [activeSupplierProductId], references: [id], onDelete: SetNull)
   orders                  Order[]
+  tenantPrices            TenantProductPrice[]
 }
 
 model User {
@@ -94,10 +95,14 @@ model Order {
   idempotencyKey       String
   supplierOrderRef     String?
   supportStatus        String    @default("OPEN")
+  tenantId             String?
+  resellerProfit       Float     @default(0.0)
+  platformProfit       Float     @default(0.0)
   createdAt            DateTime  @default(now())
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   product              Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   supplier             Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  tenant               Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   messages             ChatMessage[]
 }
 
@@ -130,8 +135,15 @@ model OtpOrder {
   errorMessage        String?
   smsCode             String?
   fullSms             String?
+  tenantId            String?
+  customerEmail       String?
+  customerName        String?
+  customerPhone       String?
+  resellerProfit      Float    @default(0)
+  platformProfit      Float    @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  tenant              Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 }
 
 model ProductRequest {
@@ -161,6 +173,7 @@ model PromoCode {
 
 model VisitLog {
   id        String   @id @default(cuid())
+  tenantId  String?
   path      String
   userAgent String?
   ipHash    String?
@@ -168,7 +181,146 @@ model VisitLog {
   device    String   @default("desktop")
   createdAt DateTime @default(now())
 
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([createdAt])
   @@index([path])
+  @@index([tenantId])
 }
+
+model SaasPlan {
+  id                    String    @id // "free", "starter", "pro"
+  name                  String    // "Free", "Starter", "Pro"
+  description           String?
+  priceMonthly          Float     @default(0.0)
+  priceYearly           Float     @default(0.0)
+  currency              String    @default("USD")
+  marginDiscountPercent Float     @default(0.0) // 0 for free, 35 for starter, 60 for pro
+  features              String    @default("[]") // JSON array of enabled feature keys
+  isActive              Boolean   @default(true)
+  sortOrder             Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenants               Tenant[]
+}
+
+model Tenant {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  password            String
+  name                String
+  subdomain           String               @unique
+  customDomain        String?              @unique
+  planId              String               @default("free")
+  planStatus          String               @default("ACTIVE") // ACTIVE, EXPIRED, TRIAL, SUSPENDED
+  planExpiresAt       DateTime?
+  storeName           String               @default("Ma Boutique")
+  tagline             String?              @default("Boutique officielle de licences et abonnements")
+  logoUrl             String?
+  bannerUrl           String?
+  themeColor          String               @default("sky")
+  themePreset         String?              @default("cyber-dark")
+  fontFamily          String?              @default("Inter")
+  buttonColor         String?              @default("#0284c7")
+  buttonTextColor     String?              @default("#ffffff")
+  buttonRadius        String?              @default("rounded-xl")
+  contactEmail        String?
+  contactPhone        String?
+  contactWhatsApp     String?
+  contactTelegram     String?
+  bannerAnnouncement  String?
+  paymentInstructions String?
+  facebookPixelId     String?
+  tiktokPixelId       String?
+  googleAnalyticsId   String?
+  welcomeMessage      String?
+  floatingChatEnabled Boolean              @default(true)
+  feexpayApiKey       String?
+  feexpayShopId       String?
+  feexpayEnabled      Boolean              @default(false)
+  monerooSecretKey    String?
+  monerooEnabled      Boolean              @default(false)
+  customGatewayEnabled Boolean             @default(false)
+  otpMarginPercent    Float?               @default(30.0)
+  telegramBotToken             String?
+  telegramChatId               String?
+  telegramNotificationsEnabled Boolean              @default(false)
+  notifyOnNewOrder             Boolean              @default(true)
+  notifyOnOtpOrder             Boolean              @default(true)
+  notifyOnSupportReply         Boolean              @default(true)
+  notifyOnPayout               Boolean              @default(true)
+  walletBalance       Float                @default(0.0)
+  totalEarnings       Float                @default(0.0)
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  plan                SaasPlan             @relation(fields: [planId], references: [id])
+  customPrices        TenantProductPrice[]
+  orders              Order[]
+  otpOrders           OtpOrder[]
+  otpServices         TenantOtpService[]
+  visitLogs           VisitLog[]
+  tickets             ResellerTicket[]
+}
+
+model TenantProductPrice {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  productId          String
+  customSellingPrice Float?
+  isEnabled          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, productId])
+}
+
+model TenantOtpService {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  serviceCode        String
+  country            String   @default("all")
+  customSellingPrice Float?
+  isEnabled          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, serviceCode, country])
+  @@index([tenantId, country])
+}
+
+model ResellerTicket {
+  id         String                  @id @default(cuid())
+  ticketCode String                  @unique
+  tenantId   String
+  subject    String
+  category   String                  @default("GENERAL") // GENERAL, ORDERS, COMMISSIONS, TECHNICAL, CATALOG
+  priority   String                  @default("MEDIUM")  // LOW, MEDIUM, HIGH, URGENT
+  status     String                  @default("OPEN")    // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  tenant     Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages   ResellerTicketMessage[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ResellerTicketMessage {
+  id         String         @id @default(cuid())
+  ticketId   String
+  senderRole String         // "RESELLER" | "SUPER_ADMIN"
+  senderName String
+  message    String
+  createdAt  DateTime       @default(now())
+  ticket     ResellerTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
 

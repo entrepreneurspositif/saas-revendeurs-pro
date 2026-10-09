@@ -25,13 +25,6 @@ export async function POST(req: NextRequest) {
 
     const config = await getFeexPayConfig();
 
-    if (!config.enabled) {
-      return NextResponse.json(
-        { success: false, message: 'Le paiement par FeexPay est actuellement désactivé par l\'administrateur.' },
-        { status: 400 }
-      );
-    }
-
     // Check standard product order
     const order = await prisma.order.findFirst({
       where: {
@@ -41,6 +34,7 @@ export async function POST(req: NextRequest) {
 
     let amountUsd = 0;
     let rawDescription = '';
+    let targetTenantId = order?.tenantId || null;
 
     if (order) {
       amountUsd = order.totalAmount;
@@ -56,28 +50,72 @@ export async function POST(req: NextRequest) {
       if (otpOrder) {
         amountUsd = otpOrder.sellingPrice;
         rawDescription = `Commande SMS OTP ${otpOrder.service.toUpperCase()}`;
+        targetTenantId = otpOrder.tenantId || null;
       } else {
         return NextResponse.json({ success: false, message: 'Ticket non trouvé' }, { status: 404 });
       }
     }
 
+    // Dynamic Gateway Resolution: Check if Reseller has configured their own FeexPay API Keys
+    let feexApiKey = config.apiKey;
+    let feexShopId = config.shopId;
+    let tenantSubdomain = '';
+
+    if (targetTenantId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: targetTenantId },
+        select: {
+          id: true,
+          subdomain: true,
+          customGatewayEnabled: true,
+          feexpayApiKey: true,
+          feexpayShopId: true,
+          feexpayEnabled: true,
+        },
+      });
+
+      if (tenant) {
+        tenantSubdomain = tenant.subdomain;
+        if (
+          tenant.customGatewayEnabled &&
+          tenant.feexpayEnabled &&
+          tenant.feexpayApiKey &&
+          tenant.feexpayShopId
+        ) {
+          // Dynamic Seller Gateway in action
+          feexApiKey = tenant.feexpayApiKey.trim();
+          feexShopId = tenant.feexpayShopId.trim();
+        }
+      }
+    }
+
+    // If using super admin fallback and super admin has disabled FeexPay:
+    if (feexApiKey === config.apiKey && !config.enabled) {
+      return NextResponse.json(
+        { success: false, message: 'Le paiement par FeexPay est actuellement désactivé.' },
+        { status: 400 }
+      );
+    }
+
     const amountXof = convertUsdToXof(amountUsd);
     const description = sanitizeDescription(rawDescription, ticketCode);
 
-    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const callbackUrl = `${protocol}://${host}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&ticketCode=${encodeURIComponent(ticketCode)}`;
-    const callbackErrorUrl = `${protocol}://${host}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&status=FAILED`;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://revente-abonnement.vercel.app').replace(/\/$/, '');
+    const host = req.headers.get('host') || '';
+    const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+    const subdomainParam = tenantSubdomain ? `&subdomain=${encodeURIComponent(tenantSubdomain)}` : '';
+    const callbackUrl = `${baseUrl}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&ticketCode=${encodeURIComponent(ticketCode)}${subdomainParam}`;
+    const callbackErrorUrl = `${baseUrl}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&status=FAILED${subdomainParam}`;
 
     // Call FeexPay V2 API to generate payment link
     const feexPayRes = await fetch('https://api-v2.feexpay.me/api/feexlinks/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
+        'Authorization': `Bearer ${feexApiKey}`,
       },
       body: JSON.stringify({
-        shop: config.shopId,
+        shop: feexShopId,
         amount: amountXof,
         description,
         paymentMethod: 'ALL',

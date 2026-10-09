@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
-import { sendTelegramNotification } from '@/lib/telegram';
+import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
 import { verifyMonerooPayment } from '@/lib/moneroo';
 
 export const dynamic = 'force-dynamic';
@@ -18,18 +18,18 @@ function extractTicketCode(data: any): string {
 
   if (direct && String(direct).trim()) {
     const cleanDirect = String(direct).trim();
-    if (/^TK-[\w-]+$/i.test(cleanDirect)) {
-      return cleanDirect.toUpperCase();
+    if (/^(TK|OTP)-[\w-]+$/i.test(cleanDirect) || /^SUB_[\w-]+$/i.test(cleanDirect)) {
+      return cleanDirect;
     }
   }
 
   const jsonStr = JSON.stringify(data || {});
-  const match = jsonStr.match(/TK-[A-Z0-9]+/i);
+  const match = jsonStr.match(/(TK-[A-Z0-9]+|OTP-[A-Z0-9]+|SUB_[A-Za-z0-9_]+)/i);
   if (match) {
-    return match[0].toUpperCase();
+    return match[0];
   }
 
-  return String(direct).trim().toUpperCase();
+  return String(direct).trim();
 }
 
 function isBrowserRequest(req: NextRequest): boolean {
@@ -169,6 +169,31 @@ async function processCallback(req: NextRequest) {
         });
       }
 
+      // Credit Reseller Wallet with sales commission
+      if (order.tenantId && order.resellerProfit > 0) {
+        try {
+          await prisma.tenant.update({
+            where: { id: order.tenantId },
+            data: {
+              walletBalance: { increment: order.resellerProfit },
+              totalEarnings: { increment: order.resellerProfit },
+            },
+          });
+
+          sendResellerTelegramNotification({
+            tenantId: order.tenantId,
+            type: 'NEW_ORDER',
+            title: `Nouvelle Vente : ${order.productTitle}`,
+            ticketCode: order.ticketCode,
+            amount: `$${order.totalAmount.toFixed(2)} USD`,
+            resellerProfit: `+$${order.resellerProfit.toFixed(2)} USD`,
+            details: `Paiement Moneroo validé avec succès !\nVotre commission nette (+${order.resellerProfit.toFixed(2)} USD) a été créditée sur votre portefeuille.`,
+          }).catch(console.error);
+        } catch (e) {
+          console.error('Error crediting reseller wallet on Moneroo callback:', e);
+        }
+      }
+
       sendTelegramNotification({
         title: `Paiement Moneroo Reçu — ${order.productTitle}`,
         ticketCode: order.ticketCode,
@@ -179,6 +204,15 @@ async function processCallback(req: NextRequest) {
     }
 
     if (isBrowser) {
+      if (order.tenantId) {
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: order.tenantId },
+          select: { subdomain: true },
+        });
+        if (tenant?.subdomain) {
+          return NextResponse.redirect(`${baseUrl}/store/${tenant.subdomain}?lookup=true&code=${encodeURIComponent(order.ticketCode)}&paid=true`);
+        }
+      }
       return NextResponse.redirect(`${baseUrl}/?ticket=${encodeURIComponent(order.ticketCode)}&paid=true`);
     }
 
@@ -202,6 +236,34 @@ async function processCallback(req: NextRequest) {
         data: { status: 'WAITING_SMS' },
       });
 
+      // Credit Reseller Wallet for OTP sales commission
+      if (otpOrder.tenantId) {
+        const otpProfit = Math.max(0, otpOrder.sellingPrice - (otpOrder.costPrice || 0));
+        if (otpProfit > 0) {
+          try {
+            await prisma.tenant.update({
+              where: { id: otpOrder.tenantId },
+              data: {
+                walletBalance: { increment: otpProfit },
+                totalEarnings: { increment: otpProfit },
+              },
+            });
+
+            sendResellerTelegramNotification({
+              tenantId: otpOrder.tenantId,
+              type: 'NEW_OTP',
+              title: `Vente Numéro OTP SMS (${otpOrder.service.toUpperCase()})`,
+              ticketCode: otpOrder.ticketCode,
+              amount: `$${otpOrder.sellingPrice.toFixed(2)} USD`,
+              resellerProfit: `+$${otpProfit.toFixed(2)} USD`,
+              details: `Paiement Moneroo validé ! Numéro OTP : ${otpOrder.phone || 'En cours de réception'}.\nVotre commission nette (+${otpProfit.toFixed(2)} USD) a été créditée sur votre portefeuille.`,
+            }).catch(console.error);
+          } catch (e) {
+            console.error('Error crediting reseller wallet on OTP Moneroo callback:', e);
+          }
+        }
+      }
+
       sendTelegramNotification({
         title: `Paiement Moneroo Reçu — OTP ${otpOrder.service.toUpperCase()}`,
         ticketCode: otpOrder.ticketCode,
@@ -212,6 +274,15 @@ async function processCallback(req: NextRequest) {
     }
 
     if (isBrowser) {
+      if (otpOrder.tenantId) {
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: otpOrder.tenantId },
+          select: { subdomain: true },
+        });
+        if (tenant?.subdomain) {
+          return NextResponse.redirect(`${baseUrl}/store/${tenant.subdomain}?lookup=true&code=${encodeURIComponent(otpOrder.ticketCode)}&paid=true`);
+        }
+      }
       return NextResponse.redirect(`${baseUrl}/otp?ticket=${encodeURIComponent(otpOrder.ticketCode)}&paid=true`);
     }
 
@@ -219,6 +290,52 @@ async function processCallback(req: NextRequest) {
       success: true,
       message: `Paiement Moneroo validé pour le ticket OTP ${otpOrder.ticketCode}!`,
     });
+  }
+
+  // 4. CHECK SAAS SUBSCRIPTION PAYMENT (SUB_<tenantId>_<planId>_<interval>)
+  if (ticketCode && ticketCode.startsWith('SUB_')) {
+    const parts = ticketCode.split('_');
+    const tenantId = parts[1];
+    const planId = parts[2];
+    const interval = parts[3] || 'monthly';
+
+    if (tenantId && planId) {
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+      const plan = await prisma.saasPlan.findUnique({ where: { id: planId } });
+
+      if (tenant && plan) {
+        if (isSuccessful) {
+          const durationDays = interval === 'yearly' ? 365 : 30;
+          const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: {
+              planId: plan.id,
+              planStatus: 'ACTIVE',
+              planExpiresAt: expiresAt,
+            },
+          });
+
+          sendTelegramNotification({
+            title: `Abonnement Revendeur Activé (Moneroo)`,
+            ticketCode: ticketCode,
+            type: 'ORDER',
+            amount: `$${(interval === 'yearly' ? plan.priceYearly : plan.priceMonthly).toFixed(2)} USD`,
+            details: `Le revendeur ${tenant.name} (${tenant.subdomain}) a validé son paiement pour l'offre ${plan.name} (${interval === 'yearly' ? 'Annuel' : 'Mensuel'}) via Moneroo !`,
+          }).catch(console.error);
+        }
+
+        if (isBrowser) {
+          return NextResponse.redirect(`${baseUrl}/reseller/dashboard?tab=subscription&activated=true&plan=${encodeURIComponent(plan.name)}`);
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: `Abonnement ${plan.name} activé avec succès pour le revendeur ${tenant.name}`,
+        });
+      }
+    }
   }
 
   if (isBrowser) {

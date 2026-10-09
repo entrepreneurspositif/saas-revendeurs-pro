@@ -43,12 +43,14 @@ export interface MonerooInitParams {
   customerEmail?: string;
   customerName?: string;
   returnUrl: string;
+  overrideSecretKey?: string;
 }
 
 export async function initializeMonerooPayment(params: MonerooInitParams) {
   const config = await getMonerooConfig();
+  const secretKey = (params.overrideSecretKey || config.secretKey)?.trim();
 
-  if (!config.secretKey) {
+  if (!secretKey) {
     throw new Error('La clé secrète Moneroo n\'est pas configurée.');
   }
 
@@ -82,7 +84,7 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
   let response = await fetch('https://api.moneroo.io/v1/payments/initialize', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${config.secretKey}`,
+      'Authorization': `Bearer ${secretKey}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
@@ -106,7 +108,7 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
       const fallbackRes = await fetch('https://api.moneroo.io/v1/payments/initialize', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${config.secretKey}`,
+          'Authorization': `Bearer ${secretKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -133,16 +135,17 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
   };
 }
 
-export async function verifyMonerooPayment(paymentId: string) {
+export async function verifyMonerooPayment(paymentId: string, overrideSecretKey?: string) {
   const config = await getMonerooConfig();
+  const secretKey = (overrideSecretKey || config.secretKey)?.trim();
 
-  if (!config.secretKey || !paymentId) {
+  if (!secretKey || !paymentId) {
     return null;
   }
 
   const response = await fetch(`https://api.moneroo.io/v1/payments/${paymentId}/verify`, {
     headers: {
-      'Authorization': `Bearer ${config.secretKey}`,
+      'Authorization': `Bearer ${secretKey}`,
       'Accept': 'application/json',
     },
   });

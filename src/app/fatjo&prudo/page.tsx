@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ThemeSelector from '@/components/ThemeSelector';
 import AdminAnalyticsSection from '@/components/AdminAnalyticsSection';
+import AdminSaasSection from '@/components/AdminSaasSection';
 import {
+  Crown,
   ShieldCheck,
   TrendingUp,
   BarChart3,
@@ -75,7 +77,7 @@ export default function AdminDashboardPage() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState<{ message: string; success: boolean } | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules' | 'analytics'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules' | 'analytics' | 'saas'>('tickets');
   const [productRequests, setProductRequests] = useState<any[]>([]);
 
   // OnlineSIM OTP State
@@ -1550,6 +1552,19 @@ export default function AdminDashboardPage() {
           description: 'Visites, filtres & trafic live',
           badge: 'Live',
           badgeColor: 'sky',
+        },
+      ],
+    },
+    {
+      title: 'SAAS & REVENTE',
+      items: [
+        {
+          id: 'saas',
+          label: 'Abonnements & SaaS Revendeurs',
+          icon: Crown,
+          description: 'Offres Free, Starter, Pro & Revendeurs',
+          badge: 'SaaS',
+          badgeColor: 'amber',
         },
       ],
     },
@@ -3845,6 +3860,9 @@ export default function AdminDashboardPage() {
 
         {/* TAB: VISITOR & TRAFFIC ANALYTICS */}
         {activeTab === 'analytics' && <AdminAnalyticsSection />}
+
+        {/* TAB: SAAS PLANS & RESELLERS MANAGEMENT */}
+        {activeTab === 'saas' && <AdminSaasSection />}
 
         {/* TAB 8: MULTI-SUPPLIER COMPARISON */}
         {activeTab === 'comparison' && (

@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
-
-const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const path = String(body.path || '/').trim();
     const rawReferrer = String(body.referrer || req.headers.get('referer') || '').trim();
+    const subdomain = String(body.subdomain || '').trim();
 
     // Ignore admin dashboard routes from visit statistics
-    if (path.startsWith('/fatjo&prudo') || path.startsWith('/api')) {
+    if (path.startsWith('/fatjo&prudo') || path.startsWith('/reseller/dashboard') || path.startsWith('/api')) {
       return NextResponse.json({ success: true, ignored: true });
     }
 
@@ -43,8 +42,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Resolve tenantId if visiting a reseller store
+    let tenantId = body.tenantId || null;
+    if (!tenantId && subdomain) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { subdomain: subdomain.toLowerCase().trim() },
+        select: { id: true },
+      });
+      if (tenant) tenantId = tenant.id;
+    } else if (!tenantId && path.startsWith('/store/')) {
+      const parts = path.split('/').filter(Boolean);
+      if (parts[1]) {
+        const tenant = await prisma.tenant.findUnique({
+          where: { subdomain: parts[1].toLowerCase().trim() },
+          select: { id: true },
+        });
+        if (tenant) tenantId = tenant.id;
+      }
+    }
+
     await prisma.visitLog.create({
       data: {
+        tenantId,
         path,
         userAgent: userAgent.substring(0, 200),
         ipHash,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
+import { sendResellerTelegramNotification } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,6 +89,18 @@ export async function POST(req: NextRequest) {
         sold: { increment: order.quantity },
       },
     });
+
+    if (order.tenantId) {
+      sendResellerTelegramNotification({
+        tenantId: order.tenantId,
+        eventType: 'NEW_ORDER',
+        title: `Commande Validée & Livrée (${order.ticketCode})`,
+        ticketCode: order.ticketCode,
+        amount: `$${(order.totalAmount || order.unitSellingPrice || 0).toFixed(2)} USD`,
+        resellerProfit: `$${(order.resellerProfit || 0).toFixed(2)} USD`,
+        details: `Produit : ${order.productTitle || order.product?.title || 'Abonnement'}\nStatut : Validé et livré avec succès par le Super Admin !`,
+      }).catch((err) => console.error('Reseller Telegram notification error:', err));
+    }
 
     return NextResponse.json({
       success: true,

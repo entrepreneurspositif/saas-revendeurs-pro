@@ -11,6 +11,9 @@
     "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@libsql/client": "^0.8.0",
     "@prisma/adapter-libsql": "^5.20.0",
     "@prisma/client": "^5.20.0",

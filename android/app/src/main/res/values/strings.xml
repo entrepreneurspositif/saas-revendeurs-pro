@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Entrepreneurs Positifs</string>
+    <string name="title_activity_main">Entrepreneurs Positifs</string>
+    <string name="package_name">com.entrepreneurspositif.app</string>
+    <string name="custom_url_scheme">com.entrepreneurspositif.app</string>
+</resources>

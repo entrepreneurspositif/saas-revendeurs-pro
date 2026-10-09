@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, ShieldCheck, Smartphone, Sparkles, Menu, X } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Smartphone, Sparkles, Menu, X, Store } from 'lucide-react';
 
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -38,6 +38,13 @@ export default function Navbar() {
       icon: Sparkles,
       activeColor: 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20',
       iconColor: 'text-emerald-400',
+    },
+    {
+      href: '/reseller/dashboard',
+      label: 'Espace Revendeur',
+      icon: Store,
+      activeColor: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md shadow-purple-500/20',
+      iconColor: 'text-purple-400',
     },
   ];
 
