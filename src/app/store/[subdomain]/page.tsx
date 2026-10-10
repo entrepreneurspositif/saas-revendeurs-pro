@@ -1044,6 +1044,11 @@ export default function TenantStorefrontPage() {
 
                           {/* Status Badge */}
                           <div className="absolute top-2 right-2 flex items-center gap-1">
+                            {(p.deliveryType === 'AUTOMATIC' || p.category === 'Méthode') && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md flex items-center gap-1">
+                                <Zap className="w-2.5 h-2.5 fill-current" /> Auto
+                              </span>
+                            )}
                             {p.isExclusive && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-purple-600 text-white shadow-md flex items-center gap-1">
                                 <Sparkles className="w-2.5 h-2.5" /> VIP
@@ -2105,7 +2110,11 @@ export default function TenantStorefrontPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5">
                         <KeyRound className="w-4 h-4" />
-                        <span>Vos Identifiants & Accès Livrés :</span>
+                        <span>
+                          {ticketLookupResult.order?.product?.category === 'Méthode' || String(ticketLookupResult.productTitle || '').toLowerCase().includes('méthode')
+                            ? '⚡ Votre Méthode / Guide Débloqué :'
+                            : 'Vos Identifiants & Accès Livrés :'}
+                        </span>
                       </span>
                       <button
                         onClick={() => {

@@ -664,12 +664,19 @@ export default function AdminDashboardPage() {
   const [editIsActive, setEditIsActive] = useState<boolean>(true);
   const [editSupplierProductId, setEditSupplierProductId] = useState<string>('');
   const [editImageUrl, setEditImageUrl] = useState<string>('');
+  const [editCategory, setEditCategory] = useState<string>('Général');
+  const [editDescription, setEditDescription] = useState<string>('');
+  const [editBadge, setEditBadge] = useState<string>('');
+  const [editDeliveryType, setEditDeliveryType] = useState<'MANUAL' | 'AUTOMATIC'>('MANUAL');
+  const [editMethodContent, setEditMethodContent] = useState<string>('');
   const [savingProduct, setSavingProduct] = useState<boolean>(false);
 
   // Add Product Modal State
   const [showAddProductModal, setShowAddProductModal] = useState<boolean>(false);
   const [newProdTitle, setNewProdTitle] = useState<string>('');
-  const [newProdCategory, setNewProdCategory] = useState<string>('IA & APIs');
+  const [newProdCategory, setNewProdCategory] = useState<string>('Méthode');
+  const [newProdDeliveryType, setNewProdDeliveryType] = useState<'MANUAL' | 'AUTOMATIC'>('AUTOMATIC');
+  const [newProdMethodContent, setNewProdMethodContent] = useState<string>('');
   const [newProdDescription, setNewProdDescription] = useState<string>('');
   const [newProdPrice, setNewProdPrice] = useState<number>(10);
   const [newProdBadge, setNewProdBadge] = useState<string>('');
@@ -1144,6 +1151,8 @@ export default function AdminDashboardPage() {
           sellingPrice: newProdPrice,
           badge: newProdBadge.trim(),
           imageUrl: newProdImageUrl.trim() || undefined,
+          deliveryType: newProdDeliveryType,
+          methodContent: newProdMethodContent.trim() || null,
         }),
       });
 
@@ -1155,6 +1164,9 @@ export default function AdminDashboardPage() {
         setNewProdPrice(10);
         setNewProdBadge('');
         setNewProdImageUrl('');
+        setNewProdCategory('Méthode');
+        setNewProdDeliveryType('AUTOMATIC');
+        setNewProdMethodContent('');
         fetchAdminData();
       }
     } catch (e: any) {
@@ -1246,6 +1258,11 @@ export default function AdminDashboardPage() {
     setEditIsActive(product.isActive);
     setEditSupplierProductId(product.activeSupplierProduct?.id || '');
     setEditImageUrl(product.imageUrl || '');
+    setEditCategory(product.category || 'Général');
+    setEditDescription(product.description || '');
+    setEditBadge(product.badge || '');
+    setEditDeliveryType(product.deliveryType || (product.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'));
+    setEditMethodContent(product.methodContent || '');
   };
 
   const handleSaveProductEdit = async () => {
@@ -1260,8 +1277,13 @@ export default function AdminDashboardPage() {
           id: editingProduct.id,
           sellingPrice: editPrice,
           isActive: editIsActive,
+          category: editCategory,
+          description: editDescription.trim(),
+          badge: editBadge.trim(),
           imageUrl: editImageUrl.trim() || undefined,
           activeSupplierProductId: editSupplierProductId || undefined,
+          deliveryType: editDeliveryType,
+          methodContent: editMethodContent.trim() || null,
         }),
       });
 
@@ -5289,6 +5311,7 @@ export default function AdminDashboardPage() {
                         <th className="px-5 py-4">Produit & Catégorie</th>
                         <th className="px-5 py-4">Prix de Vente</th>
                         <th className="px-5 py-4">Badge / Tag</th>
+                        <th className="px-5 py-4 text-center">Mode de Livraison</th>
                         <th className="px-5 py-4 text-center">Statut Vitrine</th>
                         <th className="px-5 py-4 text-center">Actions</th>
                       </tr>
@@ -5336,6 +5359,29 @@ export default function AdminDashboardPage() {
                                 </span>
                               ) : (
                                 <span className="text-slate-600 text-[10px] italic">Aucun badge</span>
+                              )}
+                            </td>
+
+                            <td className="px-5 py-4 text-center">
+                              {p.deliveryType === 'AUTOMATIC' || p.category === 'Méthode' ? (
+                                <div className="inline-flex flex-col items-center">
+                                  <span className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 font-black text-[10px] uppercase flex items-center gap-1 shadow-sm">
+                                    <Zap className="w-3 h-3 text-amber-400" />
+                                    <span>Méthode (Auto)</span>
+                                  </span>
+                                  {p.methodContent ? (
+                                    <span className="text-[9px] text-slate-400 font-mono mt-1 max-w-[130px] truncate block" title={p.methodContent}>
+                                      {p.methodContent}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] text-amber-400/80 mt-0.5">Guide secret inclus</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-xl bg-sky-500/15 text-sky-300 border border-sky-500/30 font-black text-[10px] uppercase flex items-center gap-1 mx-auto w-fit">
+                                  <Package className="w-3 h-3 text-sky-400" />
+                                  <span>Manuel</span>
+                                </span>
                               )}
                             </td>
 
@@ -5429,10 +5475,14 @@ export default function AdminDashboardPage() {
                   </label>
                   <select
                     value={newProdCategory}
-                    onChange={(e) => setNewProdCategory(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewProdCategory(val);
+                      if (val === 'Méthode') setNewProdDeliveryType('AUTOMATIC');
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
                   >
-                    {['IA & APIs', 'Licences & Outils Dev', 'Mobile & Services', 'Abonnements & Comptes', 'Général'].map((cat) => (
+                    {['Méthode', 'IA & APIs', 'Licences & Outils Dev', 'Mobile & Services', 'Abonnements & Comptes', 'Général'].map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -5453,6 +5503,79 @@ export default function AdminDashboardPage() {
                   />
                 </div>
               </div>
+
+              {/* Delivery Type Selector */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                  Mode de Livraison *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewProdDeliveryType('AUTOMATIC');
+                      if (newProdCategory !== 'Méthode') setNewProdCategory('Méthode');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      newProdDeliveryType === 'AUTOMATIC'
+                        ? 'bg-amber-500/15 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/10'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>⚡ Automatique (Méthode)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                      La méthode ou guide est révélé automatiquement dès paiement.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewProdDeliveryType('MANUAL');
+                    }}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      newProdDeliveryType === 'MANUAL'
+                        ? 'bg-sky-500/15 border-sky-500/50 text-sky-300 shadow-md shadow-sky-500/10'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <Package className="w-3.5 h-3.5 text-sky-400" />
+                      <span>🛠️ Manuelle (Sur-mesure)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                      Livraison par validation ticket / compte créé à la main.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Method Content if Automatic */}
+              {(newProdDeliveryType === 'AUTOMATIC' || newProdCategory === 'Méthode') && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Description de la Méthode (Livraison automatique après paiement) *</span>
+                    </label>
+                    <span className="text-[9px] text-amber-400 font-bold bg-amber-500/20 px-2 py-0.5 rounded-md">Automatisé</span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    required={newProdDeliveryType === 'AUTOMATIC'}
+                    placeholder="Écrivez ici le tutoriel étape par étape, les liens secrets, les identifiants ou les consignes de la méthode..."
+                    value={newProdMethodContent}
+                    onChange={(e) => setNewProdMethodContent(e.target.value)}
+                    className="w-full bg-slate-950 border border-amber-500/30 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 leading-relaxed font-mono"
+                  />
+                  <p className="text-[10px] text-slate-400 leading-snug">
+                    🔒 <strong>Livraison Instantanée :</strong> Ce texte restera secret et sera affiché au client sur son ticket (TK-...) immédiatement après le paiement.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
@@ -5520,7 +5643,7 @@ export default function AdminDashboardPage() {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                  Description / Consignes de Livraison (Optionnel)
+                  Description Publique du Produit (Visible sur la boutique avant achat)
                 </label>
                 <textarea
                   rows={3}
@@ -5583,21 +5706,148 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                    Catégorie *
+                  </label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditCategory(val);
+                      if (val === 'Méthode') setEditDeliveryType('AUTOMATIC');
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    {['Méthode', 'IA & APIs', 'Licences & Outils Dev', 'Mobile & Services', 'Abonnements & Comptes', 'Général'].map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                    Prix de Vente Final ($ USD) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(Number(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-sm font-black text-emerald-400 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Delivery Type Selector in Edit */}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                  Prix de Vente Final ($)
+                  Mode de Livraison *
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-lg font-black text-emerald-400 focus:outline-none focus:border-indigo-500"
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditDeliveryType('AUTOMATIC');
+                      if (editCategory !== 'Méthode') setEditCategory('Méthode');
+                    }}
+                    className={`p-2.5 rounded-2xl border text-left transition-all ${
+                      editDeliveryType === 'AUTOMATIC'
+                        ? 'bg-amber-500/15 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/10'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>⚡ Automatique (Méthode)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                      Guide secret révélé dès paiement.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditDeliveryType('MANUAL');
+                    }}
+                    className={`p-2.5 rounded-2xl border text-left transition-all ${
+                      editDeliveryType === 'MANUAL'
+                        ? 'bg-sky-500/15 border-sky-500/50 text-sky-300 shadow-md shadow-sky-500/10'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <Package className="w-3.5 h-3.5 text-sky-400" />
+                      <span>🛠️ Manuelle (Sur-mesure)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                      Création et validation manuelle.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Method Content Textarea in Edit */}
+              {(editDeliveryType === 'AUTOMATIC' || editCategory === 'Méthode') && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Description de la Méthode (Délivrée automatiquement au client) *</span>
+                    </label>
+                    <span className="text-[9px] text-amber-400 font-bold bg-amber-500/20 px-2 py-0.5 rounded-md">Automatisé</span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    placeholder="Écrivez le guide secret, tutoriel, étapes, liens ou consignes de la méthode..."
+                    value={editMethodContent}
+                    onChange={(e) => setEditMethodContent(e.target.value)}
+                    className="w-full bg-slate-950 border border-amber-500/30 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 leading-relaxed font-mono"
+                  />
+                  <p className="text-[10px] text-slate-400 leading-snug">
+                    🔒 Ce contenu est affiché au client sur son ticket (TK-...) immédiatement après paiement.
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                    Badge ou Tag (Optionnel)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: POPULAIRE, VIP, EXCLUSIF..."
+                    value={editBadge}
+                    onChange={(e) => setEditBadge(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                    Marge brute calculée
+                  </label>
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs font-mono font-bold text-indigo-300">
+                    +${(editPrice - (editingProduct.costPrice || 0)).toFixed(2)} USD
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                  Description Publique du Produit
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Description publique visible par les clients..."
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 leading-relaxed"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  Marge nette calculée: <strong className="text-indigo-300">+${(editPrice - editingProduct.costPrice).toFixed(2)}</strong>
-                </span>
               </div>
 
               <div>

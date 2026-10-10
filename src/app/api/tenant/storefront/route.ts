@@ -116,6 +116,8 @@ export async function GET(req: NextRequest) {
           badge: p.badge || (isExclusive ? 'Exclusif VIP' : null),
           stock: stock,
           isExclusive,
+          deliveryType: p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'),
+          isMethod: p.category === 'Méthode' || p.deliveryType === 'AUTOMATIC',
           isAvailable: p.isActive && (p.activeSupplierProduct ? (stock > 0 && isSupplierActive) : true),
         };
       });

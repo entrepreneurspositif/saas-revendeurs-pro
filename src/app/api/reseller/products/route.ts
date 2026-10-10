@@ -69,6 +69,8 @@ export async function GET(req: NextRequest) {
         imageUrl: p.imageUrl,
         stock: p.activeSupplierProduct ? p.activeSupplierProduct.stock : 999,
         isExclusive,
+        deliveryType: p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'),
+        isMethod: p.category === 'Méthode' || p.deliveryType === 'AUTOMATIC',
         // Pricing details for reseller
         baseSellingPrice: calc.baseSellingPrice,
         discountPercent: calc.discountPercent,

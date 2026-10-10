@@ -58,6 +58,8 @@ model Product {
   activeSupplierProductId String?
   imageUrl                String?
   badge                   String?
+  deliveryType            String           @default("MANUAL")
+  methodContent           String?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
   activeSupplierProduct   SupplierProduct? @relation(fields: [activeSupplierProductId], references: [id], onDelete: SetNull)

@@ -1644,13 +1644,18 @@ export default function ResellerDashboardPage() {
                                   </div>
                                 )}
                                 <div>
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <div className="font-bold text-white max-w-[200px] truncate">
                                       {p.title}
                                     </div>
                                     {p.isExclusive && (
                                       <span className="shrink-0 px-1.5 py-0.2 rounded-md bg-gradient-to-r from-amber-500/20 to-purple-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5">
                                         <Sparkles className="w-2.5 h-2.5 text-amber-400" /> VIP
+                                      </span>
+                                    )}
+                                    {(p.deliveryType === 'AUTOMATIC' || p.category === 'Méthode') && (
+                                      <span className="shrink-0 px-1.5 py-0.2 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5">
+                                        <Zap className="w-2.5 h-2.5 text-amber-400" /> Auto
                                       </span>
                                     )}
                                   </div>

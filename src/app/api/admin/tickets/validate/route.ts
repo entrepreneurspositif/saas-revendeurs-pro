@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, ticketCode } = await req.json();
+    const body = await req.json();
+    const { orderId, ticketCode, credentials, deliveredCredentials: customCreds } = body;
 
     if (!orderId && !ticketCode) {
       return NextResponse.json({ success: false, message: 'ID de commande ou code de ticket requis' }, { status: 400 });
@@ -37,9 +38,19 @@ export async function POST(req: NextRequest) {
 
     const suppProd = order.product?.activeSupplierProduct;
 
-    // Handle Manual / Exclusive Products (Without automated API supplier)
+    // Handle Manual / Exclusive Products / Méthodes (Without automated third-party API supplier)
     if (!suppProd || !suppProd.supplier) {
-      const credentialsStr = 'Produit exclusif validé par l\'administrateur. Vos accès vous ont été transmis.';
+      const isMethodOrAuto =
+        order.product?.deliveryType === 'AUTOMATIC' ||
+        order.product?.category === 'Méthode' ||
+        Boolean(order.product?.methodContent);
+
+      const inputCreds = credentials?.trim() || customCreds?.trim();
+      const credentialsStr =
+        inputCreds ||
+        (isMethodOrAuto && order.product?.methodContent ? order.product.methodContent : null) ||
+        'Produit exclusif validé par l\'administrateur. Vos accès vous ont été transmis.';
+
       const updatedOrder = await prisma.order.update({
         where: { id: order.id },
         data: {

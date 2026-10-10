@@ -51,7 +51,7 @@ export default function ExclusifsPage() {
   const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
 
-  const categories = ['Tous', 'IA & APIs', 'Licences & Outils Dev', 'Mobile & Services', 'Abonnements & Comptes', 'Général'];
+  const categories = ['Tous', 'Méthode', 'IA & APIs', 'Licences & Outils Dev', 'Mobile & Services', 'Abonnements & Comptes', 'Général'];
 
   const shuffleArray = (array: any[]) => {
     const shuffled = [...array];
@@ -270,11 +270,18 @@ export default function ExclusifsPage() {
                       </div>
                     )}
 
-                    {product.badge && (
-                      <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase bg-emerald-500 text-slate-950 shadow-md">
-                        {product.badge}
-                      </span>
-                    )}
+                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col items-end gap-1">
+                      {product.badge && (
+                        <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black uppercase bg-emerald-500 text-slate-950 shadow-md">
+                          {product.badge}
+                        </span>
+                      )}
+                      {(product.deliveryType === 'AUTOMATIC' || product.category === 'Méthode') && (
+                        <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase bg-gradient-to-r from-amber-500 to-purple-600 text-white shadow-md flex items-center gap-1">
+                          <Zap className="w-2.5 h-2.5 text-amber-300" /> Auto
+                        </span>
+                      )}
+                    </div>
 
                     <span className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-slate-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30 text-[8px] sm:text-[10px] font-black uppercase">
                       {product.category}

@@ -65,6 +65,8 @@ export async function GET(req: NextRequest) {
         isActive: p.isActive,
         badge: p.badge,
         imageUrl: p.imageUrl,
+        deliveryType: p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'),
+        isMethod: p.category === 'Méthode' || p.deliveryType === 'AUTOMATIC',
         updatedAt: p.updatedAt,
         stock: stock,
         isAvailable: p.isActive && stock > 0 && isSupplierActive,
@@ -72,6 +74,8 @@ export async function GET(req: NextRequest) {
 
       // ONLY include supplier & wholesale financial details if adminMode is TRUE
       if (adminMode) {
+        publicProduct.deliveryType = p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL');
+        publicProduct.methodContent = p.methodContent || null;
         publicProduct.costPrice = costPrice;
         publicProduct.profitMargin = parseFloat(margin.toFixed(2));
         publicProduct.profitMarginPercent = parseFloat(marginPercent);
@@ -109,7 +113,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, category, description, sellingPrice, badge, imageUrl, activeSupplierProductId } = body;
+    const {
+      title,
+      category,
+      description,
+      sellingPrice,
+      badge,
+      imageUrl,
+      activeSupplierProductId,
+      deliveryType,
+      methodContent,
+    } = body;
 
     if (!title || sellingPrice === undefined) {
       return NextResponse.json(
@@ -128,15 +142,22 @@ export async function POST(req: NextRequest) {
 
     const slug = `${slugBase}-${Date.now().toString(36)}`;
     const parsedPrice = parseFloat(Number(sellingPrice).toFixed(2));
+    const effectiveCategory = category?.trim() || 'Général';
+    const isAutoDelivery =
+      deliveryType === 'AUTOMATIC' ||
+      effectiveCategory.toLowerCase().includes('méthode') ||
+      effectiveCategory.toLowerCase().includes('methode');
 
     const productData: any = {
       title: cleanTitle,
       slug,
-      category: category?.trim() || 'Général',
+      category: effectiveCategory,
       description: description?.trim() || null,
       sellingPrice: parsedPrice,
       badge: badge?.trim() || null,
       imageUrl: imageUrl?.trim() || null,
+      deliveryType: isAutoDelivery ? 'AUTOMATIC' : 'MANUAL',
+      methodContent: methodContent?.trim() || null,
       isActive: true,
     };
 
@@ -164,7 +185,19 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, sellingPrice, isActive, category, activeSupplierProductId, title, description, badge, imageUrl } = body;
+    const {
+      id,
+      sellingPrice,
+      isActive,
+      category,
+      activeSupplierProductId,
+      title,
+      description,
+      badge,
+      imageUrl,
+      deliveryType,
+      methodContent,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'ID de produit requis' }, { status: 400 });
@@ -179,6 +212,8 @@ export async function PUT(req: NextRequest) {
     if (description !== undefined) updateData.description = description;
     if (badge !== undefined) updateData.badge = badge;
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl?.trim() || null;
+    if (deliveryType !== undefined) updateData.deliveryType = deliveryType;
+    if (methodContent !== undefined) updateData.methodContent = methodContent ? methodContent.trim() : null;
 
     if (activeSupplierProductId) {
       const suppProd = await prisma.supplierProduct.findUnique({

@@ -167,9 +167,25 @@ async function processCallback(req: NextRequest) {
           });
         }
       } else {
+        // Exclusive product or automated Method
+        const isMethodOrAuto =
+          order.product?.deliveryType === 'AUTOMATIC' ||
+          order.product?.category === 'Méthode' ||
+          Boolean(order.product?.methodContent);
+
+        const autoCreds =
+          isMethodOrAuto && order.product?.methodContent
+            ? order.product.methodContent
+            : isMethodOrAuto
+            ? 'Méthode validée avec succès. Vos accès ont été débloqués.'
+            : 'Produit exclusif validé. Vos accès vous seront transmis.';
+
         await prisma.order.update({
           where: { id: order.id },
-          data: { status: 'COMPLETED' },
+          data: {
+            status: 'COMPLETED',
+            deliveredCredentials: autoCreds,
+          },
         });
       }
 
