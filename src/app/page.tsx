@@ -200,6 +200,10 @@ export default function StorefrontPage() {
 
   const handleCreateTicket = async () => {
     if (!selectedProduct) return;
+    if (selectedProduct.requiresCustomerInfo && !customerAccounts.trim()) {
+      alert(`Veuillez renseigner : ${selectedProduct.customerInfoPrompt || 'les informations requises pour le fournisseur'}`);
+      return;
+    }
     setCreatingTicket(true);
     setCreatedTicketResult(null);
 
@@ -775,6 +779,26 @@ export default function StorefrontPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Customer Info Required for Supplier */}
+                {selectedProduct.requiresCustomerInfo && (
+                  <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 space-y-2">
+                    <label className="block text-xs font-black text-sky-400 uppercase tracking-wider">
+                      📋 {selectedProduct.customerInfoPrompt || 'Informations requises pour le fournisseur'} *
+                    </label>
+                    <textarea
+                      rows={2}
+                      required
+                      placeholder={selectedProduct.customerInfoPlaceholder || 'Ex: Email de votre compte à upgrader, identifiant ou lien...'}
+                      value={customerAccounts}
+                      onChange={(e) => setCustomerAccounts(e.target.value)}
+                      className="w-full bg-slate-950 border border-sky-500/40 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      ⚠️ Ces informations seront transmises au fournisseur pour activer votre commande.
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
                   <div>

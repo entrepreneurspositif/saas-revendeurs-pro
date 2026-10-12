@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
         activeSupplierProduct: {
           select: {
             stock: true,
+            productType: true,
             supplier: {
               select: { isActive: true },
             },
@@ -118,6 +119,9 @@ export async function GET(req: NextRequest) {
           isExclusive,
           deliveryType: p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'),
           isMethod: p.category === 'Méthode' || p.deliveryType === 'AUTOMATIC',
+          requiresCustomerInfo: Boolean(p.requiresCustomerInfo || p.activeSupplierProduct?.productType === 'upgrade_account'),
+          customerInfoPrompt: p.customerInfoPrompt || (p.activeSupplierProduct?.productType === 'upgrade_account' ? 'Email / Identifiant de votre compte à upgrader' : null),
+          customerInfoPlaceholder: p.customerInfoPlaceholder || null,
           isAvailable: p.isActive && (p.activeSupplierProduct ? (stock > 0 && isSupplierActive) : true),
         };
       });

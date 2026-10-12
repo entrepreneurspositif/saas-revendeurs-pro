@@ -157,6 +157,7 @@ export async function POST(req: NextRequest) {
         profitMargin: totalProfitMargin,
         status: 'COMPLETED',
         deliveredCredentials: credentialsStr,
+        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
         idempotencyKey,
         supplierOrderRef: purchaseRes.orderRef,
       },

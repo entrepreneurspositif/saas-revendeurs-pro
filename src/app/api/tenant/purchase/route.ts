@@ -198,6 +198,7 @@ export async function POST(req: NextRequest) {
         platformProfit: totalPlatformProfit,
         status: 'COMPLETED',
         deliveredCredentials: credentialsStr,
+        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
         idempotencyKey,
         supplierOrderRef: purchaseRes.orderRef,
       },

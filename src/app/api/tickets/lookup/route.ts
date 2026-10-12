@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
         status: order.status,
         productDescription: (order as any).product?.description || null,
         deliveredCredentials: order.status === 'COMPLETED' ? order.deliveredCredentials : null,
+        customerAccounts: order.customerAccounts || null,
         paymentInstructions: order.paymentInstructions,
         errorMessage: order.errorMessage,
         createdAt: order.createdAt,

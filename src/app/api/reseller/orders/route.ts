@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
         resellerProfit: o.resellerProfit,
         status: o.status,
         deliveredCredentials: o.deliveredCredentials,
+        customerAccounts: o.customerAccounts || null,
         paymentInstructions: o.paymentInstructions,
         supportStatus: o.supportStatus,
         createdAt: o.createdAt,

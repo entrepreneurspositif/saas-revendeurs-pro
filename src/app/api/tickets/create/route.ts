@@ -136,17 +136,19 @@ export async function POST(req: NextRequest) {
         profitMargin: totalProfitMargin,
         status: 'PENDING_PAYMENT',
         paymentInstructions,
+        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
         idempotencyKey,
       },
     });
 
     // Send background Telegram Notification to Admin
+    const customerInfoDetail = customerAccounts ? `\nInfos Fournisseur : ${String(customerAccounts).trim()}` : '';
     sendTelegramNotification({
       title: product.title,
       ticketCode: order.ticketCode,
       type: 'ORDER',
       amount: `$${totalSellingPrice.toFixed(2)} USD`,
-      details: `Quantité : ${quantity}\nClient : ${user.email}`,
+      details: `Quantité : ${quantity}\nClient : ${user.email}${customerInfoDetail}`,
     }).catch((err) => console.error('Telegram notification error:', err));
 
     return NextResponse.json({

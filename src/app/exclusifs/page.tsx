@@ -38,6 +38,7 @@ export default function ExclusifsPage() {
   // Purchase Modal State
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
+  const [customerAccounts, setCustomerAccounts] = useState<string>('');
   const [purchasing, setPurchasing] = useState<boolean>(false);
   const [createdOrder, setCreatedOrder] = useState<any | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -84,6 +85,10 @@ export default function ExclusifsPage() {
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct || quantity < 1 || purchasing) return;
+    if (selectedProduct.requiresCustomerInfo && !customerAccounts.trim()) {
+      alert(`Veuillez renseigner : ${selectedProduct.customerInfoPrompt || 'les informations requises'}`);
+      return;
+    }
 
     setPurchasing(true);
     try {
@@ -93,12 +98,13 @@ export default function ExclusifsPage() {
         body: JSON.stringify({
           productId: selectedProduct.id,
           quantity,
+          customerAccounts,
         }),
       });
 
       const data = await res.json();
-      if (data.success && data.order) {
-        setCreatedOrder(data.order);
+      if (data.success) {
+        setCreatedOrder(data.order || data);
       } else {
         alert(data.message || 'Erreur lors de la création du ticket');
       }
@@ -500,6 +506,25 @@ export default function ExclusifsPage() {
                       </span>
                     </div>
                   </div>
+
+                  {selectedProduct.requiresCustomerInfo && (
+                    <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 space-y-2">
+                      <label className="block text-xs font-black text-sky-400 uppercase tracking-wider">
+                        📋 {selectedProduct.customerInfoPrompt || 'Informations requises'} *
+                      </label>
+                      <textarea
+                        rows={2}
+                        required
+                        placeholder={selectedProduct.customerInfoPlaceholder || 'Ex: Email de votre compte, identifiant ou lien...'}
+                        value={customerAccounts}
+                        onChange={(e) => setCustomerAccounts(e.target.value)}
+                        className="w-full bg-slate-950 border border-sky-500/40 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        ⚠️ Ces informations seront transmises pour activer votre commande.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="pt-2 flex justify-end space-x-3">
                     <button

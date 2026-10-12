@@ -60,6 +60,9 @@ model Product {
   badge                   String?
   deliveryType            String           @default("MANUAL")
   methodContent           String?
+  requiresCustomerInfo    Boolean          @default(false)
+  customerInfoPrompt      String?
+  customerInfoPlaceholder String?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
   activeSupplierProduct   SupplierProduct? @relation(fields: [activeSupplierProductId], references: [id], onDelete: SetNull)
@@ -92,6 +95,7 @@ model Order {
   profitMargin         Float
   status               String    @default("PENDING_PAYMENT")
   deliveredCredentials String?
+  customerAccounts     String?
   paymentInstructions  String?
   errorMessage         String?
   idempotencyKey       String

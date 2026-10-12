@@ -3319,8 +3319,13 @@ export default function ResellerDashboardPage() {
                                   </span>
                                 </div>
                               </td>
-                              <td className="py-3 px-3 font-bold text-white max-w-[180px] truncate">
-                                {o.productTitle}
+                              <td className="py-3 px-3 font-bold text-white max-w-[200px]">
+                                <div className="truncate">{o.productTitle}</div>
+                                {o.customerAccounts && (
+                                  <div className="mt-1 px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-[10px] font-mono text-sky-300 truncate" title={o.customerAccounts}>
+                                    📋 Info client : {o.customerAccounts}
+                                  </div>
+                                )}
                               </td>
                               <td className="py-3 px-3 text-slate-400">
                                 {o.customerEmail}

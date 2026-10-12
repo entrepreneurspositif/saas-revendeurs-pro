@@ -156,6 +156,7 @@ export async function POST(req: NextRequest) {
         platformProfit: totalPlatformProfit,
         status: 'PENDING_PAYMENT',
         paymentInstructions,
+        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
         idempotencyKey,
       },
     });

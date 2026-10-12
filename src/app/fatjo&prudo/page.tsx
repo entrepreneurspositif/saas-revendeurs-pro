@@ -669,6 +669,9 @@ export default function AdminDashboardPage() {
   const [editBadge, setEditBadge] = useState<string>('');
   const [editDeliveryType, setEditDeliveryType] = useState<'MANUAL' | 'AUTOMATIC'>('MANUAL');
   const [editMethodContent, setEditMethodContent] = useState<string>('');
+  const [editRequiresCustomerInfo, setEditRequiresCustomerInfo] = useState<boolean>(false);
+  const [editCustomerInfoPrompt, setEditCustomerInfoPrompt] = useState<string>('');
+  const [editCustomerInfoPlaceholder, setEditCustomerInfoPlaceholder] = useState<string>('');
   const [savingProduct, setSavingProduct] = useState<boolean>(false);
 
   // Add Product Modal State
@@ -677,6 +680,9 @@ export default function AdminDashboardPage() {
   const [newProdCategory, setNewProdCategory] = useState<string>('Méthode');
   const [newProdDeliveryType, setNewProdDeliveryType] = useState<'MANUAL' | 'AUTOMATIC'>('AUTOMATIC');
   const [newProdMethodContent, setNewProdMethodContent] = useState<string>('');
+  const [newProdRequiresCustomerInfo, setNewProdRequiresCustomerInfo] = useState<boolean>(false);
+  const [newProdCustomerInfoPrompt, setNewProdCustomerInfoPrompt] = useState<string>('');
+  const [newProdCustomerInfoPlaceholder, setNewProdCustomerInfoPlaceholder] = useState<string>('');
   const [newProdDescription, setNewProdDescription] = useState<string>('');
   const [newProdPrice, setNewProdPrice] = useState<number>(10);
   const [newProdBadge, setNewProdBadge] = useState<string>('');
@@ -1153,6 +1159,9 @@ export default function AdminDashboardPage() {
           imageUrl: newProdImageUrl.trim() || undefined,
           deliveryType: newProdDeliveryType,
           methodContent: newProdMethodContent.trim() || null,
+          requiresCustomerInfo: newProdRequiresCustomerInfo,
+          customerInfoPrompt: newProdCustomerInfoPrompt.trim() || null,
+          customerInfoPlaceholder: newProdCustomerInfoPlaceholder.trim() || null,
         }),
       });
 
@@ -1167,6 +1176,9 @@ export default function AdminDashboardPage() {
         setNewProdCategory('Méthode');
         setNewProdDeliveryType('AUTOMATIC');
         setNewProdMethodContent('');
+        setNewProdRequiresCustomerInfo(false);
+        setNewProdCustomerInfoPrompt('');
+        setNewProdCustomerInfoPlaceholder('');
         fetchAdminData();
       }
     } catch (e: any) {
@@ -1263,6 +1275,9 @@ export default function AdminDashboardPage() {
     setEditBadge(product.badge || '');
     setEditDeliveryType(product.deliveryType || (product.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'));
     setEditMethodContent(product.methodContent || '');
+    setEditRequiresCustomerInfo(Boolean(product.requiresCustomerInfo || product.activeSupplierProduct?.productType === 'upgrade_account'));
+    setEditCustomerInfoPrompt(product.customerInfoPrompt || (product.activeSupplierProduct?.productType === 'upgrade_account' ? 'Email / Identifiant de votre compte à upgrader' : ''));
+    setEditCustomerInfoPlaceholder(product.customerInfoPlaceholder || '');
   };
 
   const handleSaveProductEdit = async () => {
@@ -1284,6 +1299,9 @@ export default function AdminDashboardPage() {
           activeSupplierProductId: editSupplierProductId || undefined,
           deliveryType: editDeliveryType,
           methodContent: editMethodContent.trim() || null,
+          requiresCustomerInfo: editRequiresCustomerInfo,
+          customerInfoPrompt: editCustomerInfoPrompt.trim() || null,
+          customerInfoPlaceholder: editCustomerInfoPlaceholder.trim() || null,
         }),
       });
 
@@ -2047,8 +2065,14 @@ export default function AdminDashboardPage() {
                             <td className="px-5 py-4 max-w-xs">
                               <div className="font-extrabold text-white text-xs leading-snug">{ord.productTitle}</div>
                               <span className="text-[10px] text-slate-400 block mt-0.5">
-                                Fournisseur: {ord.supplier?.name || 'Canboso API'}
+                                Fournisseur: {ord.supplier?.name || 'Produit Exclusif / Interne'}
                               </span>
+                              {ord.customerAccounts && (
+                                <div className="mt-1.5 p-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-[11px] font-mono text-sky-200">
+                                  <span className="font-black text-sky-400 block text-[9px] uppercase tracking-wider mb-0.5">📋 Info Client pour Fournisseur :</span>
+                                  <span className="break-all select-all">{ord.customerAccounts}</span>
+                                </div>
+                              )}
                             </td>
 
                             <td className="px-5 py-4 text-center font-bold">
@@ -5577,6 +5601,62 @@ export default function AdminDashboardPage() {
                 </div>
               )}
 
+              {/* Customer Info Required for Supplier */}
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={newProdRequiresCustomerInfo}
+                      onChange={(e) => {
+                        setNewProdRequiresCustomerInfo(e.target.checked);
+                        if (e.target.checked && !newProdCustomerInfoPrompt) {
+                          setNewProdCustomerInfoPrompt('Email / Identifiant de votre compte à activer');
+                        }
+                      }}
+                      className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-sky-500"
+                    />
+                    <div>
+                      <span className="text-xs font-extrabold text-white block">
+                        📋 Informations client à envoyer au fournisseur
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Exiger un email, identifiant ou lien du client lors de la commande
+                      </span>
+                    </div>
+                  </div>
+                </label>
+
+                {newProdRequiresCustomerInfo && (
+                  <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+                    <div>
+                      <label className="block text-[10px] font-black text-sky-400 uppercase tracking-wider mb-1">
+                        Libellé / Question affichée au client *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Email de votre compte Canva, Lien de votre profil..."
+                        value={newProdCustomerInfoPrompt}
+                        onChange={(e) => setNewProdCustomerInfoPrompt(e.target.value)}
+                        className="w-full bg-slate-900 border border-sky-500/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Exemple / Placeholder (Optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: moncompte@gmail.com"
+                        value={newProdCustomerInfoPlaceholder}
+                        onChange={(e) => setNewProdCustomerInfoPlaceholder(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                   Badge ou Tag (Optionnel)
@@ -5812,6 +5892,62 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
               )}
+
+              {/* Customer Info Required for Supplier in Edit */}
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editRequiresCustomerInfo}
+                      onChange={(e) => {
+                        setEditRequiresCustomerInfo(e.target.checked);
+                        if (e.target.checked && !editCustomerInfoPrompt) {
+                          setEditCustomerInfoPrompt('Email / Identifiant de votre compte à upgrader');
+                        }
+                      }}
+                      className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-sky-500"
+                    />
+                    <div>
+                      <span className="text-xs font-extrabold text-white block">
+                        📋 Informations client à envoyer au fournisseur
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Exiger un email, identifiant ou lien du client lors de la commande
+                      </span>
+                    </div>
+                  </div>
+                </label>
+
+                {editRequiresCustomerInfo && (
+                  <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+                    <div>
+                      <label className="block text-[10px] font-black text-sky-400 uppercase tracking-wider mb-1">
+                        Libellé / Question affichée au client *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Email de votre compte à upgrader, Lien profil..."
+                        value={editCustomerInfoPrompt}
+                        onChange={(e) => setEditCustomerInfoPrompt(e.target.value)}
+                        className="w-full bg-slate-900 border border-sky-500/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Exemple / Placeholder (Optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: moncompte@gmail.com"
+                        value={editCustomerInfoPlaceholder}
+                        onChange={(e) => setEditCustomerInfoPlaceholder(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -127,6 +127,7 @@ async function processCallback(req: NextRequest) {
           productId: suppProd.externalId,
           quantity: order.quantity,
           idempotencyKey: order.idempotencyKey || `ord-moneroo-${Date.now()}`,
+          customerAccounts: order.customerAccounts || undefined,
         });
 
         if (purchaseRes.success) {

@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
       productId: suppProd.externalId,
       quantity: order.quantity,
       idempotencyKey: order.idempotencyKey || `ord-${Date.now()}`,
+      customerAccounts: order.customerAccounts || undefined,
     });
 
     if (!purchaseRes.success) {

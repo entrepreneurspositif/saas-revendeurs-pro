@@ -67,6 +67,9 @@ export async function GET(req: NextRequest) {
         imageUrl: p.imageUrl,
         deliveryType: p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'),
         isMethod: p.category === 'Méthode' || p.deliveryType === 'AUTOMATIC',
+        requiresCustomerInfo: Boolean(p.requiresCustomerInfo || suppProd?.productType === 'upgrade_account'),
+        customerInfoPrompt: p.customerInfoPrompt || (suppProd?.productType === 'upgrade_account' ? 'Email / Identifiant de votre compte à upgrader' : null),
+        customerInfoPlaceholder: p.customerInfoPlaceholder || null,
         updatedAt: p.updatedAt,
         stock: stock,
         isAvailable: p.isActive && stock > 0 && isSupplierActive,
@@ -76,6 +79,9 @@ export async function GET(req: NextRequest) {
       if (adminMode) {
         publicProduct.deliveryType = p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL');
         publicProduct.methodContent = p.methodContent || null;
+        publicProduct.requiresCustomerInfo = Boolean(p.requiresCustomerInfo || suppProd?.productType === 'upgrade_account');
+        publicProduct.customerInfoPrompt = p.customerInfoPrompt || null;
+        publicProduct.customerInfoPlaceholder = p.customerInfoPlaceholder || null;
         publicProduct.costPrice = costPrice;
         publicProduct.profitMargin = parseFloat(margin.toFixed(2));
         publicProduct.profitMarginPercent = parseFloat(marginPercent);
@@ -123,6 +129,9 @@ export async function POST(req: NextRequest) {
       activeSupplierProductId,
       deliveryType,
       methodContent,
+      requiresCustomerInfo,
+      customerInfoPrompt,
+      customerInfoPlaceholder,
     } = body;
 
     if (!title || sellingPrice === undefined) {
@@ -158,6 +167,9 @@ export async function POST(req: NextRequest) {
       imageUrl: imageUrl?.trim() || null,
       deliveryType: isAutoDelivery ? 'AUTOMATIC' : 'MANUAL',
       methodContent: methodContent?.trim() || null,
+      requiresCustomerInfo: Boolean(requiresCustomerInfo),
+      customerInfoPrompt: customerInfoPrompt?.trim() || null,
+      customerInfoPlaceholder: customerInfoPlaceholder?.trim() || null,
       isActive: true,
     };
 
@@ -197,6 +209,9 @@ export async function PUT(req: NextRequest) {
       imageUrl,
       deliveryType,
       methodContent,
+      requiresCustomerInfo,
+      customerInfoPrompt,
+      customerInfoPlaceholder,
     } = body;
 
     if (!id) {
@@ -214,6 +229,9 @@ export async function PUT(req: NextRequest) {
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl?.trim() || null;
     if (deliveryType !== undefined) updateData.deliveryType = deliveryType;
     if (methodContent !== undefined) updateData.methodContent = methodContent ? methodContent.trim() : null;
+    if (requiresCustomerInfo !== undefined) updateData.requiresCustomerInfo = Boolean(requiresCustomerInfo);
+    if (customerInfoPrompt !== undefined) updateData.customerInfoPrompt = customerInfoPrompt ? customerInfoPrompt.trim() : null;
+    if (customerInfoPlaceholder !== undefined) updateData.customerInfoPlaceholder = customerInfoPlaceholder ? customerInfoPlaceholder.trim() : null;
 
     if (activeSupplierProductId) {
       const suppProd = await prisma.supplierProduct.findUnique({

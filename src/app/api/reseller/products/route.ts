@@ -71,6 +71,9 @@ export async function GET(req: NextRequest) {
         isExclusive,
         deliveryType: p.deliveryType || (p.category === 'Méthode' ? 'AUTOMATIC' : 'MANUAL'),
         isMethod: p.category === 'Méthode' || p.deliveryType === 'AUTOMATIC',
+        requiresCustomerInfo: Boolean(p.requiresCustomerInfo || p.activeSupplierProduct?.productType === 'upgrade_account'),
+        customerInfoPrompt: p.customerInfoPrompt || (p.activeSupplierProduct?.productType === 'upgrade_account' ? 'Email / Identifiant du compte à upgrader' : null),
+        customerInfoPlaceholder: p.customerInfoPlaceholder || null,
         // Pricing details for reseller
         baseSellingPrice: calc.baseSellingPrice,
         discountPercent: calc.discountPercent,

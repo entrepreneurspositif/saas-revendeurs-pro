@@ -89,6 +89,14 @@ export class HubxStoreDriver implements ISupplierDriver {
         external_order_id: params.idempotencyKey || `order-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
       };
 
+      if (params.customerAccounts) {
+        payload.customer_accounts = params.customerAccounts;
+        payload.customer_account = params.customerAccounts;
+        payload.custom_field = params.customerAccounts;
+        payload.custom_data = params.customerAccounts;
+        payload.email = params.customerAccounts;
+      }
+
       const res = await fetch(`${this.apiUrl}/orders`, {
         method: 'POST',
         headers,
