@@ -267,6 +267,7 @@ model Tenant {
   otpServices         TenantOtpService[]
   visitLogs           VisitLog[]
   tickets             ResellerTicket[]
+  payouts             PayoutRequest[]
 }
 
 model TenantProductPrice {
@@ -326,6 +327,25 @@ model ResellerTicketMessage {
   ticket     ResellerTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+  @@index([createdAt])
+}
+
+model PayoutRequest {
+  id             String    @id @default(cuid())
+  reference      String    @unique
+  tenantId       String
+  amount         Float
+  paymentMethod  String
+  paymentDetails String
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminNote      String?
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
   @@index([createdAt])
 }
 

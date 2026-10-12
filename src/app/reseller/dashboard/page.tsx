@@ -321,6 +321,19 @@ export default function ResellerDashboardPage() {
   const [ticketSuccess, setTicketSuccess] = useState<string | null>(null);
   const [ticketFilterStatus, setTicketFilterStatus] = useState<string>('ALL');
 
+  // Payouts & Withdrawals State
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [payoutStats, setPayoutStats] = useState({
+    totalWithdrawn: 0,
+    pendingWithdrawn: 0,
+  });
+  const [loadingPayouts, setLoadingPayouts] = useState<boolean>(false);
+  const [payoutAmount, setPayoutAmount] = useState<string>('');
+  const [payoutMethod, setPayoutMethod] = useState<string>('MTN Mobile Money');
+  const [payoutDetails, setPayoutDetails] = useState<string>('');
+  const [submittingPayout, setSubmittingPayout] = useState<boolean>(false);
+  const [payoutMsg, setPayoutMsg] = useState<{ success: boolean; text: string } | null>(null);
+
   // Upload Logo Handler
   const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -701,9 +714,84 @@ export default function ResellerDashboardPage() {
     }
   };
 
+  // Fetch Reseller Payouts
+  const fetchPayouts = async () => {
+    setLoadingPayouts(true);
+    try {
+      const res = await fetch('/api/reseller/payouts');
+      const data = await res.json();
+      if (data.success) {
+        setPayouts(data.payouts || []);
+        setPayoutStats({
+          totalWithdrawn: data.totalWithdrawn || 0,
+          pendingWithdrawn: data.pendingWithdrawn || 0,
+        });
+        if (data.walletBalance !== undefined) {
+          setReseller((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  walletBalance: data.walletBalance,
+                  totalEarnings: data.totalEarnings ?? prev.totalEarnings,
+                }
+              : prev
+          );
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching payouts:', e);
+    } finally {
+      setLoadingPayouts(false);
+    }
+  };
+
+  // Submit Payout Request
+  const handleRequestPayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const numAmount = parseFloat(payoutAmount);
+    if (isNaN(numAmount) || numAmount < 1) {
+      setPayoutMsg({ success: false, text: 'Le montant minimum de retrait est de $1.00 USD.' });
+      return;
+    }
+    if (!payoutDetails.trim()) {
+      setPayoutMsg({
+        success: false,
+        text: 'Veuillez renseigner vos coordonnées de réception (Numéro Mobile Money ou Adresse USDT).',
+      });
+      return;
+    }
+
+    setSubmittingPayout(true);
+    setPayoutMsg(null);
+    try {
+      const res = await fetch('/api/reseller/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: numAmount,
+          paymentMethod: payoutMethod,
+          paymentDetails: payoutDetails.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de la demande de retrait');
+      }
+      setPayoutMsg({ success: true, text: data.message });
+      setPayoutAmount('');
+      setPayoutDetails('');
+      fetchPayouts();
+    } catch (err: any) {
+      setPayoutMsg({ success: false, text: err.message });
+    } finally {
+      setSubmittingPayout(false);
+    }
+  };
+
   useEffect(() => {
     fetchSession();
     fetchResellerTickets();
+    fetchPayouts();
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
@@ -713,6 +801,8 @@ export default function ResellerDashboardPage() {
         setActiveTab('subscription');
       } else if (tabParam === 'support') {
         setActiveTab('support');
+      } else if (tabParam === 'wallet') {
+        setActiveTab('wallet');
       }
       if (activated === 'true') {
         setActiveTab('subscription');
@@ -728,6 +818,7 @@ export default function ResellerDashboardPage() {
     }
     if (activeTab === 'orders' || activeTab === 'overview') fetchOrders();
     if (activeTab === 'subscription') fetchPlans();
+    if (activeTab === 'wallet' || activeTab === 'overview') fetchPayouts();
     if (activeTab === 'marketing') {
       fetchAnalytics();
       fetchTelegramSettings();
@@ -3529,56 +3620,253 @@ export default function ResellerDashboardPage() {
             </div>
 
             {/* 1. Balances & Withdrawals */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Solde Retirable</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Solde Retirable</span>
                   <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
                     <Coins className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-amber-400 font-mono">
+                <div className="text-2xl font-black text-amber-400 font-mono">
                   ${(reseller?.walletBalance || 0).toFixed(2)}
                 </div>
-                <span className="text-[11px] text-slate-500 block">Disponible pour virement immédiat</span>
+                <span className="text-[10px] text-slate-500 block">
+                  {currency === 'FCFA' ? formatPrice(reseller?.walletBalance || 0) : 'Disponible immédiatement'}
+                </span>
               </div>
 
-              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-2">
+              <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total des Gains Cumulés</span>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">En Attente</span>
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-sky-400 font-mono">
+                  ${(payoutStats.pendingWithdrawn || 0).toFixed(2)}
+                </div>
+                <span className="text-[10px] text-slate-500 block">Retraits en cours de traitement</span>
+              </div>
+
+              <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Retiré</span>
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-indigo-400 font-mono">
+                  ${(payoutStats.totalWithdrawn || 0).toFixed(2)}
+                </div>
+                <span className="text-[10px] text-slate-500 block">Déjà versé sur vos comptes</span>
+              </div>
+
+              <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gains Cumulés</span>
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                     <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-emerald-400 font-mono">
+                <div className="text-2xl font-black text-emerald-400 font-mono">
                   ${(reseller?.totalEarnings || 0).toFixed(2)}
                 </div>
-                <span className="text-[11px] text-slate-500 block">Commissions générées depuis l'ouverture</span>
+                <span className="text-[10px] text-slate-500 block">Commissions totales générées</span>
               </div>
             </div>
 
-            {/* Withdrawal Request Box */}
-            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
-              <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                <ArrowRight className="w-4 h-4 text-emerald-400" />
-                <span>Demande de Retrait des Bénéfices</span>
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Les retraits de vos commissions sont versés directement vers votre compte Mobile Money (MTN, Moov, Orange, Wave) ou virement bancaire sous 24h par le Super Admin.
-              </p>
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Withdrawal Request Form */}
+            <form onSubmit={handleRequestPayout} className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
                 <div>
-                  <span className="text-xs font-bold text-white block">Seuil minimum de retrait</span>
-                  <span className="text-[11px] text-slate-400">10 $ USD (ou équivalent en monnaie locale FCFA)</span>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4 text-emerald-400" />
+                    <span>Demander un Retrait de vos Commissions</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Recevez vos gains par Mobile Money (MTN, Moov, Orange, Wave) ou USDT (TRC20 / BEP20). Seuil minimum : $1.00 USD.
+                  </p>
                 </div>
                 <button
-                  disabled={(reseller?.walletBalance || 0) < 10}
-                  onClick={() => alert(`Demande de retrait enregistrée pour votre solde de $${(reseller?.walletBalance || 0).toFixed(2)}. Le super admin traitera le versement sous 24h.`)}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed shadow-lg transition-all"
+                  type="button"
+                  onClick={fetchPayouts}
+                  className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 flex items-center gap-1.5"
                 >
-                  Demander un retrait
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingPayouts ? 'animate-spin' : ''}`} />
+                  <span>Actualiser</span>
                 </button>
               </div>
+
+              {payoutMsg && (
+                <div
+                  className={`p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+                    payoutMsg.success
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                  }`}
+                >
+                  {payoutMsg.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+                  <span>{payoutMsg.text}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                      Montant ($ USD) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPayoutAmount(String((reseller?.walletBalance || 0).toFixed(2)))}
+                      className="text-[10px] font-black text-sky-400 hover:text-sky-300"
+                    >
+                      Tout retirer (${(reseller?.walletBalance || 0).toFixed(2)})
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    max={reseller?.walletBalance || 0}
+                    required
+                    placeholder="Ex: 25.00"
+                    value={payoutAmount}
+                    onChange={(e) => setPayoutAmount(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm font-mono font-black text-emerald-400 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Moyen de Réception *
+                  </label>
+                  <select
+                    value={payoutMethod}
+                    onChange={(e) => setPayoutMethod(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="MTN Mobile Money">📱 MTN Mobile Money</option>
+                    <option value="Moov Money">📱 Moov Money</option>
+                    <option value="Orange Money">📱 Orange Money</option>
+                    <option value="Wave">🐧 Wave Mobile Money</option>
+                    <option value="USDT (TRC20)">💎 Crypto USDT (TRC20)</option>
+                    <option value="USDT (BEP20)">💎 Crypto USDT (BEP20)</option>
+                    <option value="Virement / Autre">🏦 Virement / Autre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Numéro (+Indicatif & Nom) ou Adresse USDT *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: +229 01... (Jean Dupont) ou T..."
+                    value={payoutDetails}
+                    onChange={(e) => setPayoutDetails(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <p className="text-[11px] text-slate-400">
+                  🔒 Le montant demandé est réservé immédiatement et versé après validation du Super Admin.
+                </p>
+                <button
+                  type="submit"
+                  disabled={submittingPayout || (reseller?.walletBalance || 0) < 1}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
+                >
+                  {submittingPayout ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Envoi en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Coins className="w-4 h-4" />
+                      <span>Demander le Retrait</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Payout History Table */}
+            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-sky-400" />
+                  <span>Historique de vos Demandes de Retrait ({payouts.length})</span>
+                </h3>
+              </div>
+
+              {payouts.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-2xl">
+                  Aucune demande de retrait effectuée pour le moment.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-[10px] font-black uppercase text-slate-400">
+                        <th className="py-3 px-3">Référence & Date</th>
+                        <th className="py-3 px-3">Montant</th>
+                        <th className="py-3 px-3">Moyen & Coordonnées</th>
+                        <th className="py-3 px-3">Statut</th>
+                        <th className="py-3 px-3">Note / Preuve Admin</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {payouts.map((p) => (
+                        <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="py-3 px-3">
+                            <span className="font-mono font-black text-sky-400 block">{p.reference}</span>
+                            <span className="text-[10px] text-slate-500">
+                              {new Date(p.createdAt).toLocaleString('fr-FR')}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-mono font-black text-emerald-400 text-sm">
+                            ${p.amount.toFixed(2)}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-white block">{p.paymentMethod}</span>
+                            <span className="font-mono text-[11px] text-slate-400 break-all">{p.paymentDetails}</span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase inline-flex items-center gap-1 ${
+                                p.status === 'APPROVED'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : p.status === 'REJECTED'
+                                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              }`}
+                            >
+                              {p.status === 'APPROVED'
+                                ? '✅ PAYÉ & VALIDÉ'
+                                : p.status === 'REJECTED'
+                                ? '❌ REFUSÉ (RECRÉDITÉ)'
+                                : '⏳ EN ATTENTE'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-300 max-w-[200px]">
+                            {p.adminNote ? (
+                              <span className="text-[11px] text-slate-300">{p.adminNote}</span>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 italic">En attente de traitement...</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* 2. DYNAMIC PAYMENT GATEWAYS (FEEXPAY & MONEROO) */}

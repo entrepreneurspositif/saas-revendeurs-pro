@@ -21,33 +21,37 @@ import {
   Globe,
   Sliders,
   LifeBuoy,
+  Wallet,
 } from 'lucide-react';
 import { SAAS_AVAILABLE_FEATURES, SaasFeatureDefinition, calculateSaasPrices } from '@/lib/saasPricingHelper';
 import AdminResellerSupportSection from '@/components/AdminResellerSupportSection';
+import AdminPayoutsSection from '@/components/AdminPayoutsSection';
 
 export default function AdminSaasSection() {
   const [loading, setLoading] = useState<boolean>(true);
   const [plans, setPlans] = useState<any[]>([]);
   const [resellers, setResellers] = useState<any[]>([]);
+  const [pendingPayoutsCount, setPendingPayoutsCount] = useState<number>(0);
   const [savingPlans, setSavingPlans] = useState<boolean>(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
   const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
 
   // Active sub-tab
-  const [subTab, setSubTab] = useState<'matrix' | 'resellers' | 'simulation' | 'support'>('matrix');
+  const [subTab, setSubTab] = useState<'matrix' | 'resellers' | 'payouts' | 'simulation' | 'support'>('matrix');
 
   // Simulation Calculator State
   const [simSupplierCost, setSimSupplierCost] = useState<number>(10);
   const [simPlatformPrice, setSimPlatformPrice] = useState<number>(20);
   const [simResellerRetailPrice, setSimResellerRetailPrice] = useState<number>(25);
 
-  // Fetch Plans and Resellers
+  // Fetch Plans, Resellers, and Payout Stats
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [plansRes, resellersRes] = await Promise.all([
+      const [plansRes, resellersRes, payoutsRes] = await Promise.all([
         fetch('/api/saas/plans'),
         fetch('/api/saas/resellers'),
+        fetch('/api/admin/payouts'),
       ]);
 
       const plansData = await plansRes.json();
@@ -58,6 +62,11 @@ export default function AdminSaasSection() {
       const resellersData = await resellersRes.json();
       if (resellersData.success && resellersData.resellers) {
         setResellers(resellersData.resellers);
+      }
+
+      const payoutsData = await payoutsRes.json();
+      if (payoutsData.success && payoutsData.stats) {
+        setPendingPayoutsCount(payoutsData.stats.pendingCount || 0);
       }
     } catch (e) {
       console.error(e);
@@ -192,6 +201,22 @@ export default function AdminSaasSection() {
               }`}
             >
               Revendeurs ({resellers.length})
+            </button>
+            <button
+              onClick={() => setSubTab('payouts')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                subTab === 'payouts'
+                  ? 'bg-sky-500 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Retraits</span>
+              {pendingPayoutsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">
+                  {pendingPayoutsCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setSubTab('simulation')}
@@ -639,7 +664,14 @@ export default function AdminSaasSection() {
         </div>
       )}
 
-      {/* SUB-TAB 4: RESELLER SUPPORT & TICKETING */}
+      {/* SUB-TAB 4: RESELLER PAYOUTS & WITHDRAWALS */}
+      {subTab === 'payouts' && (
+        <div className="animate-in fade-in duration-200">
+          <AdminPayoutsSection onPendingCountChange={setPendingPayoutsCount} />
+        </div>
+      )}
+
+      {/* SUB-TAB 5: RESELLER SUPPORT & TICKETING */}
       {subTab === 'support' && (
         <div className="animate-in fade-in duration-200">
           <AdminResellerSupportSection />
