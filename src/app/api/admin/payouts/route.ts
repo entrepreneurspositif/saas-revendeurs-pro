@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendResellerTelegramNotification } from '@/lib/telegram';
+import { getFeexPayConfig, executeFeexPayPayout } from '@/lib/feexpay';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const payouts = await prisma.payoutRequest.findMany({
-      include: {
-        tenant: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            storeName: true,
-            subdomain: true,
-            walletBalance: true,
-            totalEarnings: true,
-            contactWhatsApp: true,
+    const [payouts, feexConfig] = await Promise.all([
+      prisma.payoutRequest.findMany({
+        include: {
+          tenant: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              storeName: true,
+              subdomain: true,
+              walletBalance: true,
+              totalEarnings: true,
+              contactWhatsApp: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+      getFeexPayConfig(),
+    ]);
 
     const pendingPayouts = payouts.filter((p) => p.status === 'PENDING');
     const approvedPayouts = payouts.filter((p) => p.status === 'APPROVED');
@@ -41,10 +45,53 @@ export async function GET() {
         approvedAmount: parseFloat(approvedAmount.toFixed(2)),
         rejectedCount: rejectedPayouts.length,
       },
+      autoPayoutSettings: {
+        enabled: feexConfig.autoPayoutEnabled,
+        maxUsd: feexConfig.autoPayoutMaxUsd,
+        cooldownMinutes: feexConfig.autoPayoutCooldownMinutes,
+      },
       payouts,
     });
   } catch (error: any) {
     console.error('Error fetching admin payouts:', error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { enabled, maxUsd, cooldownMinutes } = body;
+
+    const updates = [
+      {
+        key: 'feexpay_auto_payout_enabled',
+        value: String(enabled !== false),
+      },
+      {
+        key: 'feexpay_auto_payout_max_usd',
+        value: String(Math.max(1, parseFloat(String(maxUsd || 25)))),
+      },
+      {
+        key: 'feexpay_auto_payout_cooldown_minutes',
+        value: String(Math.max(0, parseInt(String(cooldownMinutes ?? 60), 10))),
+      },
+    ];
+
+    for (const item of updates) {
+      await prisma.setting.upsert({
+        where: { key: item.key },
+        update: { value: item.value },
+        create: { key: item.key, value: item.value },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Paramètres de sécurité Auto-Payout FeexPay enregistrés avec succès !',
+    });
+  } catch (error: any) {
+    console.error('Error updating auto-payout settings:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
@@ -56,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     if (!payoutId || !action) {
       return NextResponse.json(
-        { success: false, message: 'ID de retrait et action (APPROVE / REJECT) requis.' },
+        { success: false, message: 'ID de retrait et action requis.' },
         { status: 400 }
       );
     }
@@ -80,7 +127,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (action === 'APPROVE') {
+    if (action === 'AUTO_PAY_FEEXPAY') {
+      const feexResult = await executeFeexPayPayout({
+        paymentMethod: payout.paymentMethod,
+        paymentDetails: payout.paymentDetails,
+        amountUsd: payout.amount,
+        reference: payout.reference,
+        email: payout.tenant?.email,
+      });
+
+      if (!feexResult.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: feexResult.message,
+          },
+          { status: 400 }
+        );
+      }
+
+      const noteText =
+        adminNote?.trim() ||
+        `⚡ Payé via API FeexPay (${feexResult.amountXof} FCFA envoyés au ${feexResult.phoneNumber}) — Réf: ${feexResult.feexReference}`;
+
+      const updatedPayout = await prisma.payoutRequest.update({
+        where: { id: payout.id },
+        data: {
+          status: 'APPROVED',
+          adminNote: noteText,
+          processedAt: new Date(),
+        },
+      });
+
+      sendResellerTelegramNotification({
+        tenantId: payout.tenantId,
+        eventType: 'PAYOUT',
+        title: `⚡ Retrait Payé via FeexPay (${payout.reference})`,
+        ticketCode: payout.reference,
+        amount: `$${payout.amount.toFixed(2)} USD (${feexResult.amountXof} FCFA)`,
+        details: `✅ Votre retrait de $${payout.amount.toFixed(2)} USD (${feexResult.amountXof} FCFA) a été transféré sur votre numéro ${feexResult.phoneNumber} !\nRéf Transaction : ${feexResult.feexReference}`,
+      }).catch(console.error);
+
+      return NextResponse.json({
+        success: true,
+        payout: updatedPayout,
+        message: `⚡ Transfert FeexPay réussi ! ${feexResult.amountXof} FCFA envoyés au ${feexResult.phoneNumber} (Réf: ${feexResult.feexReference}).`,
+      });
+    } else if (action === 'APPROVE') {
       const updatedPayout = await prisma.payoutRequest.update({
         where: { id: payout.id },
         data: {

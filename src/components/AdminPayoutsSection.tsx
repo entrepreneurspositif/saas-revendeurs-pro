@@ -11,9 +11,10 @@ import {
   Check,
   Search,
   AlertTriangle,
-  DollarSign,
-  Send,
   Store,
+  Zap,
+  ShieldCheck,
+  Save,
 } from 'lucide-react';
 
 export default function AdminPayoutsSection({
@@ -39,6 +40,12 @@ export default function AdminPayoutsSection({
     rejectedCount: 0,
   });
 
+  // Auto-Payout Security Settings (Method B)
+  const [autoPayoutEnabled, setAutoPayoutEnabled] = useState<boolean>(true);
+  const [autoPayoutMaxUsd, setAutoPayoutMaxUsd] = useState<number>(25);
+  const [autoPayoutCooldownMinutes, setAutoPayoutCooldownMinutes] = useState<number>(60);
+  const [savingAutoConfig, setSavingAutoConfig] = useState<boolean>(false);
+
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
@@ -59,6 +66,11 @@ export default function AdminPayoutsSection({
             onPendingCountChange(data.stats.pendingCount || 0);
           }
         }
+        if (data.autoPayoutSettings) {
+          setAutoPayoutEnabled(data.autoPayoutSettings.enabled !== false);
+          setAutoPayoutMaxUsd(Number(data.autoPayoutSettings.maxUsd || 25));
+          setAutoPayoutCooldownMinutes(Number(data.autoPayoutSettings.cooldownMinutes ?? 60));
+        }
       }
     } catch (e) {
       console.error('Error loading payouts:', e);
@@ -71,19 +83,55 @@ export default function AdminPayoutsSection({
     fetchPayouts();
   }, []);
 
+  const handleSaveAutoConfig = async () => {
+    setSavingAutoConfig(true);
+    setFeedbackMsg(null);
+    try {
+      const res = await fetch('/api/admin/payouts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: autoPayoutEnabled,
+          maxUsd: autoPayoutMaxUsd,
+          cooldownMinutes: autoPayoutCooldownMinutes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de la sauvegarde');
+      }
+      setFeedbackMsg({ type: 'success', text: data.message });
+      setTimeout(() => setFeedbackMsg(null), 4000);
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', text: err.message });
+    } finally {
+      setSavingAutoConfig(false);
+    }
+  };
+
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleProcessPayout = async (payoutId: string, action: 'APPROVE' | 'REJECT') => {
+  const handleProcessPayout = async (
+    payoutId: string,
+    action: 'APPROVE' | 'REJECT' | 'AUTO_PAY_FEEXPAY'
+  ) => {
     const note = adminNotes[payoutId] || '';
     if (action === 'REJECT' && !note.trim()) {
       const confirmNoNote = window.confirm(
         'Voulez-vous vraiment refuser ce retrait sans préciser de motif ? Le solde sera recrédité au revendeur.'
       );
       if (!confirmNoNote) return;
+    }
+
+    if (action === 'AUTO_PAY_FEEXPAY') {
+      const confirmAuto = window.confirm(
+        'Déclencher maintenant le virement Mobile Money automatique via FeexPay pour cette demande ?'
+      );
+      if (!confirmAuto) return;
     }
 
     setProcessingId(payoutId);
@@ -106,7 +154,7 @@ export default function AdminPayoutsSection({
 
       setFeedbackMsg({ type: 'success', text: data.message });
       await fetchPayouts();
-      setTimeout(() => setFeedbackMsg(null), 5000);
+      setTimeout(() => setFeedbackMsg(null), 6000);
     } catch (err: any) {
       setFeedbackMsg({ type: 'error', text: err.message });
     } finally {
@@ -128,8 +176,107 @@ export default function AdminPayoutsSection({
     return true;
   });
 
+  const isMobileMoneyMethod = (method: string) => {
+    const m = (method || '').toUpperCase();
+    return (
+      !m.includes('USDT') &&
+      !m.includes('CRYPTO') &&
+      !m.includes('VIREMENT')
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* Auto-Payout FeexPay Security Bar (Method B) */}
+      <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/30 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-white">
+                  Auto-Payout Sécurisé FeexPay (Méthode B)
+                </h3>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                    autoPayoutEnabled
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {autoPayoutEnabled ? '⚡ Actif' : 'Manuel uniquement'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Les retraits Mobile Money sous le plafond sont envoyés automatiquement via l&apos;API Payout FeexPay après audit comptable et verrouillage atomique. Au-dessus du plafond, ils passent en validation 1-clic.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAutoPayoutEnabled(!autoPayoutEnabled)}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 ${
+              autoPayoutEnabled
+                ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
+                : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            {autoPayoutEnabled ? '✅ Auto-Payout Activé' : 'Activer Auto-Payout'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-800/80">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+              Plafond Max Auto-Payout ($ USD)
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={autoPayoutMaxUsd}
+              onChange={(e) => setAutoPayoutMaxUsd(parseFloat(e.target.value) || 0)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-400 focus:border-emerald-500 outline-none"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Au-delà de ${autoPayoutMaxUsd || 0} USD ({Math.round((autoPayoutMaxUsd || 0) * 650)} FCFA), validation Admin requise.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+              Cooldown Anti-Spam (Minutes)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="5"
+              value={autoPayoutCooldownMinutes}
+              onChange={(e) => setAutoPayoutCooldownMinutes(parseInt(e.target.value, 10) || 0)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-sky-400 focus:border-sky-500 outline-none"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Délai minimum entre 2 virements automatiques d&apos;un même revendeur.
+            </p>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              disabled={savingAutoConfig}
+              onClick={handleSaveAutoConfig}
+              className="w-full py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all"
+            >
+              <Save className="w-4 h-4" />
+              <span>{savingAutoConfig ? 'Enregistrement...' : 'Sauvegarder la Sécurité'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/25">
@@ -261,6 +408,7 @@ export default function AdminPayoutsSection({
           {filteredPayouts.map((p) => {
             const isPending = p.status === 'PENDING';
             const isApproved = p.status === 'APPROVED';
+            const canAutoPayFeex = isPending && isMobileMoneyMethod(p.paymentMethod);
 
             return (
               <div
@@ -344,7 +492,7 @@ export default function AdminPayoutsSection({
 
                     {p.adminNote && (
                       <p className="text-[11px] text-slate-400 bg-slate-950/60 border border-slate-800/80 px-3 py-1.5 rounded-lg">
-                        <strong className="text-slate-300">Note Admin :</strong> {p.adminNote}
+                        <strong className="text-slate-300">Note / Statut :</strong> {p.adminNote}
                       </p>
                     )}
                   </div>
@@ -358,10 +506,13 @@ export default function AdminPayoutsSection({
                       <span className="text-2xl font-black text-emerald-400 font-mono">
                         ${p.amount.toFixed(2)} USD
                       </span>
+                      <span className="text-[11px] text-slate-400 font-mono block">
+                        ≈ {Math.round(p.amount * 650)} FCFA
+                      </span>
                     </div>
 
                     {isPending && (
-                      <div className="w-full sm:w-auto flex flex-col gap-2 min-w-[280px]">
+                      <div className="w-full sm:w-auto flex flex-col gap-2 min-w-[300px]">
                         <input
                           type="text"
                           value={adminNotes[p.id] || ''}
@@ -371,6 +522,19 @@ export default function AdminPayoutsSection({
                           placeholder="Réf transfert (ID Tx) ou motif de refus..."
                           className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:border-sky-500 outline-none"
                         />
+                        {canAutoPayFeex && (
+                          <button
+                            type="button"
+                            disabled={processingId === p.id}
+                            onClick={() => handleProcessPayout(p.id, 'AUTO_PAY_FEEXPAY')}
+                            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 disabled:opacity-50 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-all"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span>
+                              ⚡ Payer via FeexPay ({Math.round(p.amount * 650)} FCFA)
+                            </span>
+                          </button>
+                        )}
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -379,7 +543,7 @@ export default function AdminPayoutsSection({
                             className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Valider & Payé</span>
+                            <span>Marquer Payé</span>
                           </button>
                           <button
                             type="button"

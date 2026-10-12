@@ -3747,10 +3747,12 @@ export default function ResellerDashboardPage() {
                     onChange={(e) => setPayoutMethod(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="MTN Mobile Money">📱 MTN Mobile Money</option>
-                    <option value="Moov Money">📱 Moov Money</option>
-                    <option value="Orange Money">📱 Orange Money</option>
-                    <option value="Wave">🐧 Wave Mobile Money</option>
+                    <option value="MTN Mobile Money">⚡ MTN Mobile Money (Auto FeexPay)</option>
+                    <option value="Moov Money">⚡ Moov Money (Auto FeexPay)</option>
+                    <option value="Celtiis Bénin">⚡ Celtiis Cash Bénin (Auto FeexPay)</option>
+                    <option value="Orange Money">⚡ Orange Money (Auto FeexPay)</option>
+                    <option value="Wave">⚡ Wave Mobile Money (Auto FeexPay)</option>
+                    <option value="Togocom T-Money">⚡ Togocom / T-Money (Auto FeexPay)</option>
                     <option value="USDT (TRC20)">💎 Crypto USDT (TRC20)</option>
                     <option value="USDT (BEP20)">💎 Crypto USDT (BEP20)</option>
                     <option value="Virement / Autre">🏦 Virement / Autre</option>
@@ -3759,12 +3761,12 @@ export default function ResellerDashboardPage() {
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Numéro (+Indicatif & Nom) ou Adresse USDT *
+                    Numéro Mobile Money (avec indicatif) ou Adresse USDT *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: +229 01... (Jean Dupont) ou T..."
+                    placeholder="Ex: 2290197000000 ou 2250700000000"
                     value={payoutDetails}
                     onChange={(e) => setPayoutDetails(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
@@ -3774,7 +3776,7 @@ export default function ResellerDashboardPage() {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                 <p className="text-[11px] text-slate-400">
-                  🔒 Le montant demandé est réservé immédiatement et versé après validation du Super Admin.
+                  ⚡ Virements Mobile Money exécutés automatiquement via FeexPay (ou validés par le Super Admin au-delà du plafond de sécurité).
                 </p>
                 <button
                   type="submit"

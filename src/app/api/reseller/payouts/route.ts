@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
+import {
+  getFeexPayConfig,
+  isFeexPaySupportedMethod,
+  executeFeexPayPayout,
+} from '@/lib/feexpay';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,12 +44,16 @@ export async function GET(req: NextRequest) {
       .filter((p) => p.status === 'PENDING')
       .reduce((sum, p) => sum + p.amount, 0);
 
+    const feexConfig = await getFeexPayConfig();
+
     return NextResponse.json({
       success: true,
       walletBalance: parseFloat(tenant.walletBalance.toFixed(2)),
       totalEarnings: parseFloat(tenant.totalEarnings.toFixed(2)),
       totalWithdrawn: parseFloat(totalWithdrawn.toFixed(2)),
       pendingWithdrawn: parseFloat(pendingWithdrawn.toFixed(2)),
+      autoPayoutEnabled: feexConfig.autoPayoutEnabled,
+      autoPayoutMaxUsd: feexConfig.autoPayoutMaxUsd,
       payouts,
     });
   } catch (error: any) {
@@ -80,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     if (!paymentDetails || !String(paymentDetails).trim()) {
       return NextResponse.json(
-        { success: false, message: 'Veuillez renseigner vos coordonnées de réception (Numéro ou Adresse Wallet).' },
+        { success: false, message: 'Veuillez renseigner vos coordonnées de réception (Numéro Mobile Money ou Adresse Wallet).' },
         { status: 400 }
       );
     }
@@ -106,17 +115,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const reference = `PAY-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    // Deduct from walletBalance immediately to lock funds
-    const updatedTenant = await prisma.tenant.update({
-      where: { id: tenant.id },
+    // =========================================================================
+    // SECURITY LOCK 1: Atomic conditional decrement (anti-race-condition)
+    // =========================================================================
+    const atomicLock = await prisma.tenant.updateMany({
+      where: {
+        id: tenant.id,
+        isActive: true,
+        walletBalance: { gte: requestedAmount },
+      },
       data: {
         walletBalance: { decrement: requestedAmount },
       },
     });
 
-    const payout = await prisma.payoutRequest.create({
+    if (atomicLock.count === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Opération refusée : solde insuffisant ou requête simultanée détectée.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const updatedTenant = await prisma.tenant.findUnique({
+      where: { id: tenant.id },
+    });
+    const newWalletBalance = parseFloat((updatedTenant?.walletBalance || 0).toFixed(2));
+
+    const reference = `PAY-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Create the payout record in PENDING state first (idempotency anchor)
+    let payout = await prisma.payoutRequest.create({
       data: {
         reference,
         tenantId: tenant.id,
@@ -127,13 +158,131 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Notify Super Admin on Telegram
+    // =========================================================================
+    // SECURITY LOCKS 2-5: Evaluate eligibility for Instant FeexPay Auto-Payout (Method B)
+    // =========================================================================
+    const feexConfig = await getFeexPayConfig();
+    const isMobileMoney = isFeexPaySupportedMethod(paymentMethod);
+
+    let autoPayEligible = feexConfig.autoPayoutEnabled && isMobileMoney;
+    let manualReviewReason = '';
+
+    if (!feexConfig.autoPayoutEnabled) {
+      manualReviewReason = 'Auto-Payout désactivé par le Super Admin';
+    } else if (!isMobileMoney) {
+      manualReviewReason = `Méthode ${paymentMethod} nécessitant un envoi manuel`;
+    } else if (requestedAmount > feexConfig.autoPayoutMaxUsd) {
+      autoPayEligible = false;
+      manualReviewReason = `Montant ($${requestedAmount.toFixed(2)}) supérieur au plafond de virement automatique ($${feexConfig.autoPayoutMaxUsd.toFixed(2)} USD) — En attente de validation Super Admin`;
+    }
+
+    // Security Lock 3: Cooldown check (prevent rapid consecutive auto-withdrawals)
+    if (autoPayEligible && feexConfig.autoPayoutCooldownMinutes > 0) {
+      const cooldownThreshold = new Date(
+        Date.now() - feexConfig.autoPayoutCooldownMinutes * 60 * 1000
+      );
+      const recentPayout = await prisma.payoutRequest.findFirst({
+        where: {
+          tenantId: tenant.id,
+          id: { not: payout.id },
+          status: 'APPROVED',
+          processedAt: { gte: cooldownThreshold },
+        },
+      });
+      if (recentPayout) {
+        autoPayEligible = false;
+        manualReviewReason = `Délai de sécurité anti-spam (${feexConfig.autoPayoutCooldownMinutes} min entre 2 retraits automatiques) — Mis en attente de validation Super Admin`;
+      }
+    }
+
+    // Security Lock 4: Accounting Integrity Audit (walletBalance + total payouts <= totalEarnings)
+    if (autoPayEligible) {
+      const allActivePayouts = await prisma.payoutRequest.findMany({
+        where: {
+          tenantId: tenant.id,
+          status: { in: ['APPROVED', 'PENDING'] },
+        },
+        select: { amount: true },
+      });
+      const sumPayouts = allActivePayouts.reduce((sum, p) => sum + p.amount, 0);
+      const totalAccounted = newWalletBalance + sumPayouts;
+
+      if (totalAccounted > (tenant.totalEarnings || 0) + 0.05) {
+        autoPayEligible = false;
+        manualReviewReason = `Audit de sécurité comptable : vérification manuelle requise par le Super Admin`;
+      }
+    }
+
+    // =========================================================================
+    // EXECUTE AUTOMATIC FEEXPAY PAYOUT IF ELIGIBLE
+    // =========================================================================
+    if (autoPayEligible) {
+      const feexResult = await executeFeexPayPayout({
+        paymentMethod: String(paymentMethod).trim(),
+        paymentDetails: String(paymentDetails).trim(),
+        amountUsd: requestedAmount,
+        reference,
+        email: tenant.email,
+      });
+
+      if (feexResult.success && feexResult.status === 'SUCCESSFUL') {
+        payout = await prisma.payoutRequest.update({
+          where: { id: payout.id },
+          data: {
+            status: 'APPROVED',
+            processedAt: new Date(),
+            adminNote: `⚡ Virement Automatique FeexPay (${feexResult.amountXof} FCFA envoyés au ${feexResult.phoneNumber}) — Réf: ${feexResult.feexReference}`,
+          },
+        });
+
+        // Notify Super Admin on Telegram
+        sendTelegramNotification({
+          title: `⚡ Auto-Payout FeexPay Exécuté — ${tenant.storeName || tenant.name}`,
+          ticketCode: reference,
+          type: 'ORDER',
+          amount: `$${requestedAmount.toFixed(2)} USD (${feexResult.amountXof} FCFA)`,
+          details: `Revendeur : ${tenant.name} (/store/${tenant.subdomain})\nMéthode : ${paymentMethod}\nNuméro crédité : ${feexResult.phoneNumber}\nRéf FeexPay : ${feexResult.feexReference}\nSolde restant : $${newWalletBalance.toFixed(2)} USD`,
+        }).catch(console.error);
+
+        // Notify Reseller on Telegram
+        sendResellerTelegramNotification({
+          tenantId: tenant.id,
+          eventType: 'PAYOUT',
+          title: `⚡ Retrait Payé Instantanément (${reference})`,
+          ticketCode: reference,
+          amount: `$${requestedAmount.toFixed(2)} USD (${feexResult.amountXof} FCFA)`,
+          details: `✅ Votre retrait de $${requestedAmount.toFixed(2)} USD (${feexResult.amountXof} FCFA) a été envoyé automatiquement via FeexPay sur votre numéro ${feexResult.phoneNumber} !\nRéf Transaction : ${feexResult.feexReference}\nNouveau solde disponible : $${newWalletBalance.toFixed(2)} USD.`,
+        }).catch(console.error);
+
+        return NextResponse.json({
+          success: true,
+          autoPaid: true,
+          payout,
+          newWalletBalance,
+          message: `⚡ Retrait ${reference} payé automatiquement ! ${feexResult.amountXof} FCFA ont été envoyés sur le ${feexResult.phoneNumber} via FeexPay.`,
+        });
+      } else {
+        // FeexPay returned PENDING or temporary error: keep request safely in PENDING for 1-click Admin action
+        manualReviewReason = `Transfert auto en attente (${feexResult.message})`;
+      }
+    }
+
+    if (manualReviewReason) {
+      payout = await prisma.payoutRequest.update({
+        where: { id: payout.id },
+        data: {
+          adminNote: manualReviewReason,
+        },
+      });
+    }
+
+    // Notify Super Admin on Telegram for pending request
     sendTelegramNotification({
       title: `Demande de Retrait Revendeur — ${tenant.storeName || tenant.name}`,
       ticketCode: reference,
       type: 'REQUEST',
       amount: `$${requestedAmount.toFixed(2)} USD`,
-      details: `Revendeur : ${tenant.name} (/store/${tenant.subdomain})\nMéthode : ${paymentMethod}\nCoordonnées : ${paymentDetails}\nSolde restant : $${updatedTenant.walletBalance.toFixed(2)} USD`,
+      details: `Revendeur : ${tenant.name} (/store/${tenant.subdomain})\nMéthode : ${paymentMethod}\nCoordonnées : ${paymentDetails}\nInfo Auto-Payout : ${manualReviewReason || 'En attente'}\nSolde restant : $${newWalletBalance.toFixed(2)} USD`,
     }).catch(console.error);
 
     // Notify Reseller on Telegram
@@ -143,14 +292,15 @@ export async function POST(req: NextRequest) {
       title: `Demande de retrait enregistrée (${reference})`,
       ticketCode: reference,
       amount: `$${requestedAmount.toFixed(2)} USD`,
-      details: `Votre demande de retrait de $${requestedAmount.toFixed(2)} USD via ${paymentMethod} (${paymentDetails}) a bien été transmise au Super Admin.\nNouveau solde disponible : $${updatedTenant.walletBalance.toFixed(2)} USD.`,
+      details: `Votre demande de retrait de $${requestedAmount.toFixed(2)} USD via ${paymentMethod} (${paymentDetails}) a bien été enregistrée.\nNouveau solde disponible : $${newWalletBalance.toFixed(2)} USD.`,
     }).catch(console.error);
 
     return NextResponse.json({
       success: true,
+      autoPaid: false,
       payout,
-      newWalletBalance: parseFloat(updatedTenant.walletBalance.toFixed(2)),
-      message: `Demande de retrait ${reference} de $${requestedAmount.toFixed(2)} USD envoyée avec succès !`,
+      newWalletBalance,
+      message: `Demande de retrait ${reference} de $${requestedAmount.toFixed(2)} USD enregistrée ! (${manualReviewReason || 'Validation en cours'})`,
     });
   } catch (error: any) {
     console.error('Error creating payout request:', error);
