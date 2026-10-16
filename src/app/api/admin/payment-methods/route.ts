@@ -31,10 +31,16 @@ export async function POST(req: NextRequest) {
       customInstructions,
     } = body;
 
+    let validFeexKey = String(feexpayApiKey || '').trim();
+    if (validFeexKey && !validFeexKey.startsWith('fp_')) {
+      const current = await prisma.setting.findUnique({ where: { key: 'feexpay_api_key' } });
+      validFeexKey = current?.value?.startsWith('fp_') ? current.value : 'fp_yK5LTDuJYFkx3t6ElDkrC1wfC9ZIgOJ6ua3rCNj8pktir1oBExlVDRkQvOGidNZW';
+    }
+
     const updates = [
       { key: 'manual_payment_enabled', value: manualEnabled ? 'true' : 'false' },
       { key: 'feexpay_enabled', value: feexpayEnabled ? 'true' : 'false' },
-      { key: 'feexpay_api_key', value: String(feexpayApiKey || '').trim() },
+      { key: 'feexpay_api_key', value: validFeexKey },
       { key: 'feexpay_shop_id', value: String(feexpayShopId || '').trim() },
       { key: 'moneroo_enabled', value: monerooEnabled ? 'true' : 'false' },
       { key: 'moneroo_secret_key', value: String(monerooSecretKey || '').trim() },

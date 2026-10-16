@@ -30,15 +30,26 @@ export async function getFeexPayConfig(): Promise<FeexPayConfig> {
     return acc;
   }, {} as Record<string, string>);
 
+  const DEFAULT_FEEXPAY_API_KEY = 'fp_yK5LTDuJYFkx3t6ElDkrC1wfC9ZIgOJ6ua3rCNj8pktir1oBExlVDRkQvOGidNZW';
+  const DEFAULT_FEEXPAY_SHOP_ID = '673db7093c2872d9f60742de';
+
+  const envKey = process.env.FEEXPAY_PAYOUT_API_KEY || process.env.FEEXPAY_API_KEY;
+  const dbKey = map['feexpay_api_key'];
+  const resolvedKey =
+    (envKey && envKey.trim().startsWith('fp_') ? envKey.trim() : '') ||
+    (dbKey && dbKey.trim().startsWith('fp_') ? dbKey.trim() : '') ||
+    DEFAULT_FEEXPAY_API_KEY;
+
+  const envShop = process.env.FEEXPAY_SHOP_ID;
+  const dbShop = map['feexpay_shop_id'];
+  const resolvedShop =
+    (envShop && envShop.trim().length >= 10 ? envShop.trim() : '') ||
+    (dbShop && dbShop.trim().length >= 10 ? dbShop.trim() : '') ||
+    DEFAULT_FEEXPAY_SHOP_ID;
+
   return {
-    apiKey:
-      process.env.FEEXPAY_PAYOUT_API_KEY ||
-      map['feexpay_api_key'] ||
-      'fp_yK5LTDuJYFkx3t6ElDkrC1wfC9ZIgOJ6ua3rCNj8pktir1oBExlVDRkQvOGidNZW',
-    shopId:
-      process.env.FEEXPAY_SHOP_ID ||
-      map['feexpay_shop_id'] ||
-      '673db7093c2872d9f60742de',
+    apiKey: resolvedKey,
+    shopId: resolvedShop,
     enabled: map['feexpay_enabled'] !== 'false',
     autoPayoutEnabled: map['feexpay_auto_payout_enabled'] !== 'false', // Default true (Method B)
     autoPayoutMaxUsd: parseFloat(map['feexpay_auto_payout_max_usd'] || '25'),

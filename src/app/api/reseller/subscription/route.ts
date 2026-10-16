@@ -156,7 +156,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const ticketCode = `SUB_${tenant.id}_${targetPlan.id}_${interval}`;
+    const subNonce = Date.now().toString().slice(-6);
+    const ticketCode = `SUB_${tenant.id}_${targetPlan.id}_${interval}_${subNonce}`;
     const host = req.headers.get('host') || '';
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://revente-abonnement.vercel.app').replace(/\/$/, '');
     const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
@@ -180,7 +181,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           shop: feexConfig.shopId,
           amount: convertUsdToXof(priceUsd),
-          description: `Abonnement ${targetPlan.name} ${interval === 'yearly' ? 'Annuel' : 'Mensuel'} - ${tenant.storeName}`.replace(/[^a-zA-Z0-9 _-]/g, ''),
+          description: `Abonnement ${targetPlan.name} ${interval === 'yearly' ? 'Annuel' : 'Mensuel'} #${subNonce}`.replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 80),
           paymentMethod: 'ALL',
           expireIn: 60,
           range: 0,

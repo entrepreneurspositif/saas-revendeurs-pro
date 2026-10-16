@@ -3062,6 +3062,8 @@ export default function AdminDashboardPage() {
                       value={feexpayApiKey}
                       onChange={(e) => setFeexpayApiKey(e.target.value)}
                       placeholder="fp_yK5LTDuJYF..."
+                      autoComplete="new-password"
+                      data-lpignore="true"
                       className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500"
                     />
                     <button
@@ -3085,6 +3087,8 @@ export default function AdminDashboardPage() {
                       value={feexpayShopId}
                       onChange={(e) => setFeexpayShopId(e.target.value)}
                       placeholder="673db7093c2872d9..."
+                      autoComplete="new-password"
+                      data-lpignore="true"
                       className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
                     />
                     <button
