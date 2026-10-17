@@ -22,6 +22,7 @@ import {
   Sliders,
   LifeBuoy,
   Wallet,
+  KeyRound,
 } from 'lucide-react';
 import { SAAS_AVAILABLE_FEATURES, SaasFeatureDefinition, calculateSaasPrices } from '@/lib/saasPricingHelper';
 import AdminResellerSupportSection from '@/components/AdminResellerSupportSection';
@@ -152,6 +153,33 @@ export default function AdminSaasSection() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleResetResellerPassword = async (reseller: any) => {
+    const newPass = window.prompt(
+      `Définir un nouveau mot de passe pour ${reseller.name} (${reseller.email}) :`,
+      'Pass' + Math.floor(1000 + Math.random() * 9000) + '!'
+    );
+    if (!newPass || newPass.trim().length < 6) {
+      if (newPass) alert('Le mot de passe doit comporter au moins 6 caractères.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/saas/resellers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reseller.id, password: newPass.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ Mot de passe de ${reseller.name} mis à jour avec succès : "${newPass.trim()}"`);
+      } else {
+        alert(`❌ Erreur: ${data.message}`);
+      }
+    } catch (e: any) {
+      alert(`❌ Erreur: ${e.message}`);
     }
   };
 
@@ -518,15 +546,26 @@ export default function AdminSaasSection() {
                           </button>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <a
-                            href={`/store/${r.subdomain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-bold text-[11px] transition-all"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            <span>Visiter</span>
-                          </a>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleResetResellerPassword(r)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-[11px] transition-all"
+                              title="Définir un nouveau mot de passe pour ce revendeur"
+                            >
+                              <KeyRound className="w-3 h-3" />
+                              <span>MDP</span>
+                            </button>
+                            <a
+                              href={`/store/${r.subdomain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-bold text-[11px] transition-all"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Visiter</span>
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     ))}

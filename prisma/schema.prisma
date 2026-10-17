@@ -255,6 +255,8 @@ model Tenant {
   notifyOnOtpOrder             Boolean              @default(true)
   notifyOnSupportReply         Boolean              @default(true)
   notifyOnPayout               Boolean              @default(true)
+  resetToken                   String?
+  resetTokenExpiresAt          DateTime?
   walletBalance       Float                @default(0.0)
   totalEarnings       Float                @default(0.0)
   isActive            Boolean              @default(true)

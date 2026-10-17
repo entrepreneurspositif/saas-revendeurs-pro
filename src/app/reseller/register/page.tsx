@@ -145,6 +145,9 @@ export default function ResellerRegisterPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
                 />
               </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                🔒 En cas d&apos;oubli, vous pourrez récupérer votre compte instantanément en 1 clic via notre Bot Telegram ou par email.
+              </p>
             </div>
 
             {/* Store Information */}

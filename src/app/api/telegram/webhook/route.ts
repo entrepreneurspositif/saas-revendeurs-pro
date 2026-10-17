@@ -517,6 +517,96 @@ Retrouvez l'intégralité de nos abonnements, votre tableau de bord et le module
         return NextResponse.json({ success: true });
       }
 
+      // Case 5b: Automated Reseller Account Recovery (24/7 Intelligent Bot)
+      if (
+        rawText.startsWith('/start reset_') ||
+        lowerText.startsWith('/reset') ||
+        lowerText.startsWith('/recup') ||
+        lowerText.startsWith('/recuperer') ||
+        lowerText.includes('mot de passe')
+      ) {
+        let emailTarget = '';
+        if (rawText.startsWith('/start reset_')) {
+          emailTarget = rawText.replace('/start reset_', '').trim().toLowerCase();
+        } else {
+          const parts = rawText.split(/\s+/);
+          if (parts.length > 1 && parts[1].includes('@')) {
+            emailTarget = parts[1].trim().toLowerCase();
+          }
+        }
+
+        if (!emailTarget) {
+          const promptText = `
+🔐 <b>RÉCUPÉRATION DE COMPTE REVENDEUR</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Vous avez oublié votre mot de passe ?
+Pour recevoir votre code de réinitialisation instantanément, envoyez la commande avec votre email :
+
+👉 <code>/reset votre_email@exemple.com</code>
+
+Notre bot va vérifier votre compte et vous délivrer un code de sécurité à 6 chiffres immédiatement (valable 15 minutes) !
+`.trim();
+          await sendTelegramMsg(chatId, promptText, replyKeyboard);
+          return NextResponse.json({ success: true });
+        }
+
+        const tenant = await prisma.tenant.findUnique({
+          where: { email: emailTarget },
+        });
+
+        if (!tenant) {
+          await sendTelegramMsg(
+            chatId,
+            `⚠️ Aucun compte revendeur associé à l'adresse <code>${emailTarget}</code> n'a été trouvé. Vérifiez l'orthographe ou inscrivez-vous sur le site.`,
+            replyKeyboard
+          );
+          return NextResponse.json({ success: true });
+        }
+
+        // Generate 6-digit code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+
+        // Auto-link reseller's telegramChatId to their tenant profile!
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: {
+            resetToken: resetCode,
+            resetTokenExpiresAt: expiresAt,
+            telegramChatId: String(chatId),
+            telegramNotificationsEnabled: true,
+          },
+        });
+
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://revente-abonnement.vercel.app').replace(/\/$/, '');
+        const host = req.headers.get('host') || '';
+        const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+        const resetUrl = `${baseUrl}/reseller/login?email=${encodeURIComponent(tenant.email)}&code=${resetCode}`;
+
+        const successText = `
+🔐 <b>CODE DE SÉCURITÉ REVENDEUR</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bonjour <b>${tenant.name}</b> (${tenant.storeName || tenant.subdomain}),
+
+Voici votre code de réinitialisation instantané :
+👉 <code>${resetCode}</code>
+
+⏰ Ce code est valable pendant <b>15 minutes</b>.
+
+Votre compte Telegram a été synchronisé avec votre boutique. Cliquez sur le bouton ci-dessous pour changer votre mot de passe et accéder à votre espace :
+`.trim();
+
+        const resetKeyboard = {
+          inline_keyboard: [
+            [{ text: '🔑 Réinitialiser mon mot de passe', url: resetUrl }],
+            [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
+          ],
+        };
+
+        await sendTelegramMsg(chatId, successText, resetKeyboard);
+        return NextResponse.json({ success: true });
+      }
+
       // Case 6: Admin Features (Stats / Panneau Admin)
       if (lowerText.includes('admin') || lowerText.includes('statistique') || lowerText.includes('stats')) {
         if (!isAdmin) {

@@ -62,13 +62,17 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, planId, planStatus, isActive, walletBalanceAdjustment } = body;
+    const { id, planId, planStatus, isActive, walletBalanceAdjustment, password } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'ID revendeur requis' }, { status: 400 });
     }
 
     const updateData: any = {};
+
+    if (password && String(password).trim().length >= 6) {
+      updateData.password = String(password).trim();
+    }
 
     if (planId) {
       const planExists = await prisma.saasPlan.findUnique({ where: { id: planId } });
