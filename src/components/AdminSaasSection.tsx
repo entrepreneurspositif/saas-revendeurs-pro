@@ -23,10 +23,12 @@ import {
   LifeBuoy,
   Wallet,
   KeyRound,
+  Mail,
 } from 'lucide-react';
 import { SAAS_AVAILABLE_FEATURES, SaasFeatureDefinition, calculateSaasPrices } from '@/lib/saasPricingHelper';
 import AdminResellerSupportSection from '@/components/AdminResellerSupportSection';
 import AdminPayoutsSection from '@/components/AdminPayoutsSection';
+import AdminSmtpSection from '@/components/AdminSmtpSection';
 
 export default function AdminSaasSection() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -38,7 +40,7 @@ export default function AdminSaasSection() {
   const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
 
   // Active sub-tab
-  const [subTab, setSubTab] = useState<'matrix' | 'resellers' | 'payouts' | 'simulation' | 'support'>('matrix');
+  const [subTab, setSubTab] = useState<'matrix' | 'resellers' | 'payouts' | 'simulation' | 'support' | 'smtp'>('matrix');
 
   // Simulation Calculator State
   const [simSupplierCost, setSimSupplierCost] = useState<number>(10);
@@ -266,6 +268,17 @@ export default function AdminSaasSection() {
             >
               <LifeBuoy className="w-3.5 h-3.5 text-amber-400" />
               <span>Support Revendeurs</span>
+            </button>
+            <button
+              onClick={() => setSubTab('smtp')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                subTab === 'smtp'
+                  ? 'bg-sky-500 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5 text-sky-400" />
+              <span>Email & SMTP</span>
             </button>
           </div>
 
@@ -714,6 +727,13 @@ export default function AdminSaasSection() {
       {subTab === 'support' && (
         <div className="animate-in fade-in duration-200">
           <AdminResellerSupportSection />
+        </div>
+      )}
+
+      {/* SUB-TAB 6: EMAIL & SMTP CONFIGURATION */}
+      {subTab === 'smtp' && (
+        <div className="animate-in fade-in duration-200">
+          <AdminSmtpSection />
         </div>
       )}
     </div>

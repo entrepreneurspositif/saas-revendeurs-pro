@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
     let webhookMsg = '';
     if (cleanToken && enabled) {
       try {
-        const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'abonnements-pro.shop';
+        const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
         const webhookUrl = `${protocol}://${host}/api/telegram/webhook`;
 
         const webhookRes = await fetch(`https://api.telegram.org/bot${cleanToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}`);
@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             commands: [
               { command: 'start', description: '🚀 Menu principal & Tableau de bord' },
+              { command: 'reset', description: '🔐 Récupérer mot de passe revendeur (/reset email)' },
               { command: 'suivi', description: '🔍 Suivre un ticket (ex: /suivi TK-123)' },
               { command: 'catalogue', description: '📦 Voir les produits & abonnements' },
               { command: 'otp', description: '📱 Numéros virtuels & SMS OTP' },

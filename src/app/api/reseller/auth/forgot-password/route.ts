@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { sendPasswordResetEmail, getSmtpConfig } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,10 +28,12 @@ async function getTelegramBotInfo(): Promise<{ botToken?: string; username?: str
 export async function GET() {
   try {
     const { username } = await getTelegramBotInfo();
+    const smtpConfig = await getSmtpConfig();
     return NextResponse.json({
       success: true,
       hasTelegramBot: Boolean(username),
       botUsername: username || null,
+      hasSmtpConfig: Boolean(smtpConfig),
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
         // Obfuscate whether account exists to prevent email scraping
         return NextResponse.json({
           success: true,
-          message: 'Si un compte est associé à cet email, un code de sécurité vous a été envoyé.',
+          message: 'Si un compte est associé à cet email, les instructions de sécurité vous ont été transmises.',
           botUsername: botUsername || null,
         });
       }
@@ -88,9 +91,22 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Construct resetUrl dynamically based on incoming request
+      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'abonnements-pro.shop';
+      const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+      const resetUrl = `${proto}://${host}/reseller/login?email=${encodeURIComponent(cleanEmail)}&code=${resetCode}`;
+
+      // 1. Send real email via SMTP
+      const mailRes = await sendPasswordResetEmail({
+        to: cleanEmail,
+        name: tenant.name,
+        code: resetCode,
+        resetUrl,
+      });
+
       let sentDirectlyToTelegram = false;
 
-      // If reseller has Telegram connected, send code directly to their chat
+      // 2. If reseller has Telegram connected, send code directly to their chat
       if (botToken && tenant.telegramChatId) {
         try {
           const text = `
@@ -123,22 +139,36 @@ Vous avez demandé la réinitialisation de votre mot de passe pour la boutique <
         }
       }
 
-      // Notify Super Admin on Telegram as well
+      // 3. Notify Super Admin on Telegram
       sendTelegramNotification({
         title: `Demande de Réinitialisation MDP Revendeur`,
         ticketCode: `RESET-${resetCode}`,
         type: 'SUPPORT',
         amount: 'N/A',
-        details: `Revendeur : ${tenant.name} (${cleanEmail})\nCode de sécurité généré : ${resetCode}\nEnvoyé au Telegram revendeur : ${sentDirectlyToTelegram ? 'Oui' : 'Non lié'}`,
+        details: `Revendeur : ${tenant.name} (${cleanEmail})\nCode de sécurité : ${resetCode}\nEmail envoyé : ${mailRes.success ? 'Oui' : (mailRes.notConfigured ? 'Non configuré' : 'Échec')}\nTelegram revendeur : ${sentDirectlyToTelegram ? 'Oui' : 'Non lié'}`,
       }).catch(console.error);
+
+      let responseMessage = '';
+      if (mailRes.success) {
+        responseMessage = `Code de sécurité envoyé à votre boîte email (${cleanEmail}) ! Vérifiez votre boîte de réception et vos spams.`;
+        if (sentDirectlyToTelegram) {
+          responseMessage += ' Et également sur votre Telegram.';
+        }
+      } else if (sentDirectlyToTelegram) {
+        responseMessage = 'Votre code vous a été envoyé directement sur Telegram !';
+      } else if (mailRes.notConfigured) {
+        responseMessage = 'Code de sécurité généré ! Le serveur email (SMTP) n\'est pas encore configuré : obtenez votre code en 2 secondes via notre Bot Telegram en 1 clic.';
+      } else {
+        responseMessage = 'Code généré ! Vous pouvez également l\'obtenir instantanément via notre Bot Telegram ci-dessous.';
+      }
 
       return NextResponse.json({
         success: true,
         sentDirectlyToTelegram,
+        sentByEmail: mailRes.success,
+        emailNotConfigured: Boolean(mailRes.notConfigured),
         botUsername: botUsername || null,
-        message: sentDirectlyToTelegram
-          ? 'Votre code de réinitialisation vous a été envoyé directement sur Telegram !'
-          : 'Code de sécurité généré avec succès ! Vous pouvez aussi l\'obtenir instantanément via notre Bot Telegram.',
+        message: responseMessage,
       });
     }
 

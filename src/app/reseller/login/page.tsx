@@ -471,6 +471,24 @@ function ResellerLoginContent() {
                     </>
                   )}
                 </button>
+
+                {/* Instant Telegram Bot Option in Step 2 */}
+                {botUsername && (
+                  <div className="pt-2 border-t border-slate-800 text-center space-y-2">
+                    <p className="text-[11px] text-slate-400">
+                      Pas reçu l&apos;e-mail ? Obtenez votre code en 2 secondes sur Telegram :
+                    </p>
+                    <a
+                      href={getTelegramBotResetUrl() || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-4 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Sparkles className="w-4 h-4 text-sky-400" />
+                      <span>Obtenir mon code via @{botUsername}</span>
+                    </a>
+                  </div>
+                )}
               </form>
             )}
           </div>
