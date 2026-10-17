@@ -159,24 +159,30 @@ export default function AdminSaasSection() {
   };
 
   const handleResetResellerPassword = async (reseller: any) => {
+    const defaultSuggested = 'Pass' + Math.floor(100000 + Math.random() * 900000);
     const newPass = window.prompt(
       `Définir un nouveau mot de passe pour ${reseller.name} (${reseller.email}) :`,
-      'Pass' + Math.floor(1000 + Math.random() * 9000) + '!'
+      defaultSuggested
     );
     if (!newPass || newPass.trim().length < 6) {
       if (newPass) alert('Le mot de passe doit comporter au moins 6 caractères.');
       return;
     }
 
+    const cleanPass = newPass.trim();
+
     try {
       const res = await fetch('/api/saas/resellers', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: reseller.id, password: newPass.trim() }),
+        body: JSON.stringify({ id: reseller.id, password: cleanPass }),
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Mot de passe de ${reseller.name} mis à jour avec succès : "${newPass.trim()}"`);
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          navigator.clipboard.writeText(cleanPass).catch(() => {});
+        }
+        alert(`✅ Mot de passe de ${reseller.name} mis à jour avec succès !\n\nNouveau mot de passe : ${cleanPass}\n\n(Copié dans votre presse-papier pour le coller facilement)`);
       } else {
         alert(`❌ Erreur: ${data.message}`);
       }

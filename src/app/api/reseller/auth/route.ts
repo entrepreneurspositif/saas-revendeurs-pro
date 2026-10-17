@@ -121,9 +121,12 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (tenant.password !== password) {
+      const cleanPassword = String(password || '').trim();
+      const dbPassword = String(tenant.password || '').trim();
+
+      if (tenant.password !== password && dbPassword !== cleanPassword) {
         return NextResponse.json(
-          { success: false, message: 'Mot de passe incorrect' },
+          { success: false, message: 'Mot de passe incorrect. Vérifiez la casse (majuscules/minuscules) et qu\'il n\'y ait aucun espace superflu.' },
           { status: 401 }
         );
       }
