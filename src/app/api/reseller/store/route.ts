@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         bannerUrl: tenant.bannerUrl,
         themeColor: tenant.themeColor,
         themePreset: tenant.themePreset || 'cyber-dark',
+        productTemplate: tenant.productTemplate || 'grid-modern',
         fontFamily: tenant.fontFamily || 'Inter',
         buttonColor: tenant.buttonColor || '#0284c7',
         buttonTextColor: tenant.buttonTextColor || '#ffffff',
@@ -97,6 +98,7 @@ export async function PUT(req: NextRequest) {
       bannerUrl,
       themeColor,
       themePreset,
+      productTemplate,
       fontFamily,
       buttonColor,
       buttonTextColor,
@@ -122,6 +124,7 @@ export async function PUT(req: NextRequest) {
     if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl?.trim() || null;
     if (themeColor !== undefined) updateData.themeColor = themeColor.trim();
     if (themePreset !== undefined) updateData.themePreset = themePreset.trim();
+    if (productTemplate !== undefined) updateData.productTemplate = productTemplate.trim();
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily.trim();
     if (buttonColor !== undefined) updateData.buttonColor = buttonColor.trim();
     if (buttonTextColor !== undefined) updateData.buttonTextColor = buttonTextColor.trim();

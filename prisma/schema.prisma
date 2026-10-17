@@ -226,6 +226,7 @@ model Tenant {
   bannerUrl           String?
   themeColor          String               @default("sky")
   themePreset         String?              @default("cyber-dark")
+  productTemplate     String?              @default("grid-modern")
   fontFamily          String?              @default("Inter")
   buttonColor         String?              @default("#0284c7")
   buttonTextColor     String?              @default("#ffffff")

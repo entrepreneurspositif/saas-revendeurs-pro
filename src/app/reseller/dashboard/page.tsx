@@ -53,6 +53,8 @@ import {
   LifeBuoy,
   Clock,
   Plus,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -126,6 +128,41 @@ const THEME_PRESETS = [
     badge: 'Épuré',
     borderClass: 'border-slate-700',
     accentName: 'slate',
+  },
+];
+
+const PRODUCT_TEMPLATES = [
+  {
+    id: 'grid-modern',
+    name: 'Grille E-Commerce Moderne',
+    badge: 'Recommandé',
+    badgeColor: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+    description: 'Cartes visuelles immersives avec grande bannière 16:9, zoom fluide au survol, badges d\'état complets (Auto, VIP, Stock) et présentation riche.',
+    features: ['Vignettes visuelles 16:9', 'Badges Auto & VIP animés', 'Prix & bouton en bas de carte', '3 à 4 colonnes réactives'],
+  },
+  {
+    id: 'list-compact',
+    name: 'Liste Compacte & Rapide',
+    badge: 'Haute Conversion',
+    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    description: 'Format tableau/catalogue horizontal ultra-rapide. Maximise les commandes immédiates sur mobile et idéal pour les gros catalogues.',
+    features: ['Miniature carrée 48px', 'Délai "Livraison < 2 min"', 'Lignes horizontales compactes', 'Achat en 1 clic sans scroll'],
+  },
+  {
+    id: 'pricing-saas',
+    name: 'Vitrine SaaS & Formules Pro',
+    badge: 'Style SaaS B2B',
+    badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    description: 'Cartes type grille de tarifs SaaS avec bordure dégradée, prix en grand format, liste d\'avantages vérifiés avec coches et bouton pleine largeur.',
+    features: ['Bordure dégradée lumineuse', 'Tarif pro mis en avant', 'Coches d\'avantages garantis (✓)', 'CTA pleine largeur percutant'],
+  },
+  {
+    id: 'minimal-glass',
+    name: 'Minimaliste & Glass Luxe',
+    badge: 'Design Épuré',
+    badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    description: 'Design épuré et ultra-moderne effet verre poli. Typographie fine, reflets subtils et focus absolu sur la valeur du produit.',
+    features: ['Effet verre translucide', 'Bordures fines & reflets', 'Design épuré tech luxury', 'Bouton capsule sobre'],
   },
 ];
 
@@ -211,6 +248,7 @@ export default function ResellerDashboardPage() {
     bannerUrl: '',
     themeColor: 'sky',
     themePreset: 'cyber-dark',
+    productTemplate: 'grid-modern',
     fontFamily: 'Inter',
     buttonColor: '#0ea5e9',
     buttonTextColor: '#ffffff',
@@ -383,6 +421,7 @@ export default function ResellerDashboardPage() {
         bannerUrl: data.reseller.bannerUrl || '',
         themeColor: data.reseller.themeColor || 'sky',
         themePreset: data.reseller.themePreset || 'cyber-dark',
+        productTemplate: data.reseller.productTemplate || 'grid-modern',
         fontFamily: data.reseller.fontFamily || 'Inter',
         buttonColor: data.reseller.buttonColor || '#0ea5e9',
         buttonTextColor: data.reseller.buttonTextColor || '#ffffff',
@@ -2634,7 +2673,151 @@ export default function ResellerDashboardPage() {
                   </div>
                 </div>
 
-                {/* 5. Live Interactive Mockup Preview */}
+                {/* 5. Product Display Templates Selection */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4 text-sky-400" />
+                      <span>Template d'Affichage des Produits (Page de Vente)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">4 styles de vitrine haute conversion</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Définissez la manière dont vos abonnements et licences sont mis en scène pour vos clients sur votre boutique publique. Vos visiteurs peuvent aussi basculer d'un mode à l'autre en 1 clic.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    {PRODUCT_TEMPLATES.map((tmpl) => {
+                      const isSelected = (storeSettings.productTemplate || 'grid-modern') === tmpl.id;
+                      const Icon =
+                        tmpl.id === 'grid-modern'
+                          ? LayoutGrid
+                          : tmpl.id === 'list-compact'
+                          ? List
+                          : tmpl.id === 'pricing-saas'
+                          ? Layers
+                          : Sparkles;
+
+                      return (
+                        <div
+                          key={tmpl.id}
+                          onClick={() => setStoreSettings({ ...storeSettings, productTemplate: tmpl.id })}
+                          className={`cursor-pointer p-4 rounded-2xl border transition-all text-left relative overflow-hidden flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-slate-900/90 border-sky-400 shadow-xl shadow-sky-500/10 ring-1 ring-sky-400'
+                              : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/40'
+                          }`}
+                        >
+                          <div>
+                            {/* Card Header with Icon & Badge */}
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                    isSelected
+                                      ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/30'
+                                      : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="font-bold text-white text-xs leading-snug">
+                                    {tmpl.name}
+                                  </div>
+                                  <span
+                                    className={`inline-block px-1.5 py-0.5 rounded-md text-[9px] font-bold border mt-0.5 ${tmpl.badgeColor}`}
+                                  >
+                                    {tmpl.badge}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <div className="w-5 h-5 rounded-full bg-sky-500 text-slate-950 flex items-center justify-center shrink-0 shadow-sm">
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Description */}
+                            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+                              {tmpl.description}
+                            </p>
+
+                            {/* Feature highlights */}
+                            <div className="space-y-1 mb-3 pt-2 border-t border-slate-800/60">
+                              {tmpl.features.map((feat, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  <span>{feat}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Mini visual wireframe mockup preview */}
+                          <div className="pt-2 border-t border-slate-800/80">
+                            {tmpl.id === 'grid-modern' && (
+                              <div className="grid grid-cols-2 gap-1.5 p-2 rounded-lg bg-slate-950 border border-slate-800/60">
+                                <div className="p-1.5 rounded bg-slate-900 border border-slate-800 space-y-1">
+                                  <div className="h-4 rounded bg-sky-500/20 w-full" />
+                                  <div className="h-1.5 rounded bg-slate-700 w-3/4" />
+                                  <div className="h-1.5 rounded bg-amber-400/40 w-1/2" />
+                                </div>
+                                <div className="p-1.5 rounded bg-slate-900 border border-slate-800 space-y-1">
+                                  <div className="h-4 rounded bg-emerald-500/20 w-full" />
+                                  <div className="h-1.5 rounded bg-slate-700 w-3/4" />
+                                  <div className="h-1.5 rounded bg-amber-400/40 w-1/2" />
+                                </div>
+                              </div>
+                            )}
+
+                            {tmpl.id === 'list-compact' && (
+                              <div className="space-y-1.5 p-2 rounded-lg bg-slate-950 border border-slate-800/60">
+                                <div className="flex items-center gap-2 p-1 rounded bg-slate-900 border border-slate-800">
+                                  <div className="w-3.5 h-3.5 rounded bg-emerald-500/30 shrink-0" />
+                                  <div className="h-1.5 rounded bg-slate-700 flex-1" />
+                                  <div className="w-8 h-2 rounded bg-sky-500/40 shrink-0" />
+                                </div>
+                                <div className="flex items-center gap-2 p-1 rounded bg-slate-900 border border-slate-800">
+                                  <div className="w-3.5 h-3.5 rounded bg-sky-500/30 shrink-0" />
+                                  <div className="h-1.5 rounded bg-slate-700 flex-1" />
+                                  <div className="w-8 h-2 rounded bg-sky-500/40 shrink-0" />
+                                </div>
+                              </div>
+                            )}
+
+                            {tmpl.id === 'pricing-saas' && (
+                              <div className="p-2 rounded-lg bg-slate-950 border border-purple-500/30 space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                  <div className="h-2 rounded bg-purple-400/40 w-1/3" />
+                                  <div className="h-2 rounded bg-emerald-400/40 w-1/4" />
+                                </div>
+                                <div className="h-3 rounded bg-white/20 w-1/2" />
+                                <div className="h-1.5 rounded bg-slate-700 w-full" />
+                                <div className="h-2.5 rounded bg-purple-500/40 w-full" />
+                              </div>
+                            )}
+
+                            {tmpl.id === 'minimal-glass' && (
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-white/5 to-white/0 border border-white/10 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <div className="h-1.5 rounded bg-white/40 w-1/3" />
+                                  <div className="w-2 h-2 rounded-full bg-amber-400/60" />
+                                </div>
+                                <div className="h-2 rounded bg-white/60 w-2/3" />
+                                <div className="h-2 rounded-full bg-white/20 w-1/2 ml-auto" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 6. Live Interactive Mockup Preview */}
                 <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -2642,11 +2825,11 @@ export default function ResellerDashboardPage() {
                       Aperçu en direct de votre vitrine
                     </span>
                     <span className="text-[10px] text-slate-500 font-mono">
-                      Police : {storeSettings.fontFamily || 'Inter'} | Thème : {storeSettings.themePreset || 'Cyber Dark'}
+                      Template : {PRODUCT_TEMPLATES.find((p) => p.id === (storeSettings.productTemplate || 'grid-modern'))?.name} | Thème : {storeSettings.themePreset || 'Cyber Dark'}
                     </span>
                   </div>
 
-                  {/* Mock Store Header & Card */}
+                  {/* Mock Store Header & Dynamic Template Card */}
                   <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-inner">
                     {/* Mock Navbar */}
                     <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -2683,25 +2866,157 @@ export default function ResellerDashboardPage() {
                       </button>
                     </div>
 
-                    {/* Mock Product Card with Custom Button */}
-                    <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-bold text-white text-xs">Exemple d'Article Digital Pro</div>
-                        <div className="text-[10px] text-slate-400">Livraison immédiate via Ticket sécurisé</div>
-                        <div className="text-xs font-black text-amber-300 mt-1">$9.99 USD</div>
-                      </div>
+                    {/* DYNAMIC PRODUCT PREVIEW ACCORDING TO TEMPLATE */}
+                    {storeSettings.productTemplate === 'list-compact' ? (
+                      /* List Compact Mockup */
+                      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500/20 to-sky-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                            <Zap className="w-5 h-5 text-sky-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-xs truncate">Canva Pro - Compte Privé</span>
+                              <span className="px-1.5 py-0.2 text-[8px] font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                ⚡ Livraison &lt; 2 min
+                              </span>
+                            </div>
+                            <div className="text-[9px] text-slate-400 truncate">Graphisme &amp; Création • 12 en stock</div>
+                          </div>
+                        </div>
 
-                      <button
-                        type="button"
-                        style={{
-                          backgroundColor: storeSettings.buttonColor || '#0ea5e9',
-                          color: storeSettings.buttonTextColor || '#ffffff',
-                        }}
-                        className={`px-4 py-2 ${storeSettings.buttonRadius || 'rounded-xl'} font-bold text-xs shadow-lg transition-transform hover:scale-105 active:scale-95`}
-                      >
-                        Commander
-                      </button>
-                    </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <div className="text-xs font-black text-amber-300">$9.99 USD</div>
+                            <div className="text-[8px] text-slate-500">Paiement unique</div>
+                          </div>
+                          <button
+                            type="button"
+                            style={{
+                              backgroundColor: storeSettings.buttonColor || '#0ea5e9',
+                              color: storeSettings.buttonTextColor || '#ffffff',
+                            }}
+                            className={`px-3 py-1.5 ${storeSettings.buttonRadius || 'rounded-xl'} font-bold text-xs shadow-md transition-transform hover:scale-105`}
+                          >
+                            Commander
+                          </button>
+                        </div>
+                      </div>
+                    ) : storeSettings.productTemplate === 'pricing-saas' ? (
+                      /* Pricing SaaS Mockup */
+                      <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 shadow-lg relative overflow-hidden">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            ⭐ Formule Pro Vérifiée
+                          </span>
+                          <span className="text-[9px] font-bold text-emerald-400 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Stock Immédiat
+                          </span>
+                        </div>
+
+                        <div className="mb-3">
+                          <h4 className="text-sm font-black text-white">ChatGPT Plus &amp; Codex API</h4>
+                          <div className="flex items-baseline gap-1 mt-1">
+                            <span className="text-xl font-black text-white">$14.99</span>
+                            <span className="text-[10px] text-slate-400 font-semibold">/ formule complète</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 mb-4 text-[10px] text-slate-300">
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>Accès officiel garanti &amp; sans partage</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>Livraison automatisée instantanée (&lt; 2 min)</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>Support VIP et assistance dédiée</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          style={{
+                            backgroundColor: storeSettings.buttonColor || '#0ea5e9',
+                            color: storeSettings.buttonTextColor || '#ffffff',
+                          }}
+                          className={`w-full py-2.5 ${storeSettings.buttonRadius || 'rounded-xl'} font-bold text-xs shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-1.5`}
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
+                          <span>Obtenir cette formule</span>
+                        </button>
+                      </div>
+                    ) : storeSettings.productTemplate === 'minimal-glass' ? (
+                      /* Minimal Glass Mockup */
+                      <div className="p-4 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 shadow-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                            Licence Officielle
+                          </span>
+                          <span className="text-xs font-black text-white">$12.50 USD</span>
+                        </div>
+
+                        <div>
+                          <div className="font-bold text-white text-sm">Adobe Creative Cloud 1 An</div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Activation directe sur votre compte personnel Adobe.</p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                          <span className="text-[9px] text-slate-400 flex items-center gap-1">
+                            <Shield className="w-3 h-3 text-sky-400" />
+                            Vendeur Vérifié
+                          </span>
+                          <button
+                            type="button"
+                            style={{
+                              backgroundColor: storeSettings.buttonColor || '#0ea5e9',
+                              color: storeSettings.buttonTextColor || '#ffffff',
+                            }}
+                            className={`px-4 py-1.5 ${storeSettings.buttonRadius || 'rounded-full'} font-bold text-xs shadow-md transition-all hover:opacity-90`}
+                          >
+                            Acheter maintenant
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Default Grid Modern Mockup */
+                      <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                        <div className="h-16 rounded-xl bg-gradient-to-r from-sky-600/30 via-indigo-600/30 to-purple-600/30 border border-slate-800 flex items-center justify-between p-3 relative overflow-hidden">
+                          <div className="space-y-0.5">
+                            <span className="px-2 py-0.5 rounded-md text-[8px] font-black uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                              ⚡ Auto
+                            </span>
+                            <div className="font-black text-white text-xs">Spotify Premium Personnel</div>
+                          </div>
+                          <span className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-700 text-[9px] font-bold text-emerald-400">
+                            En Stock
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 pt-1">
+                          <div>
+                            <div className="text-[10px] text-slate-400">Livraison immédiate via Ticket sécurisé</div>
+                            <div className="text-xs font-black text-amber-300 mt-0.5">$9.99 USD</div>
+                          </div>
+
+                          <button
+                            type="button"
+                            style={{
+                              backgroundColor: storeSettings.buttonColor || '#0ea5e9',
+                              color: storeSettings.buttonTextColor || '#ffffff',
+                            }}
+                            className={`px-4 py-2 ${storeSettings.buttonRadius || 'rounded-xl'} font-bold text-xs shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-1.5`}
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                            <span>Commander</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -37,6 +37,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Hash,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -62,6 +64,9 @@ export default function TenantStorefrontPage() {
   // Products Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(12);
+
+  // Active Product Layout Template (grid-modern, list-compact, pricing-saas, minimal-glass)
+  const [activeTemplate, setActiveTemplate] = useState<string>('grid-modern');
 
   // OTP Filters & Tariffs State
   const [otpCountries, setOtpCountries] = useState<any[]>([]);
@@ -165,6 +170,12 @@ export default function TenantStorefrontPage() {
   useEffect(() => {
     fetchStorefront();
   }, [subdomain]);
+
+  useEffect(() => {
+    if (storeData?.productTemplate) {
+      setActiveTemplate(storeData.productTemplate);
+    }
+  }, [storeData]);
 
   useEffect(() => {
     if (subdomain) {
@@ -967,7 +978,7 @@ export default function TenantStorefrontPage() {
                 />
               </div>
 
-              {/* Controls: Stock toggle & Sorting */}
+              {/* Controls: Stock toggle, Sorting & Layout Switcher */}
               <div className="flex items-center gap-2.5 flex-wrap">
                 {/* In Stock toggle */}
                 <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 hover:border-slate-700">
@@ -993,6 +1004,58 @@ export default function TenantStorefrontPage() {
                     <option value="PRICE_DESC" className="bg-slate-900 text-white">Prix : Décroissant</option>
                   </select>
                 </div>
+
+                {/* Layout View Switcher */}
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('grid-modern')}
+                    title="Grille E-Commerce Moderne"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'grid-modern'
+                        ? 'bg-sky-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('list-compact')}
+                    title="Liste Compacte & Rapide"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'list-compact'
+                        ? 'bg-sky-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('pricing-saas')}
+                    title="Vitrine SaaS & Formules Pro"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'pricing-saas'
+                        ? 'bg-sky-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('minimal-glass')}
+                    title="Minimaliste & Glass Luxe"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'minimal-glass'
+                        ? 'bg-sky-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1017,12 +1080,350 @@ export default function TenantStorefrontPage() {
               ))}
             </div>
 
-            {/* Products Grid */}
+            {/* Products Display (4 Specialized High-Converting Templates) */}
             {filteredProducts.length === 0 ? (
               <div className="py-16 text-center text-slate-400 text-xs bg-slate-900/40 border border-slate-800 rounded-3xl">
                 Aucun article ne correspond à votre recherche dans cette catégorie.
               </div>
+            ) : activeTemplate === 'list-compact' ? (
+              /* ======================================================== */
+              /* TEMPLATE 2: LIST COMPACT & RAPIDE                        */
+              /* ======================================================== */
+              <div className="space-y-3">
+                {paginatedProducts.map((p) => {
+                  const inStock = p.stock > 0 && p.isAvailable;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`${currentTheme.bgCard} ${currentTheme.cardBorder} hover:border-slate-700 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all hover:shadow-lg group`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        {/* Square Thumbnail */}
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shrink-0 flex items-center justify-center relative">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="text-slate-600 font-black text-lg uppercase">
+                              {p.title.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title & Metadata */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            <span className={`text-[9px] font-bold uppercase tracking-wider ${currentTheme.accentText}`}>
+                              {p.category}
+                            </span>
+                            {(p.deliveryType === 'AUTOMATIC' || p.category === 'Méthode') && (
+                              <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-0.5">
+                                <Zap className="w-2.5 h-2.5 fill-current" /> Auto &lt; 2 min
+                              </span>
+                            )}
+                            {p.isExclusive && (
+                              <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-0.5">
+                                <Sparkles className="w-2.5 h-2.5" /> VIP
+                              </span>
+                            )}
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase ${
+                                inStock
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              }`}
+                            >
+                              {inStock ? (p.badge || 'En stock') : 'Épuisé'}
+                            </span>
+                          </div>
+
+                          <h3 className="font-bold text-sm text-white truncate group-hover:text-sky-400 transition-colors" title={p.title}>
+                            {p.title}
+                          </h3>
+
+                          {p.description && (
+                            <p className="text-[11px] text-slate-400 truncate max-w-xl mt-0.5">
+                              {p.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Price & Action Button */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
+                        <div className="sm:text-right">
+                          <span className="text-[9px] text-slate-400 block font-medium">Prix unitaire</span>
+                          <span className="text-base font-black text-white font-mono">
+                            {formatPrice(p.sellingPrice)}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setQuantity(1);
+                            setCustomerEmail('');
+                            setCustomerName('');
+                            setCustomerAccounts('');
+                            setCreatedTicketResult(null);
+                            setTicketError(null);
+                            triggerPixelEvent('ViewContent', {
+                              content_name: p.title || p.name,
+                              content_type: 'product',
+                              value: p.sellingPrice,
+                              currency,
+                            });
+                          }}
+                          disabled={!inStock}
+                          style={{
+                            backgroundColor: activeBtnColor,
+                            color: activeBtnTextColor,
+                          }}
+                          className={`px-4 py-2 ${activeBtnRadius} font-bold text-xs flex items-center gap-1.5 transition-all shadow-md hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap`}
+                        >
+                          <Ticket className="w-3.5 h-3.5" />
+                          <span>Commander</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : activeTemplate === 'pricing-saas' ? (
+              /* ======================================================== */
+              /* TEMPLATE 3: VITRINE SAAS & FORMULES PRO                  */
+              /* ======================================================== */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedProducts.map((p) => {
+                  const inStock = p.stock > 0 && p.isAvailable;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`${currentTheme.bgCard} border border-slate-800 hover:border-sky-500/40 rounded-3xl p-6 flex flex-col justify-between transition-all hover:shadow-2xl relative overflow-hidden group`}
+                    >
+                      {/* Top colored accent bar */}
+                      <div className={`h-1.5 w-full bg-gradient-to-r ${currentTheme.accentGradient} absolute top-0 left-0`} />
+
+                      <div>
+                        {/* Header row: Category & Availability */}
+                        <div className="flex items-center justify-between gap-2 mb-4 pt-1">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${currentTheme.badgeStyle}`}>
+                            {p.category}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              inStock
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            }`}
+                          >
+                            {inStock ? (p.badge || 'Disponible') : 'Rupture'}
+                          </span>
+                        </div>
+
+                        {/* Product Icon & Title */}
+                        <div className="flex items-start gap-3.5 mb-3">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
+                            {p.imageUrl ? (
+                              <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="font-black text-xl text-white">{p.title.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="font-black text-base text-white leading-tight" title={p.title}>
+                              {p.title}
+                            </h3>
+                            {(p.deliveryType === 'AUTOMATIC' || p.category === 'Méthode') && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-bold mt-0.5">
+                                <Zap className="w-3 h-3 fill-current" />
+                                Livraison Immédiate &lt; 2 min
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* SaaS Pricing Tag */}
+                        <div className="my-4 py-3 border-y border-slate-800/80">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-3xl font-black text-white font-mono tracking-tight">
+                              {formatPrice(p.sellingPrice)}
+                            </span>
+                            <span className="text-xs text-slate-400 font-semibold">/ formule complète</span>
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        {p.description && (
+                          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
+                            {p.description}
+                          </p>
+                        )}
+
+                        {/* Checklist of verified guarantees */}
+                        <div className="space-y-2 mb-6 text-xs text-slate-300">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Accès officiel vérifié &amp; activation directe</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Livraison instantanée via ticket sécurisé</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Remplacement &amp; assistance prioritaire</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Support direct 7j/7 réactif</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Full-width CTA */}
+                      <button
+                        onClick={() => {
+                          setSelectedProduct(p);
+                          setQuantity(1);
+                          setCustomerEmail('');
+                          setCustomerName('');
+                          setCustomerAccounts('');
+                          setCreatedTicketResult(null);
+                          setTicketError(null);
+                          triggerPixelEvent('ViewContent', {
+                            content_name: p.title || p.name,
+                            content_type: 'product',
+                            value: p.sellingPrice,
+                            currency,
+                          });
+                        }}
+                        disabled={!inStock}
+                        style={{
+                          backgroundColor: activeBtnColor,
+                          color: activeBtnTextColor,
+                        }}
+                        className={`w-full py-3 ${activeBtnRadius} font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none`}
+                      >
+                        <Ticket className="w-4 h-4" />
+                        <span>Obtenir cette formule</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : activeTemplate === 'minimal-glass' ? (
+              /* ======================================================== */
+              /* TEMPLATE 4: MINIMALISTE & GLASS LUXE                     */
+              /* ======================================================== */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {paginatedProducts.map((p) => {
+                  const inStock = p.stock > 0 && p.isAvailable;
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-slate-900/40 backdrop-blur-xl border border-white/10 hover:border-white/20 rounded-3xl p-5 flex flex-col justify-between transition-all hover:bg-slate-900/60 hover:shadow-2xl group relative overflow-hidden"
+                    >
+                      <div className="space-y-3.5">
+                        {/* Top minimal header */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            {p.category}
+                          </span>
+                          <span
+                            className={`flex items-center gap-1.5 text-[10px] font-semibold ${
+                              inStock ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                inStock ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                              }`}
+                            />
+                            {inStock ? (p.badge || 'En stock') : 'Indisponible'}
+                          </span>
+                        </div>
+
+                        {/* Minimal 16:9 banner */}
+                        <div className="aspect-video w-full rounded-2xl bg-black/40 border border-white/5 overflow-hidden relative flex items-center justify-center">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="text-white/20 font-black text-3xl uppercase">
+                              {p.title.charAt(0)}
+                            </div>
+                          )}
+                          {p.isExclusive && (
+                            <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/10 backdrop-blur-md text-amber-300 border border-amber-300/30 flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5" /> VIP
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Title */}
+                        <div>
+                          <h3 className="font-bold text-sm text-white group-hover:text-sky-300 transition-colors line-clamp-2" title={p.title}>
+                            {p.title}
+                          </h3>
+                          {p.description && (
+                            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed mt-1">
+                              {p.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Minimal Bottom Bar */}
+                      <div className="pt-4 border-t border-white/5 mt-4 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-slate-500 block font-bold">Tarif</span>
+                          <span className="text-base font-black text-white font-mono">
+                            {formatPrice(p.sellingPrice)}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setQuantity(1);
+                            setCustomerEmail('');
+                            setCustomerName('');
+                            setCustomerAccounts('');
+                            setCreatedTicketResult(null);
+                            setTicketError(null);
+                            triggerPixelEvent('ViewContent', {
+                              content_name: p.title || p.name,
+                              content_type: 'product',
+                              value: p.sellingPrice,
+                              currency,
+                            });
+                          }}
+                          disabled={!inStock}
+                          style={{
+                            backgroundColor: activeBtnColor,
+                            color: activeBtnTextColor,
+                          }}
+                          className={`px-4 py-2 ${activeBtnRadius} font-bold text-xs shadow-md transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5`}
+                        >
+                          <span>Commander</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
+              /* ======================================================== */
+              /* TEMPLATE 1: GRILLE E-COMMERCE MODERNE (DÉFAUT)          */
+              /* ======================================================== */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {paginatedProducts.map((p) => {
                   const inStock = p.stock > 0 && p.isAvailable;

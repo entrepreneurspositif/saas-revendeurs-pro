@@ -139,6 +139,7 @@ export async function GET(req: NextRequest) {
         bannerUrl: tenant.bannerUrl,
         themeColor: tenant.themeColor,
         themePreset: tenant.themePreset || 'cyber-dark',
+        productTemplate: tenant.productTemplate || 'grid-modern',
         fontFamily: tenant.fontFamily || 'Inter',
         buttonColor: tenant.buttonColor || '#0284c7',
         buttonTextColor: tenant.buttonTextColor || '#ffffff',
