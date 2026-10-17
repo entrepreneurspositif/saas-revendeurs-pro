@@ -55,16 +55,6 @@ import {
   Plus,
   LayoutGrid,
   List,
-  LayoutDashboard,
-  Users,
-  Bell,
-  FileText,
-  Headphones,
-  ChevronDown,
-  Rocket,
-  Calendar,
-  ArrowUpRight,
-  Menu,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -210,11 +200,7 @@ export default function ResellerDashboardPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [reseller, setReseller] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'clients' | 'products' | 'wallet' | 'support' | 'marketing' | 'storefront' | 'subscription'>('overview');
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
-  const [salesChartPeriod, setSalesChartPeriod] = useState<string>('7 derniers mois');
-  const [topProductsPeriod, setTopProductsPeriod] = useState<string>('Ce mois');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'storefront' | 'subscription' | 'orders' | 'wallet' | 'marketing' | 'support'>('overview');
 
   // Copy feedback
   const [copiedLink, setCopiedLink] = useState(false);
@@ -865,11 +851,11 @@ export default function ResellerDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'products' || activeTab === 'overview') {
+    if (activeTab === 'products') {
       fetchProducts();
       if (reseller?.subdomain) fetchOtpTariffs(selectedOtpCountry);
     }
-    if (activeTab === 'orders' || activeTab === 'clients' || activeTab === 'overview') fetchOrders();
+    if (activeTab === 'orders' || activeTab === 'overview') fetchOrders();
     if (activeTab === 'subscription') fetchPlans();
     if (activeTab === 'wallet' || activeTab === 'overview') fetchPayouts();
     if (activeTab === 'marketing') {
@@ -1292,874 +1278,617 @@ export default function ResellerDashboardPage() {
   const categories = ['Tous', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex font-sans antialiased selection:bg-blue-600 selection:text-white">
-      {/* Mobile Drawer Backdrop */}
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 md:hidden"
-        />
-      )}
-
-      {/* LEFT SIDEBAR - CloudPro Reseller Portal (Exact Mockup Match) */}
-      <aside
-        className={`fixed md:sticky top-0 left-0 z-50 h-screen w-64 bg-[#0B132B] text-slate-300 flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out border-r border-slate-800/80 p-4 overflow-y-auto ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
-      >
-        <div className="space-y-6">
-          {/* Logo & Portal Brand */}
-          <div className="flex items-center justify-between px-2 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#2563EB] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 shrink-0">
-                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z" />
-                </svg>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
+      {/* Top Header - Executive SaaS Design */}
+      <header className="sticky top-0 z-40 bg-slate-900/90 border-b border-slate-800 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Brand, Live Store Status & Subdomain */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-base shrink-0">
+              {reseller?.storeName ? reseller.storeName.charAt(0).toUpperCase() : 'R'}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-white text-sm sm:text-base tracking-tight truncate">
+                  {reseller?.storeName || 'Ma Boutique'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  En ligne
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    currentPlan?.id === 'pro'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : currentPlan?.id === 'starter'
+                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  }`}
+                >
+                  Plan {currentPlan?.name || 'Free'}
+                </span>
               </div>
-              <div>
-                <div className="font-extrabold text-white text-base tracking-tight leading-tight">
-                  {reseller?.storeName || 'CloudPro'}
-                </div>
-                <div className="text-[11px] text-slate-400 font-medium">Reseller Portal</div>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono truncate">
+                <span>/store/{reseller?.subdomain}</span>
               </div>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="md:hidden p-1 rounded-lg text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1 pt-2">
-            {/* 1. Tableau de bord */}
+          {/* Right: Quick Solde Chip & Action Buttons */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Quick Wallet Pill */}
             <button
-              onClick={() => {
-                setActiveTab('overview');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 transition-all ${
-                activeTab === 'overview'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
+              onClick={() => setActiveTab('wallet')}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 text-xs transition-all group"
+              title="Voir mon portefeuille et demander un retrait"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Tableau de bord</span>
-            </button>
-
-            {/* 2. Mes ventes */}
-            <button
-              onClick={() => {
-                setActiveTab('orders');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between transition-all ${
-                activeTab === 'orders'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-4 h-4" />
-                <span>Mes ventes</span>
-              </div>
-              {orders.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-500/30 text-white font-bold">
-                  {orders.length}
-                </span>
-              )}
-            </button>
-
-            {/* 3. Clients */}
-            <button
-              onClick={() => {
-                setActiveTab('clients');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 transition-all ${
-                activeTab === 'clients'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Clients</span>
-            </button>
-
-            {/* 4. Produits & Offres */}
-            <button
-              onClick={() => {
-                setActiveTab('products');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between transition-all ${
-                activeTab === 'products'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Package className="w-4 h-4" />
-                <span>Produits & Offres</span>
-              </div>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300 font-bold">
-                {products.length}
+              <Coins className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span className="text-slate-400">Solde :</span>
+              <span className="font-mono font-bold text-amber-400">
+                ${(reseller?.walletBalance || 0).toFixed(2)}
               </span>
             </button>
 
-            {/* 5. Commissions */}
-            <button
-              onClick={() => {
-                setActiveTab('wallet');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between transition-all ${
-                activeTab === 'wallet'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
+            {/* View Store Button */}
+            <a
+              href={`/store/${reseller?.subdomain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-sky-500/20"
             >
-              <div className="flex items-center gap-3">
-                <Coins className="w-4 h-4" />
-                <span>Commissions</span>
-              </div>
-              <span className="font-mono text-[11px] font-bold text-amber-400">
-                ${(reseller?.walletBalance || 0).toFixed(0)}
-              </span>
+              <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="hidden sm:inline">Voir ma vitrine</span>
+            </a>
+
+            {/* Share / Copy Link */}
+            <button
+              onClick={handleCopyLink}
+              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all"
+              title="Copier le lien public"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
             </button>
 
-            {/* 6. Support */}
+            {/* Logout */}
             <button
-              onClick={() => {
-                setActiveTab('support');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-between transition-all ${
-                activeTab === 'support'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
+              onClick={handleLogout}
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-medium flex items-center gap-1.5 transition-all"
+              title="Déconnexion"
             >
-              <div className="flex items-center gap-3">
-                <Headphones className="w-4 h-4" />
-                <span>Support</span>
-              </div>
-              {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300">
-                  {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length}
-                </span>
-              )}
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Quitter</span>
             </button>
-
-            {/* 7. Ressources */}
-            <button
-              onClick={() => {
-                setActiveTab('marketing');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 transition-all ${
-                activeTab === 'marketing'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>Ressources</span>
-            </button>
-
-            {/* 8. Paramètres */}
-            <button
-              onClick={() => {
-                setActiveTab('storefront');
-                setSidebarOpen(false);
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-3 transition-all ${
-                activeTab === 'storefront'
-                  ? 'bg-[#2563EB] text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Paramètres</span>
-            </button>
-          </nav>
+          </div>
         </div>
+      </header>
 
-        {/* Bottom Help Box */}
-        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2 mt-6">
-          <div className="flex items-center gap-2 text-white font-bold text-xs">
-            <Headphones className="w-4 h-4 text-blue-400" />
-            <span>Besoin d'aide ?</span>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-snug">
-            Notre équipe support est à votre disposition.
-          </p>
+      {/* Main Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+        {/* Navigation Tabs Bar */}
+        <div className="bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800/80 backdrop-blur-lg mb-6 flex items-center gap-1 overflow-x-auto scrollbar-none">
           <button
-            onClick={() => {
-              setActiveTab('support');
-              setSidebarOpen(false);
-            }}
-            className="w-full py-1.5 px-3 rounded-full border border-slate-700 hover:bg-slate-800 text-[11px] text-white font-medium transition-all mt-1"
+            onClick={() => setActiveTab('overview')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'overview'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
           >
-            Contacter le support
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Vue d'ensemble</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'products'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Catalogue & Marges</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
+                activeTab === 'products' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {products.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('storefront')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'storefront'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Store className="w-3.5 h-3.5" />
+            <span>Boutique & Design</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'orders'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>Commandes</span>
+            {orders.length > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
+                  activeTab === 'orders' ? 'bg-slate-950/20 text-slate-950' : 'bg-sky-500/20 text-sky-300'
+                }`}
+              >
+                {orders.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'wallet'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Coins className="w-3.5 h-3.5" />
+            <span>Finances & Retraits</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('marketing')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'marketing'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Marketing & Pixels</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('subscription')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'subscription'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span>Abonnement SaaS</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('support')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'support'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <LifeBuoy className="w-3.5 h-3.5" />
+            <span>Support</span>
+            {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-amber-400/20 text-amber-300 font-mono font-black">
+                {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length}
+              </span>
+            )}
           </button>
         </div>
-      </aside>
 
-      {/* RIGHT MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC]">
-        {/* Top Header Navbar */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-          {/* Mobile hamburger + Store shortcut */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+        {/* TAB 1: OVERVIEW - COCKPIT PRO */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Hero Welcome Banner */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl relative overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:inline text-xs font-semibold text-slate-500">Vitrine :</span>
-              <a
-                href={`/store/${reseller?.subdomain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-mono font-medium text-slate-700 transition-colors"
-                title="Ouvrir ma vitrine publique"
-              >
-                <Globe className="w-3.5 h-3.5 text-blue-600" />
-                <span className="max-w-[180px] sm:max-w-none truncate">/store/{reseller?.subdomain}</span>
-                <ExternalLink className="w-3 h-3 text-slate-400 ml-0.5" />
-              </a>
-
-              <button
-                onClick={handleCopyLink}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-                title="Copier le lien public"
-              >
-                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Right: Notifications & User Profile Chip */}
-          <div className="flex items-center gap-4 relative">
-            {/* Notification Bell */}
-            <div
-              onClick={() => setActiveTab('orders')}
-              className="relative p-2 text-slate-600 hover:text-slate-900 cursor-pointer rounded-xl hover:bg-slate-100 transition-colors"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
-                {orders.filter((o) => o.status === 'PENDING' || o.status === 'PENDING_PAYMENT').length || 3}
-              </span>
-            </div>
-
-            {/* Profile Chip with Dropdown */}
-            <div className="relative">
-              <div
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center gap-3 pl-2 py-1 cursor-pointer select-none group"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#2563EB] text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                  {reseller?.name
-                    ? reseller.name
-                        .split(' ')
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((n: string) => n[0].toUpperCase())
-                        .join('')
-                    : 'DC'}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <div className="text-xs font-bold text-slate-900 leading-tight">
-                    {reseller?.name || 'Dina Claudine'}
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Vitrine Ouverte 24h/24
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                      Plan {currentPlan?.name || 'Free'}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                      Template : {PRODUCT_TEMPLATES.find((t) => t.id === (storeSettings.productTemplate || 'grid-modern'))?.name || 'Grille'}
+                    </span>
                   </div>
-                  <div className="text-[11px] text-slate-400">Revendeur</div>
+
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Bonjour, {reseller?.name} 👋
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+                    Bienvenue sur votre cockpit revendeur. Suivez vos commandes, ajustez vos marges et partagez votre vitrine logicielle officielle pour générer des ventes.
+                  </p>
+
+                  {/* Public link bar */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-sky-400 max-w-full truncate">
+                      <Globe className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">{storeUrl}</span>
+                    </div>
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? 'Lien copié' : 'Copier'}</span>
+                    </button>
+                    <a
+                      href={`/store/${reseller?.subdomain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Tester ma vitrine</span>
+                    </a>
+                  </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-transform" />
+
+                {/* Quick Shortcuts */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2 shrink-0">
+                  <button
+                    onClick={() => setActiveTab('products')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Package className="w-4 h-4 text-sky-400" />
+                    <span>Ajuster mes prix</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('storefront')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Store className="w-4 h-4 text-amber-400" />
+                    <span>Changer mon design</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('wallet')}
+                    className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Coins className="w-4 h-4 text-emerald-400" />
+                    <span>Retirer mes gains</span>
+                  </button>
+                </div>
               </div>
-
-              {/* Profile Dropdown Menu */}
-              {profileMenuOpen && (
-                <div className="absolute right-0 top-12 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-50 text-xs">
-                  <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                    <div className="font-bold text-slate-900 truncate">{reseller?.name || 'Dina Claudine'}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{reseller?.email}</div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setActiveTab('storefront');
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full px-3 py-2 text-left rounded-xl hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Paramètres boutique</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab('subscription');
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full px-3 py-2 text-left rounded-xl hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                  >
-                    <Crown className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Mon offre ({currentPlan?.name || 'Free'})</span>
-                  </button>
-                  <div className="border-t border-slate-100 my-1" />
-                  <button
-                    onClick={handleLogout}
-                    className="w-full px-3 py-2 text-left rounded-xl hover:bg-rose-50 text-rose-600 flex items-center gap-2 font-semibold"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Déconnexion</span>
-                  </button>
-                </div>
-              )}
             </div>
-          </div>
-        </header>
 
-        {/* PAGE CONTENT CONTAINER */}
-        <div className="p-6 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
-          {/* TAB 1: OVERVIEW - EXACT MOCKUP REPRODUCTION */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Header Title & Subtitle */}
-              <div className="space-y-1">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                  Bonjour, {reseller?.name || 'Dina Claudine'} !
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                  Voici un aperçu de votre activité de revendeur sur la plateforme {reseller?.storeName || 'CloudPro'}.
-                </p>
-              </div>
-
-              {/* 4 TOP METRIC CARDS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-                {/* 1. Clients actifs */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-                  <div className="flex items-center gap-3.5 mb-3">
-                    <div className="w-11 h-11 rounded-full bg-[#3B82F6] flex items-center justify-center text-white shrink-0 shadow-sm shadow-blue-500/25">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 block">Clients actifs</span>
-                      <div className="text-2xl font-black text-slate-900 mt-0.5 font-sans">
-                        {Array.from(new Set(orders.map((o) => o.customerEmail || o.customerName).filter(Boolean))).length || 48}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                    <span>↑ +12%</span>
-                    <span className="text-slate-400 font-normal">vs mois dernier</span>
+            {/* Executive KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Turnover */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Chiffre d'Affaires
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4" />
                   </div>
                 </div>
-
-                {/* 2. Ventes ce mois */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-                  <div className="flex items-center gap-3.5 mb-3">
-                    <div className="w-11 h-11 rounded-full bg-[#10B981] flex items-center justify-center text-white shrink-0 shadow-sm shadow-emerald-500/25">
-                      <ShoppingCart className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 block">Ventes ce mois</span>
-                      <div className="text-2xl font-black text-slate-900 mt-0.5 font-sans">
-                        {orderStats.totalTurnover > 0 ? formatPrice(orderStats.totalTurnover) : '12 480 €'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                    <span>↑ +28%</span>
-                    <span className="text-slate-400 font-normal">vs mois dernier</span>
-                  </div>
+                <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  ${orderStats.totalTurnover.toFixed(2)}
                 </div>
-
-                {/* 3. Commissions estimées */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-                  <div className="flex items-center gap-3.5 mb-3">
-                    <div className="w-11 h-11 rounded-full bg-[#8B5CF6] flex items-center justify-center text-white shrink-0 shadow-sm shadow-purple-500/25">
-                      <Percent className="w-5 h-5 stroke-[2.5]" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 block">Commissions estimées</span>
-                      <div className="text-2xl font-black text-slate-900 mt-0.5 font-sans">
-                        {orderStats.totalProfit > 0 ? formatPrice(orderStats.totalProfit) : '2 496 €'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                    <span>↑ +32%</span>
-                    <span className="text-slate-400 font-normal">vs mois dernier</span>
-                  </div>
-                </div>
-
-                {/* 4. Abonnements en cours */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-                  <div className="flex items-center gap-3.5 mb-3">
-                    <div className="w-11 h-11 rounded-full bg-[#F59E0B] flex items-center justify-center text-white shrink-0 shadow-sm shadow-amber-500/25">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 block">Abonnements en cours</span>
-                      <div className="text-2xl font-black text-slate-900 mt-0.5 font-sans">
-                        {orders.filter((o) => o.status === 'COMPLETED' || o.status === 'VALIDATED').length || 96}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                    <span>↑ +15%</span>
-                    <span className="text-slate-400 font-normal">vs mois dernier</span>
-                  </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  <span>Volume brut des ventes</span>
                 </div>
               </div>
 
-              {/* 3-COLUMN MOCKUP LAYOUT (12 COLS: 5 / 4 / 3) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* COLUMN 1 (5 COLS): ÉVOLUTION DES VENTES + VOS DERNIERS CLIENTS */}
-                <div className="lg:col-span-5 space-y-6">
-                  {/* Évolution de vos ventes Card */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A]">
-                        Évolution de vos ventes
-                      </h3>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 text-xs text-slate-600 font-medium bg-slate-50/50">
-                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{salesChartPeriod}</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </div>
-
-                    {/* SVG Line Chart with Gradient Fill */}
-                    <div className="relative pt-2">
-                      <svg viewBox="0 0 500 210" className="w-full h-48 overflow-visible">
-                        <defs>
-                          <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Y-axis guide lines */}
-                        <line x1="60" y1="20" x2="490" y2="20" stroke="#F1F5F9" strokeDasharray="4 4" />
-                        <text x="5" y="24" fill="#94A3B8" fontSize="11" fontFamily="sans-serif">20 000 €</text>
-
-                        <line x1="60" y1="58" x2="490" y2="58" stroke="#F1F5F9" strokeDasharray="4 4" />
-                        <text x="5" y="62" fill="#94A3B8" fontSize="11" fontFamily="sans-serif">15 000 €</text>
-
-                        <line x1="60" y1="96" x2="490" y2="96" stroke="#F1F5F9" strokeDasharray="4 4" />
-                        <text x="5" y="100" fill="#94A3B8" fontSize="11" fontFamily="sans-serif">10 000 €</text>
-
-                        <line x1="60" y1="134" x2="490" y2="134" stroke="#F1F5F9" strokeDasharray="4 4" />
-                        <text x="12" y="138" fill="#94A3B8" fontSize="11" fontFamily="sans-serif">5 000 €</text>
-
-                        <line x1="60" y1="172" x2="490" y2="172" stroke="#E2E8F0" />
-                        <text x="32" y="176" fill="#94A3B8" fontSize="11" fontFamily="sans-serif">0 €</text>
-
-                        {/* Area Fill */}
-                        <polygon
-                          fill="url(#salesGrad)"
-                          points="80,150 145,135 210,105 275,115 340,92 405,78 470,45 470,172 80,172"
-                        />
-
-                        {/* Blue Curve Line */}
-                        <polyline
-                          fill="none"
-                          stroke="#3B82F6"
-                          strokeWidth="3.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points="80,150 145,135 210,105 275,115 340,92 405,78 470,45"
-                        />
-
-                        {/* Circles at data points */}
-                        {[
-                          { cx: 80, cy: 150 },
-                          { cx: 145, cy: 135 },
-                          { cx: 210, cy: 105 },
-                          { cx: 275, cy: 115 },
-                          { cx: 340, cy: 92 },
-                          { cx: 405, cy: 78 },
-                          { cx: 470, cy: 45 },
-                        ].map((pt, idx) => (
-                          <circle
-                            key={idx}
-                            cx={pt.cx}
-                            cy={pt.cy}
-                            r="4.5"
-                            fill="#3B82F6"
-                            stroke="#FFFFFF"
-                            strokeWidth="2.5"
-                            className="cursor-pointer transition-transform hover:scale-150"
-                          />
-                        ))}
-
-                        {/* X-axis Month labels */}
-                        <text x="73" y="196" fill="#64748B" fontSize="11" fontWeight="500">Jan</text>
-                        <text x="138" y="196" fill="#64748B" fontSize="11" fontWeight="500">Fév</text>
-                        <text x="202" y="196" fill="#64748B" fontSize="11" fontWeight="500">Mar</text>
-                        <text x="268" y="196" fill="#64748B" fontSize="11" fontWeight="500">Avr</text>
-                        <text x="332" y="196" fill="#64748B" fontSize="11" fontWeight="500">Mai</text>
-                        <text x="398" y="196" fill="#64748B" fontSize="11" fontWeight="500">Juin</text>
-                        <text x="463" y="196" fill="#64748B" fontSize="11" fontWeight="500">Juil</text>
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Vos derniers clients Table Card */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A]">
-                        Vos derniers clients
-                      </h3>
-                      <button
-                        onClick={() => setActiveTab('clients')}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                      >
-                        <span>Voir tous</span>
-                        <span>→</span>
-                      </button>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                            <th className="pb-3 font-medium">Client</th>
-                            <th className="pb-3 font-medium">Offre</th>
-                            <th className="pb-3 font-medium">Statut</th>
-                            <th className="pb-3 font-medium text-right">Date de souscription</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {[
-                            { name: 'Entreprise ABC', initials: 'EA', color: 'bg-blue-600', offer: 'Business (SaaS)', status: 'Actif', date: '12 juil. 2025' },
-                            { name: 'Société XYZ', initials: 'SX', color: 'bg-indigo-600', offer: 'Pro (SaaS)', status: 'Actif', date: '10 juil. 2025' },
-                            { name: 'Alpha Services', initials: 'AS', color: 'bg-sky-600', offer: 'Enterprise (SaaS)', status: 'Actif', date: '6 juil. 2025' },
-                            { name: 'Beta Corp', initials: 'BC', color: 'bg-purple-600', offer: 'Business (SaaS)', status: 'Actif', date: '3 juil. 2025' },
-                            { name: 'Gamma Tech', initials: 'GT', color: 'bg-slate-700', offer: 'Pro (SaaS)', status: 'En attente', date: '30 juin 2025' },
-                          ].map((item, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="py-3">
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-7 h-7 rounded-full ${item.color} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
-                                    {item.initials}
-                                  </div>
-                                  <span className="font-bold text-slate-800">{item.name}</span>
-                                </div>
-                              </td>
-                              <td className="py-3 text-slate-600 font-medium">{item.offer}</td>
-                              <td className="py-3">
-                                <span
-                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                    item.status === 'Actif'
-                                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
-                                      : 'bg-amber-50 text-amber-600 border border-amber-200/60'
-                                  }`}
-                                >
-                                  {item.status}
-                                </span>
-                              </td>
-                              <td className="py-3 text-slate-500 text-right">{item.date}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+              {/* Net Profit */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    Bénéfice Net
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight">
+                  +${orderStats.totalProfit.toFixed(2)}
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>Gains nets réels (100% à vous)</span>
+                </div>
+              </div>
 
-                {/* COLUMN 2 (4 COLS): RÉPARTITION DES VENTES + TOP PRODUITS VENDUS */}
-                <div className="lg:col-span-4 space-y-6">
-                  {/* Répartition des ventes par offre Card */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-4">
-                    <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A]">
-                      Répartition des ventes par offre
-                    </h3>
-
-                    {/* Donut Chart & Legend Container */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-5 pt-2">
-                      {/* SVG Donut */}
-                      <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
-                        <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                          {/* Segment 1: Pro 45% (blue) */}
-                          <circle cx="50" cy="50" r="38" fill="transparent" stroke="#3B82F6" strokeWidth="15" strokeDasharray="107.4 131.3" strokeDashoffset="0" />
-                          {/* Segment 2: Business 28% (green) */}
-                          <circle cx="50" cy="50" r="38" fill="transparent" stroke="#10B981" strokeWidth="15" strokeDasharray="66.8 171.9" strokeDashoffset="-107.4" />
-                          {/* Segment 3: Enterprise 15% (purple) */}
-                          <circle cx="50" cy="50" r="38" fill="transparent" stroke="#8B5CF6" strokeWidth="15" strokeDasharray="35.8 202.9" strokeDashoffset="-174.2" />
-                          {/* Segment 4: Add-ons 7% (yellow) */}
-                          <circle cx="50" cy="50" r="38" fill="transparent" stroke="#F59E0B" strokeWidth="15" strokeDasharray="16.7 222.0" strokeDashoffset="-210.0" />
-                          {/* Segment 5: Autres 5% (slate) */}
-                          <circle cx="50" cy="50" r="38" fill="transparent" stroke="#94A3B8" strokeWidth="15" strokeDasharray="11.9 226.8" strokeDashoffset="-226.7" />
-                        </svg>
-
-                        {/* Center Value */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                          <span className="font-black text-sm text-[#0F172A]">12 480 €</span>
-                          <span className="text-[9px] text-slate-400 font-medium">Ventes ce mois</span>
-                        </div>
-                      </div>
-
-                      {/* Legend */}
-                      <div className="space-y-2 text-xs w-full sm:w-auto">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
-                            <span className="text-slate-700 font-medium">Pro (SaaS)</span>
-                          </div>
-                          <span className="font-bold text-slate-900">45%</span>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                            <span className="text-slate-700 font-medium">Business (SaaS)</span>
-                          </div>
-                          <span className="font-bold text-slate-900">28%</span>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
-                            <span className="text-slate-700 font-medium">Enterprise (SaaS)</span>
-                          </div>
-                          <span className="font-bold text-slate-900">15%</span>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
-                            <span className="text-slate-700 font-medium">Add-ons</span>
-                          </div>
-                          <span className="font-bold text-slate-900">7%</span>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#94A3B8]" />
-                            <span className="text-slate-700 font-medium">Autres</span>
-                          </div>
-                          <span className="font-bold text-slate-900">5%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Top produits vendus Card */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A]">
-                        Top produits vendus
-                      </h3>
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-slate-200 text-xs text-slate-600 font-medium bg-slate-50/50">
-                        <span>{topProductsPeriod}</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 pt-1">
-                      {[
-                        { rank: 1, title: 'Business (SaaS)', sales: 4, revenue: '1 996 €', bg: 'bg-blue-500' },
-                        { rank: 2, title: 'Pro (SaaS)', sales: 3, revenue: '1 497 €', bg: 'bg-sky-500' },
-                        { rank: 3, title: 'Enterprise (SaaS)', sales: 2, revenue: '1 198 €', bg: 'bg-purple-500' },
-                        { rank: 4, title: 'Add-ons', sales: 2, revenue: '598 €', bg: 'bg-orange-500' },
-                        { rank: 5, title: 'Support premium', sales: 1, revenue: '299 €', bg: 'bg-amber-500' },
-                      ].map((item) => (
-                        <div key={item.rank} className="flex items-center justify-between gap-3 text-xs">
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-slate-400 w-3">{item.rank}</span>
-                            <div className={`w-8 h-8 rounded-xl ${item.bg} text-white flex items-center justify-center shrink-0 shadow-sm`}>
-                              <ShoppingCart className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="font-bold text-slate-800 leading-tight">{item.title}</div>
-                              <div className="text-[11px] text-slate-400">{item.sales} ventes</div>
-                            </div>
-                          </div>
-                          <span className="font-extrabold text-slate-900 font-sans">{item.revenue}</span>
-                        </div>
-                      ))}
-                    </div>
+              {/* Orders */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                    Commandes
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                    <ShoppingCart className="w-4 h-4" />
                   </div>
                 </div>
+                <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  {orderStats.completedOrders}{' '}
+                  <span className="text-base text-slate-500 font-normal">/ {orderStats.totalOrders}</span>
+                </div>
+                <div className="mt-3">
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${
+                          orderStats.totalOrders > 0
+                            ? Math.round((orderStats.completedOrders / orderStats.totalOrders) * 100)
+                            : 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    {orderStats.totalOrders > 0
+                      ? `${Math.round((orderStats.completedOrders / orderStats.totalOrders) * 100)}% livrées avec succès`
+                      : 'Prêt à recevoir des commandes'}
+                  </span>
+                </div>
+              </div>
 
-                {/* COLUMN 3 (3 COLS): BOOSTEZ VOS VENTES + ACTIVITÉ RÉCENTE */}
-                <div className="lg:col-span-3 space-y-6">
-                  {/* Boostez vos ventes Card */}
-                  <div className="bg-gradient-to-br from-blue-50/90 to-indigo-50/50 rounded-2xl p-5 border border-blue-100/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)] space-y-3">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm">
-                      <Rocket className="w-5 h-5 text-blue-600 fill-current" />
+              {/* Available Balance */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-amber-500/40 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    Solde Retirable
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                  ${(reseller?.walletBalance || 0).toFixed(2)}
+                </div>
+                <button
+                  onClick={() => setActiveTab('wallet')}
+                  className="mt-2 text-[11px] font-bold text-amber-300 hover:text-white flex items-center gap-1 transition-colors"
+                >
+                  <span>Demander un virement</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Launch Checklist (4-Step Store Health) */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Guide de Configuration & Santé de votre Boutique
+                  </h3>
+                </div>
+                <span className="text-[10px] text-slate-500">4 étapes clés</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                {/* Step 1 */}
+                <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-emerald-500/20 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">Étape 1</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="font-bold text-white text-xs">Vitrine Opérationnelle</div>
+                  <p className="text-[11px] text-slate-400 truncate">/store/{reseller?.subdomain}</p>
+                </div>
+
+                {/* Step 2 */}
+                <div
+                  onClick={() => setActiveTab('storefront')}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-sky-500/40 cursor-pointer transition-all space-y-1 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-sky-400 font-bold uppercase">Étape 2</span>
+                    <Store className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="font-bold text-white text-xs group-hover:text-sky-300 transition-colors">
+                    Template & Design
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {PRODUCT_TEMPLATES.find((t) => t.id === (storeSettings.productTemplate || 'grid-modern'))?.name || 'Grille Moderne'}
+                  </p>
+                </div>
+
+                {/* Step 3 */}
+                <div
+                  onClick={() => setActiveTab('products')}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/40 cursor-pointer transition-all space-y-1 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">Étape 3</span>
+                    <Package className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="font-bold text-white text-xs group-hover:text-amber-300 transition-colors">
+                    Catalogue & Marges
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {products.length} articles disponibles
+                  </p>
+                </div>
+
+                {/* Step 4 */}
+                <div
+                  onClick={() => setActiveTab('storefront')}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-indigo-500/40 cursor-pointer transition-all space-y-1 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-indigo-400 font-bold uppercase">Étape 4</span>
+                    <CreditCard className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="font-bold text-white text-xs group-hover:text-indigo-300 transition-colors">
+                    Paiements Clients
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {storeSettings.feexpayEnabled ? 'FeexPay Actif' : storeSettings.monerooEnabled ? 'Moneroo Actif' : 'Virement direct ticket'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Split: Recent Orders (65%) & Wholesale Discount Card (35%) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Recent Orders Activity (2 cols on lg) */}
+              <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-sky-400" />
+                    <h3 className="font-bold text-sm text-white">Dernières Commandes Clients</h3>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className="text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                  >
+                    <span>Voir tout ({orders.length})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {orders.length === 0 ? (
+                  <div className="py-12 text-center rounded-2xl bg-slate-950/60 border border-slate-800/80 p-6 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                      <ShoppingCart className="w-6 h-6" />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-[#0F172A]">Boostez vos ventes</h4>
-                      <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                        Découvrez nos dernières offres et ressources marketing pour accompagner vos clients.
+                      <div className="font-bold text-white text-sm">Aucune commande pour le moment</div>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                        Partagez le lien de votre vitrine sur WhatsApp, Telegram ou vos réseaux pour enregistrer vos premières ventes.
                       </p>
                     </div>
                     <button
-                      onClick={() => setActiveTab('subscription')}
-                      className="w-full py-2.5 px-4 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all text-center block"
+                      onClick={handleCopyLink}
+                      className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition-all"
                     >
-                      Voir les offres
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Partager ma boutique</span>
                     </button>
                   </div>
-
-                  {/* Activité récente Card */}
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] space-y-4">
-                    <h3 className="font-extrabold text-sm text-[#0F172A]">
-                      Activité récente
-                    </h3>
-
-                    <div className="space-y-4 pt-1">
-                      {/* Event 1 */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <Users className="w-4 h-4" />
-                        </div>
-                        <div className="text-xs space-y-0.5">
-                          <div className="font-bold text-slate-800">Nouveau client inscrit</div>
-                          <div className="text-[11px] text-slate-500">Entreprise ABC</div>
-                          <div className="text-[10px] text-slate-400">Il y a 2 heures</div>
-                        </div>
-                      </div>
-
-                      {/* Event 2 */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <ShoppingCart className="w-4 h-4" />
-                        </div>
-                        <div className="text-xs space-y-0.5">
-                          <div className="font-bold text-slate-800">Vente réalisée</div>
-                          <div className="text-[11px] text-slate-500">Business (SaaS) — 499 €</div>
-                          <div className="text-[10px] text-slate-400">Il y a 4 heures</div>
-                        </div>
-                      </div>
-
-                      {/* Event 3 */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <Percent className="w-4 h-4 stroke-[2.5]" />
-                        </div>
-                        <div className="text-xs space-y-0.5">
-                          <div className="font-bold text-slate-800">Commission validée</div>
-                          <div className="text-[11px] text-slate-500">+ 125 €</div>
-                          <div className="text-[10px] text-slate-400">Il y a 6 heures</div>
-                        </div>
-                      </div>
-
-                      {/* Event 4 */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <Calendar className="w-4 h-4" />
-                        </div>
-                        <div className="text-xs space-y-0.5">
-                          <div className="font-bold text-slate-800">Rendez-vous client</div>
-                          <div className="text-[11px] text-slate-500">Démo produit — Société XYZ</div>
-                          <div className="text-[10px] text-slate-400">Aujourd'hui à 10:30</div>
-                        </div>
-                      </div>
-
-                      {/* Event 5 */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-                          <Headphones className="w-4 h-4" />
-                        </div>
-                        <div className="text-xs space-y-0.5">
-                          <div className="font-bold text-slate-800">Nouveau ticket support</div>
-                          <div className="text-[11px] text-slate-500">#4587 — Problème de connexion</div>
-                          <div className="text-[10px] text-slate-400">Aujourd'hui à 09:12</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setActiveTab('orders')}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 pt-1"
-                    >
-                      <span>Voir toute l'activité</span>
-                      <span>→</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: CLIENTS DIRECTORY */}
-          {activeTab === 'clients' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-extrabold text-[#0F172A] tracking-tight">Répertoire de vos Clients</h2>
-                  <p className="text-xs text-slate-500">Consultez l'historique et les souscriptions de vos clients.</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-400 font-semibold text-[11px]">
-                        <th className="py-3.5 px-4 font-medium">Client</th>
-                        <th className="py-3.5 px-4 font-medium">Email</th>
-                        <th className="py-3.5 px-4 font-medium">Offre Principale</th>
-                        <th className="py-3.5 px-4 font-medium">Statut</th>
-                        <th className="py-3.5 px-4 font-medium text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {[
-                        { name: 'Entreprise ABC', initials: 'EA', email: 'contact@entreprise-abc.com', offer: 'Business (SaaS)', status: 'Actif', color: 'bg-blue-600' },
-                        { name: 'Société XYZ', initials: 'SX', email: 'direction@societe-xyz.fr', offer: 'Pro (SaaS)', status: 'Actif', color: 'bg-indigo-600' },
-                        { name: 'Alpha Services', initials: 'AS', email: 'admin@alpha-services.net', offer: 'Enterprise (SaaS)', status: 'Actif', color: 'bg-sky-600' },
-                        { name: 'Beta Corp', initials: 'BC', email: 'support@betacorp.org', offer: 'Business (SaaS)', status: 'Actif', color: 'bg-purple-600' },
-                        { name: 'Gamma Tech', initials: 'GT', email: 'tech@gammatech.io', offer: 'Pro (SaaS)', status: 'En attente', color: 'bg-slate-700' },
-                      ].map((c, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full ${c.color} text-white font-bold text-xs flex items-center justify-center shrink-0`}>
-                                {c.initials}
-                              </div>
-                              <span className="font-bold text-slate-800">{c.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{c.email}</td>
-                          <td className="py-3.5 px-4 font-medium text-slate-700">{c.offer}</td>
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                c.status === 'Actif'
-                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
-                                  : 'bg-amber-50 text-amber-600 border border-amber-200/60'
-                              }`}
-                            >
-                              {c.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => setActiveTab('orders')}
-                              className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition-colors"
-                            >
-                              Voir commandes
-                            </button>
-                          </td>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-[10px] font-bold uppercase text-slate-400">
+                          <th className="pb-2.5">Ticket</th>
+                          <th className="pb-2.5">Article</th>
+                          <th className="pb-2.5">Client</th>
+                          <th className="pb-2.5">Prix</th>
+                          <th className="pb-2.5 text-emerald-400">Bénéfice</th>
+                          <th className="pb-2.5">Statut</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-medium">
+                        {orders.slice(0, 5).map((o) => {
+                          const isSuccess = o.status === 'COMPLETED' || o.status === 'VALIDATED';
+                          const isPending = o.status === 'PENDING_PAYMENT' || o.status === 'PENDING';
+                          return (
+                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
+                              <td className="py-2.5 font-mono text-sky-400 font-bold">
+                                {o.ticketCode || o.id.slice(0, 8)}
+                              </td>
+                              <td className="py-2.5 text-white font-bold max-w-[150px] truncate" title={o.productTitle}>
+                                {o.productTitle}
+                              </td>
+                              <td className="py-2.5 text-slate-400 max-w-[120px] truncate">
+                                {o.customerEmail || o.customerName || 'Anonyme'}
+                              </td>
+                              <td className="py-2.5 font-mono font-bold text-white">
+                                ${(o.totalAmount || o.unitSellingPrice || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2.5 font-mono font-bold text-emerald-400">
+                                +${(o.profitMargin || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                    isSuccess
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : isPending
+                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                  }`}
+                                >
+                                  {isSuccess ? 'Livré' : isPending ? 'En attente' : o.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Wholesale Discount & Plan Box */}
+              <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                      <Crown className="w-4 h-4 text-purple-400" />
+                      Statut Grossiste
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20 font-mono">
+                      Plan {currentPlan?.name || 'Free'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-black text-white leading-snug">
+                    {currentPlan?.id === 'pro'
+                      ? 'Tarif Grossiste VIP Activé'
+                      : currentPlan?.id === 'starter'
+                      ? 'Tarif Grossiste Starter Activé'
+                      : 'Tarif Standard Plateforme'}
+                  </h3>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Votre marge commerciale est maximale : vous achetez à prix d'usine déduit et vous fixez librement votre prix de vente client.
+                  </p>
+
+                  {/* Clean Visual Calculation Scheme */}
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2 text-[11px] font-mono">
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Prix Public Catalogue</span>
+                      <span>100%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sky-400 font-bold">
+                      <span>Votre Remise Plan {currentPlan?.name}</span>
+                      <span>
+                        {currentPlan?.id === 'pro' ? 'Jusqu\'à ~30%' : currentPlan?.id === 'starter' ? 'Jusqu\'à ~20%' : 'Standard'}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-emerald-400 font-black">
+                      <span>Votre Marge Nette</span>
+                      <span>100% conservée</span>
+                    </div>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => setActiveTab('subscription')}
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all shadow-sm"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Gérer mon abonnement</span>
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
         {/* TAB 2: PRODUCTS & CUSTOM PRICING */}
         {activeTab === 'products' && (
@@ -6425,6 +6154,5 @@ export default function ResellerDashboardPage() {
         )}
       </div>
     </div>
-  </div>
-);
+  );
 }
