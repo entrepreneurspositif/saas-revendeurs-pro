@@ -171,7 +171,7 @@ export default function ExclusifsPage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen flex flex-col font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-emerald-500 selection:text-white transition-colors">
       <Navbar />
 
       {/* Hero Header */}
