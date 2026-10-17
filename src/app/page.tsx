@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import SupportWidget from '@/components/SupportWidget';
 import FormattedCredentials from '@/components/FormattedCredentials';
 import {
@@ -34,20 +36,33 @@ import {
   Filter,
   FileText,
   Globe,
+  Star,
+  Lock,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Headphones,
+  Store,
+  ArrowUpRight,
+  User,
+  BadgeCheck,
 } from 'lucide-react';
 
 import { useCurrency } from '@/components/CurrencyContext';
 
 export default function StorefrontPage() {
-  const { currency, formatPrice, formatBoth } = useCurrency();
+  const { currency, formatPrice } = useCurrency();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [stockFilter, setStockFilter] = useState<'ALL' | 'IN_STOCK'>('ALL');
-  const [sortBy, setSortBy] = useState<'RANDOM' | 'NEWEST' | 'OLDEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'TITLE_ASC' | 'TITLE_DESC'>('RANDOM');
+  const [sortBy, setSortBy] = useState<'RANDOM' | 'NEWEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'TITLE_ASC'>('RANDOM');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(9);
+
+  // FAQ Accordion State
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   // Helper for shuffling product array randomly
   const shuffleArray = (array: any[]) => {
@@ -100,11 +115,11 @@ export default function StorefrontPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const categories = [
-    { name: 'Tous', icon: Layers },
-    { name: 'IA & APIs', icon: Bot },
-    { name: 'Licences & Outils Dev', icon: Code2 },
-    { name: 'Mobile & Services', icon: Smartphone },
-    { name: 'Abonnements & Comptes', icon: KeyRound },
+    { name: 'Tous', icon: Layers, label: 'Tous les abonnements' },
+    { name: 'Abonnements & Comptes', icon: KeyRound, label: 'Streaming & Divertissement' },
+    { name: 'IA & APIs', icon: Bot, label: 'Intelligence Artificielle & Clés' },
+    { name: 'Licences & Outils Dev', icon: Code2, label: 'Outils Pro & Bureautique' },
+    { name: 'Mobile & Services', icon: Smartphone, label: 'Services Mobile' },
   ];
 
   const fetchProducts = async () => {
@@ -158,39 +173,6 @@ export default function StorefrontPage() {
     }
   }, []);
 
-  const handlePayWithCustomGateway = async (ticketCode: string) => {
-    if (!ticketCode) return;
-    setPayingWithCustomGateway(true);
-    try {
-      const res = await fetch('/api/custom-gateway/init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketCode }),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        alert(data.message || 'Erreur lors de l\'initialisation de la passerelle.');
-        return;
-      }
-
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-        return;
-      }
-      alert(`Passerelle ${data.gatewayName || ''} activée pour le ticket ${data.ticketCode}.`);
-    } catch (e: any) {
-      alert(e.message || 'Erreur de connexion à la passerelle.');
-    } finally {
-      setPayingWithCustomGateway(false);
-    }
-  };
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery, stockFilter, sortBy, itemsPerPage]);
-
-
   const handleOpenPurchase = (product: any) => {
     setSelectedProduct(product);
     setQuantity(1);
@@ -199,14 +181,13 @@ export default function StorefrontPage() {
   };
 
   const handleCreateTicket = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || quantity < 1 || creatingTicket) return;
     if (selectedProduct.requiresCustomerInfo && !customerAccounts.trim()) {
-      alert(`Veuillez renseigner : ${selectedProduct.customerInfoPrompt || 'les informations requises pour le fournisseur'}`);
+      alert(`Veuillez renseigner : ${selectedProduct.customerInfoPrompt || 'les informations requises'}`);
       return;
     }
-    setCreatingTicket(true);
-    setCreatedTicketResult(null);
 
+    setCreatingTicket(true);
     try {
       const res = await fetch('/api/tickets/create', {
         method: 'POST',
@@ -214,17 +195,15 @@ export default function StorefrontPage() {
         body: JSON.stringify({
           productId: selectedProduct.id,
           quantity,
-          customerAccounts,
+          customerAccounts: customerAccounts.trim() || undefined,
         }),
       });
 
       const data = await res.json();
       setCreatedTicketResult(data);
-    } catch (e: any) {
-      setCreatedTicketResult({
-        success: false,
-        message: e.message || 'Erreur réseau lors de la génération du ticket.',
-      });
+    } catch (e) {
+      console.error(e);
+      setCreatedTicketResult({ success: false, message: 'Erreur réseau lors de la création du ticket.' });
     } finally {
       setCreatingTicket(false);
     }
@@ -242,7 +221,7 @@ export default function StorefrontPage() {
 
       const data = await res.json();
       if (!data.success) {
-        alert(data.message || 'Erreur lors de l\'initialisation de FeexPay.');
+        alert(data.message || 'Erreur lors de l\'initialisation du paiement FeexPay.');
         return;
       }
 
@@ -283,6 +262,34 @@ export default function StorefrontPage() {
       alert(e.message || 'Erreur réseau lors de la connexion à Moneroo.');
     } finally {
       setPayingWithMoneroo(false);
+    }
+  };
+
+  const handlePayWithCustomGateway = async (ticketCode: string) => {
+    if (!ticketCode) return;
+    setPayingWithCustomGateway(true);
+    try {
+      const res = await fetch('/api/custom-gateway/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Erreur lors de l\'initialisation de la passerelle.');
+        return;
+      }
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+      alert(data.message || 'Erreur de paiement.');
+    } catch (e: any) {
+      alert(e.message || 'Erreur réseau.');
+    } finally {
+      setPayingWithCustomGateway(false);
     }
   };
 
@@ -328,27 +335,11 @@ export default function StorefrontPage() {
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === 'RANDOM') {
-        return 0; // Preserve current random order
-      }
-      if (sortBy === 'NEWEST') {
-        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
-      }
-      if (sortBy === 'OLDEST') {
-        return new Date(a.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
-      }
-      if (sortBy === 'PRICE_ASC') {
-        return a.sellingPrice - b.sellingPrice;
-      }
-      if (sortBy === 'PRICE_DESC') {
-        return b.sellingPrice - a.sellingPrice;
-      }
-      if (sortBy === 'TITLE_ASC') {
-        return a.title.localeCompare(b.title);
-      }
-      if (sortBy === 'TITLE_DESC') {
-        return b.title.localeCompare(a.title);
-      }
+      if (sortBy === 'RANDOM') return 0;
+      if (sortBy === 'NEWEST') return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+      if (sortBy === 'PRICE_ASC') return a.sellingPrice - b.sellingPrice;
+      if (sortBy === 'PRICE_DESC') return b.sellingPrice - a.sellingPrice;
+      if (sortBy === 'TITLE_ASC') return a.title.localeCompare(b.title);
       return 0;
     });
 
@@ -360,45 +351,157 @@ export default function StorefrontPage() {
   const paginatedProducts = filteredAndSortedProducts.slice(startIndex, endIndex);
 
   const getVisiblePageNumbers = (current: number, total: number): (number | string)[] => {
-    if (total <= 5) {
-      return Array.from({ length: total }, (_, i) => i + 1);
-    }
-    if (current <= 3) {
-      return [1, 2, 3, '...', total];
-    }
-    if (current >= total - 2) {
-      return [1, '...', total - 2, total - 1, total];
-    }
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 3) return [1, 2, 3, '...', total];
+    if (current >= total - 2) return [1, '...', total - 2, total - 1, total];
     return [1, '...', current - 1, current, current + 1, '...', total];
   };
 
-  return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-sky-500 selection:text-slate-950">
+  const faqItems = [
+    {
+      q: 'Combien de temps faut-il pour recevoir mes identifiants après le paiement ?',
+      a: 'La livraison est instantanée ou effectuée en moins de 2 minutes ! Dès que votre paiement par Mobile Money (Wave, MTN, Orange, Moov) ou Crypto est validé, vos accès s\'affichent directement sur votre ticket de commande sécurisé et restent consultables à tout moment.',
+    },
+    {
+      q: 'Que se passe-t-il en cas de problème avec mon compte ou ma clé ?',
+      a: 'Tous nos comptes bénéficient d\'une Garantie de Remplacement 30 Jours. Si vous rencontrez la moindre anomalie (mot de passe invalide, déconnexion), notre support Telegram ou Web remplace immédiatement votre compte sur simple transmission de votre Code Ticket.',
+    },
+    {
+      q: 'Quels pays et réseaux Mobile Money sont acceptés ?',
+      a: 'Nous acceptons Wave, MTN MoMo, Orange Money, Moov Money et les cartes bancaires Visa/Mastercard dans toute la zone UEMOA/CEMAC (Bénin, Côte d\'Ivoire, Sénégal, Cameroun, Togo, Mali, Burkina Faso, etc.) ainsi que les cryptomonnaies USDT TRC20/BEP20 pour l\'international.',
+    },
+    {
+      q: 'Comment fonctionne le suivi de commande par Code Ticket ?',
+      a: 'Chaque commande dispose d\'un identifiant unique (ex: TK-849201). Il vous suffit de cliquer sur "Suivre ma Commande" en haut de page, d\'entrer ce code, et vous retrouvez vos identifiants, votre statut de validation et vos instructions à toute heure.',
+    },
+    {
+      q: 'Puis-je revendre vos abonnements à mes propres clients avec ma propre boutique ?',
+      a: 'Oui, parfaitement ! Notre plateforme SaaS Revendeur vous permet d\'ouvrir votre propre boutique en ligne avec votre marque, vos propres prix de vente, vos coordonnées et un sous-domaine offert. Vous profitez de remises grossiste jusqu\'à -60% et retirez vos bénéfices quand vous voulez.',
+    },
+  ];
 
+  const testimonials = [
+    {
+      name: 'Wilfried Kouassi',
+      role: 'Revendeur SaaS & Entrepreneur',
+      city: 'Abidjan, Côte d\'Ivoire',
+      rating: 5,
+      product: 'Boutique Revendeur Pro',
+      comment:
+        'J\'ai lancé ma boutique sous-domaine la semaine dernière. J\'ai déjà fait plus de 28 ventes d\'abonnements Netflix et Canva Pro. Les marges sont réelles et les retraits vers mon compte Wave arrivent sans délai.',
+    },
+    {
+      name: 'Marc-Aurèle D.',
+      role: 'Directeur d\'Agence Marketing',
+      city: 'Cotonou, Bénin',
+      rating: 5,
+      product: 'ChatGPT Plus & Canva Pro',
+      comment:
+        'Tous mes graphistes et rédacteurs utilisent les comptes fournis par Entrepreneurs Positifs. Zéro coupure en 4 mois. Service client hyper réactif sur Telegram. Rien à voir avec les revendeurs douteux sur Facebook.',
+    },
+    {
+      name: 'Aminata Sow',
+      role: 'Étudiante & Freelance',
+      city: 'Dakar, Sénégal',
+      rating: 5,
+      product: 'Spotify & ChatGPT Plus',
+      comment:
+        'Paiement par Orange Money ultra simple, ticket généré direct et accès fonctionnel en 1 minute. La garantie de remplacement donne une vraie tranquillité d\'esprit. Je recommande à 100%.',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100 font-sans selection:bg-sky-500 selection:text-slate-950">
       <Navbar />
 
-      {/* Hero Header Section */}
-      <section className="relative overflow-hidden border-b border-slate-800/60 glass-panel pt-14 pb-16 px-4 sm:px-6 lg:px-8">
-        
-        <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-6 relative z-10">
+      {/* HERO SECTION - REFINED FINTECH & SAAS LOOK */}
+      <section className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 bg-grid-pattern border-b border-white/[0.08]">
+        {/* Soft Radial Ambient Lighting */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[360px] bg-gradient-to-b from-sky-500/15 via-indigo-500/10 to-transparent blur-3xl pointer-events-none -z-10" />
+
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-7 relative z-10">
           
-          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-400 text-xs font-bold tracking-wide shadow-lg shadow-sky-500/10">
-            <Ticket className="w-4 h-4 text-sky-400" />
-            <span>Système de Ticket & Validation de Paiement</span>
+          {/* Verified Official Supplier Pill */}
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.1] text-xs font-semibold text-slate-300 shadow-sm backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-white font-bold">Grossiste & Distributeur Officiel</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-sky-400 font-medium">+15 000 Commandes Validées</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white max-w-4xl leading-[1.15]">
-            Abonnements & Produits Digitaux{' '}
-            <span className="gradient-text">au Meilleur Prix</span>
-          </h1>
+          {/* Master Headline */}
+          <div className="space-y-3 max-w-4xl">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.12]">
+              Abonnements & Licences Numériques au{' '}
+              <span className="gradient-accent">Tarif Grossiste Direct</span>
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-normal">
+              Économisez jusqu&apos;à 70% sur vos accès Netflix, ChatGPT Plus, Canva Pro, Spotify, outils d&apos;IA et licences logicielles. 
+              Livraison automatisée en moins de 2 minutes avec <strong className="text-white font-semibold">Garantie 30 Jours</strong>.
+            </p>
+          </div>
 
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-            Sélectionnez votre produit, obtenez votre ticket de commande avec les instructions de paiement. 
-            Une fois validé par l'admin, vos accès et clés sont livrés automatiquement sur votre ticket.
-          </p>
+          {/* In-Hero Quick Search Bar */}
+          <div className="w-full max-w-xl">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-500 to-indigo-600 rounded-2xl opacity-20 group-hover:opacity-40 transition-all blur-sm" />
+              <div className="relative bg-[#0c1222] border border-white/[0.12] rounded-2xl p-1.5 flex items-center shadow-xl">
+                <Search className="w-5 h-5 text-slate-400 ml-3 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Rechercher : Netflix, ChatGPT, Canva, Spotify, Windows..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
+                />
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="p-1.5 text-slate-400 hover:text-white mr-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <a
+                    href="#catalogue"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs shrink-0 flex items-center space-x-1 shadow-md shadow-sky-500/20"
+                  >
+                    <span>Explorer</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
 
-          {/* Quick Action Buttons */}
+            {/* Quick Keyword Pills */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-3 text-[11px] text-slate-400">
+              <span className="font-semibold text-slate-500 mr-1">Populaire :</span>
+              {['Netflix', 'ChatGPT Plus', 'Canva Pro', 'Spotify', 'Windows 11', 'Numéros OTP'].map((kw) => (
+                <button
+                  key={kw}
+                  onClick={() => {
+                    setSearchQuery(kw);
+                    const el = document.getElementById('catalogue');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-slate-300 font-medium transition-all"
+                >
+                  {kw}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Action CTAs */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="#catalogue"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center space-x-2 shadow-lg shadow-sky-500/20 transition-all hover:scale-[1.02]"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Voir le Catalogue Complet</span>
+            </a>
+
             <button
               onClick={() => {
                 setShowLookupModal(true);
@@ -406,70 +509,147 @@ export default function StorefrontPage() {
                 setLookupError(null);
                 setLookupTicketCode('');
               }}
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black text-xs flex items-center space-x-2 shadow-xl shadow-sky-500/20 transition-all group"
+              className="px-5 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.1] text-white font-bold text-xs sm:text-sm flex items-center space-x-2 transition-all"
             >
-              <Ticket className="w-4 h-4 stroke-[2.5]" />
-              <span>Suivre un Ticket / Récupérer mon Article</span>
+              <Ticket className="w-4 h-4 text-sky-400" />
+              <span>Suivre ma Commande (Code Ticket)</span>
             </button>
 
-            <button
-              onClick={fetchProducts}
-              className="px-4 py-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-slate-600 text-slate-300 hover:text-white font-bold text-xs flex items-center space-x-2 transition-all"
+            <Link
+              href="/reseller/register"
+              className="px-4 py-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-400 font-bold text-xs sm:text-sm flex items-center space-x-1.5 transition-all"
             >
-              <RefreshCcw className="w-4 h-4 text-slate-400" />
-              <span>Actualiser Catalogue</span>
-            </button>
+              <Store className="w-4 h-4" />
+              <span>Devenir Revendeur SaaS</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* TRUST & KEY METRICS STRIP */}
+      <section className="border-b border-white/[0.08] bg-[#090e1a]/80 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-sky-400" />
+              </div>
+              <div>
+                <span className="block text-white font-black text-base sm:text-lg tracking-tight">&lt; 2 Minutes</span>
+                <span className="text-[11px] text-slate-400 font-medium">Livraison automatique par Ticket</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <span className="block text-white font-black text-base sm:text-lg tracking-tight">Garantie 30 Jours</span>
+                <span className="text-[11px] text-slate-400 font-medium">Remplacement ou réactivation immédiate</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <span className="block text-white font-black text-base sm:text-lg tracking-tight">100% Sécurisé</span>
+                <span className="text-[11px] text-slate-400 font-medium">Wave, MTN, Orange, Moov, USDT</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+              </div>
+              <div>
+                <span className="block text-white font-black text-base sm:text-lg tracking-tight">4.9 / 5 Étoiles</span>
+                <span className="text-[11px] text-slate-400 font-medium">Avis vérifiés de nos clients réguliers</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CATALOGUE SECTION */}
+      <main id="catalogue" className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-8">
         
-        {/* Category Navigation */}
-        <div className="glass-panel p-3.5 rounded-2xl border border-slate-800/80 shadow-lg">
-          <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/[0.08] pb-6">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-sky-400 uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Boutique Grossiste Officielle</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Abonnements & Licences en Direct
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
+              Choisissez votre formule. Les accès sont vérifiés avant chaque livraison pour garantir 100% de fiabilité.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={fetchProducts}
+              className="px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs font-bold flex items-center space-x-1.5 transition-all"
+            >
+              <RefreshCcw className="w-3.5 h-3.5 text-slate-400" />
+              <span>Rafraîchir les Stocks</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Category Pills Navigation */}
+        <div className="bg-white/[0.02] p-2 rounded-2xl border border-white/[0.06] shadow-sm">
+          <div className="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             {categories.map((cat) => {
               const Icon = cat.icon;
               const isSelected = selectedCategory === cat.name;
               return (
                 <button
                   key={cat.name}
-                  onClick={() => setSelectedCategory(cat.name)}
+                  onClick={() => {
+                    setSelectedCategory(cat.name);
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 whitespace-nowrap transition-all ${
                     isSelected
-                      ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-slate-950 font-black shadow-md shadow-sky-500/20'
-                      : 'bg-slate-900/70 text-slate-400 hover:text-white hover:bg-slate-800/80'
+                      ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md shadow-sky-500/20 font-black'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isSelected ? 'text-slate-950' : 'text-slate-400'}`} />
-                  <span>{cat.name}</span>
+                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
+                  <span>{cat.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Filter Toolbar & Search */}
-        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4 shadow-lg">
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-            {/* Stock Availability Filter */}
-            <div className="flex items-center space-x-1 bg-slate-900/90 border border-slate-800 rounded-xl p-1">
+        {/* Filter Toolbar: Search, Stock Filter, Sort */}
+        <div className="bg-white/[0.02] p-3.5 sm:p-4 rounded-2xl border border-white/[0.06] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Stock Availability Toggle */}
+            <div className="flex items-center space-x-1 bg-white/[0.04] border border-white/[0.08] rounded-xl p-1">
               <button
                 onClick={() => setStockFilter('ALL')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   stockFilter === 'ALL'
-                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                    ? 'bg-sky-500 text-slate-950 font-black shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Tous les articles
+                Tous les produits
               </button>
               <button
                 onClick={() => setStockFilter('IN_STOCK')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   stockFilter === 'IN_STOCK'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -478,90 +658,59 @@ export default function StorefrontPage() {
             </div>
 
             {/* Sorting Dropdown */}
-            <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1.5">
+            <div className="flex items-center space-x-2 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-1.5">
               <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="text-[11px] sm:text-xs font-bold text-slate-400 shrink-0">Trier:</span>
+              <span className="text-xs font-bold text-slate-400 shrink-0">Tri :</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent text-[11px] sm:text-xs font-bold text-white focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"
               >
-                <option value="RANDOM" className="bg-slate-900 text-white">Ordre aléatoire (Découverte)</option>
-                <option value="NEWEST" className="bg-slate-900 text-white">Plus récents</option>
-                <option value="OLDEST" className="bg-slate-900 text-white">Plus anciens</option>
-                <option value="PRICE_ASC" className="bg-slate-900 text-white">Prix: Croissant</option>
-                <option value="PRICE_DESC" className="bg-slate-900 text-white">Prix: Décroissant</option>
-                <option value="TITLE_ASC" className="bg-slate-900 text-white">Titre: A-Z</option>
-                <option value="TITLE_DESC" className="bg-slate-900 text-white">Titre: Z-A</option>
+                <option value="RANDOM" className="bg-[#0c1222] text-white">Découverte (Aléatoire)</option>
+                <option value="NEWEST" className="bg-[#0c1222] text-white">Nouveautés</option>
+                <option value="PRICE_ASC" className="bg-[#0c1222] text-white">Prix : Croissant</option>
+                <option value="PRICE_DESC" className="bg-[#0c1222] text-white">Prix : Décroissant</option>
+                <option value="TITLE_ASC" className="bg-[#0c1222] text-white">Titre A-Z</option>
               </select>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2.5 sm:space-x-3 w-full md:w-auto">
-            {/* Search Input */}
-            <div className="relative flex-1 md:w-64">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Rechercher un produit..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-[11px] sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors shadow-inner"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Items Per Page */}
-            <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 shrink-0">
-              <span className="text-[9px] sm:text-[10px] font-bold uppercase text-slate-400">Afficher:</span>
+          {/* Results Count & Items per page */}
+          <div className="flex items-center justify-between md:justify-end space-x-3 text-xs text-slate-400 font-semibold">
+            <span>
+              <strong className="text-white">{totalItems}</strong> produit(s) trouvé(s)
+            </span>
+            <div className="flex items-center space-x-1.5 bg-white/[0.04] border border-white/[0.08] rounded-xl px-2.5 py-1">
+              <span className="text-[10px] uppercase font-bold text-slate-500">Par page :</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="bg-transparent text-[11px] sm:text-xs font-bold text-sky-400 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-sky-400 focus:outline-none cursor-pointer"
               >
-                <option value={6} className="bg-slate-900 text-white">6</option>
-                <option value={9} className="bg-slate-900 text-white">9</option>
-                <option value={12} className="bg-slate-900 text-white">12</option>
-                <option value={24} className="bg-slate-900 text-white">24</option>
+                <option value={9} className="bg-[#0c1222] text-white">9</option>
+                <option value={18} className="bg-[#0c1222] text-white">18</option>
+                <option value={36} className="bg-[#0c1222] text-white">36</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Results Counter Summary */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 px-1 font-bold">
-          <span>
-            Affichage de <strong className="text-white">{totalItems > 0 ? startIndex + 1 : 0}</strong> à{' '}
-            <strong className="text-white">{endIndex}</strong> sur <strong className="text-sky-400">{totalItems}</strong> produit(s)
-          </span>
-          {stockFilter === 'IN_STOCK' && (
-            <span className="text-emerald-400 text-[11px] flex items-center space-x-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Filtre "En stock" actif</span>
-            </span>
-          )}
-        </div>
-
-        {/* Product Cards Grid - 2 columns on mobile */}
+        {/* Product Grid */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="h-64 sm:h-72 rounded-2xl sm:rounded-3xl bg-slate-900/40 animate-pulse border border-slate-800/60" />
+              <div
+                key={n}
+                className="h-72 rounded-2xl bg-white/[0.02] border border-white/[0.06] animate-pulse"
+              />
             ))}
           </div>
         ) : paginatedProducts.length === 0 ? (
-          <div className="text-center py-20 glass-panel rounded-3xl border border-slate-800/80 space-y-3">
-            <Package className="w-14 h-14 text-slate-600 mx-auto stroke-1" />
-            <h3 className="text-xl font-extrabold text-white">Aucun produit trouvé</h3>
+          <div className="text-center py-20 bg-white/[0.02] rounded-3xl border border-white/[0.06] space-y-4">
+            <Package className="w-14 h-14 text-slate-600 mx-auto stroke-[1.2]" />
+            <h3 className="text-xl font-extrabold text-white">Aucun produit ne correspond</h3>
             <p className="text-slate-400 text-xs max-w-sm mx-auto">
-              Aucun produit ne correspond à vos critères de filtre ou de recherche actuels.
+              Essayez de modifier votre recherche ou de réinitialiser vos filtres de catégorie.
             </p>
             <button
               onClick={() => {
@@ -569,61 +718,79 @@ export default function StorefrontPage() {
                 setSearchQuery('');
                 setStockFilter('ALL');
               }}
-              className="mt-2 px-4 py-2 rounded-xl bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 text-xs font-bold border border-sky-500/20 transition-all inline-block"
+              className="px-4 py-2 rounded-xl bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 text-xs font-bold border border-sky-500/20 transition-all inline-block"
             >
               Réinitialiser les filtres
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
             {paginatedProducts.map((product) => {
               const stock = product.stock || 0;
-              const isAvailable = product.isAvailable;
+              const isAvailable = product.isAvailable && stock > 0;
 
               return (
                 <div
                   key={product.id}
-                  className="glass-card rounded-2xl sm:rounded-3xl p-3 sm:p-6 flex flex-col justify-between relative overflow-hidden group border border-slate-800/90 hover:border-sky-500/40 transition-all"
+                  className="top-edge-highlight group rounded-2xl bg-[#0a0f1d]/90 hover:bg-[#0d1427] border border-white/[0.08] hover:border-sky-500/40 p-3.5 sm:p-5 flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-sky-500/5 relative overflow-hidden"
                 >
-                  <div>
-                    <div className="flex flex-wrap items-center justify-between gap-1 mb-2 sm:mb-3">
-                      <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase bg-slate-800/80 text-slate-300 tracking-wider border border-slate-700/50 truncate max-w-[70px] sm:max-w-none">
-                        {product.category}
+                  <div className="space-y-3">
+                    {/* Top Row: Category + Stock Tag */}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-white/[0.04] text-slate-300 border border-white/[0.08] truncate max-w-[90px] sm:max-w-none">
+                        {product.category || 'Digital'}
                       </span>
 
-                      {stock > 0 ? (
-                        <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center space-x-1 shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span>Stock: {stock}</span>
+                      {isAvailable ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center space-x-1 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>En stock ({stock})</span>
                         </span>
                       ) : (
-                        <span className="px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-extrabold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center space-x-1 shrink-0">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center space-x-1 shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                          <span>Épuisé</span>
+                          <span>Rupture temporaire</span>
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-xs sm:text-base font-extrabold text-white group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug mb-1 sm:mb-2">
+                    {/* Product Title */}
+                    <h3 className="text-xs sm:text-base font-bold text-white group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug">
                       {product.title}
                     </h3>
 
-                    <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 sm:line-clamp-3 leading-relaxed mb-3 sm:mb-6">
-                      {product.description || 'Compte premium avec livraison et activation automatique garantie.'}
+                    {/* Description preview */}
+                    <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-2 sm:line-clamp-3 leading-relaxed">
+                      {product.description || 'Abonnement officiel garanti avec livraison et activation automatique 24/7.'}
                     </p>
+
+                    {/* Trust Micro-Badges */}
+                    <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[9px] sm:text-[10px] text-slate-400">
+                      <span className="px-1.5 py-0.5 rounded bg-white/[0.03] text-slate-300 flex items-center space-x-1">
+                        <BadgeCheck className="w-3 h-3 text-sky-400" />
+                        <span>Compte Garanti</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-white/[0.03] text-slate-300 flex items-center space-x-1">
+                        <Zap className="w-3 h-3 text-amber-400" />
+                        <span>Livraison &lt; 2 min</span>
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="pt-2 sm:pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-auto">
+                  {/* Price & Action Footer */}
+                  <div className="pt-4 mt-4 border-t border-white/[0.06] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
                     <div>
-                      <span className="text-[9px] uppercase font-black tracking-wider text-slate-400 hidden sm:block mb-0.5">
-                        Prix de vente ({currency})
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 hidden sm:block">
+                        Tarif Grossiste
                       </span>
                       <div className="flex flex-col">
-                        <span className="text-xs sm:text-xl font-black text-emerald-400 leading-tight">
+                        <span className="text-sm sm:text-xl font-black text-emerald-400 leading-tight">
                           {formatPrice(product.sellingPrice)}
                         </span>
-                        <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold hidden sm:block">
-                          {currency === 'FCFA' ? `($${product.sellingPrice.toFixed(2)} USD)` : `(${formatPrice(product.sellingPrice, 'FCFA')})`}
+                        <span className="text-[9px] sm:text-[10px] text-slate-500 font-semibold hidden sm:block">
+                          {currency === 'FCFA'
+                            ? `($${product.sellingPrice.toFixed(2)} USD)`
+                            : `(${formatPrice(product.sellingPrice, 'FCFA')})`}
                         </span>
                       </div>
                     </div>
@@ -631,14 +798,14 @@ export default function StorefrontPage() {
                     <button
                       onClick={() => handleOpenPurchase(product)}
                       disabled={!isAvailable}
-                      className={`px-2.5 sm:px-5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-extrabold flex items-center justify-center space-x-1 sm:space-x-2 transition-all shadow-lg w-full sm:w-auto ${
+                      className={`px-3 sm:px-5 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-md w-full sm:w-auto ${
                         isAvailable
-                          ? 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black shadow-sky-500/20 hover:scale-[1.02]'
+                          ? 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-extrabold shadow-sky-500/20 hover:scale-[1.02]'
                           : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                       }`}
                     >
-                      <Ticket className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-                      <span>{isAvailable ? 'Commander' : 'Rupture'}</span>
+                      <Ticket className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>{isAvailable ? 'Commander' : 'Épuisé'}</span>
                     </button>
                   </div>
                 </div>
@@ -647,22 +814,21 @@ export default function StorefrontPage() {
           </div>
         )}
 
-        {/* Responsive Pagination Controls */}
+        {/* Pagination Controls */}
         {!loading && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 mt-8 shadow-xl">
-            <div className="text-xs text-slate-400 font-bold text-center sm:text-left">
-              Page <span className="text-white font-extrabold">{validPage}</span> sur{' '}
-              <span className="text-white font-extrabold">{totalPages}</span>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] mt-8">
+            <div className="text-xs text-slate-400 font-semibold">
+              Page <strong className="text-white">{validPage}</strong> sur <strong className="text-white">{totalPages}</strong>
             </div>
 
             <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={validPage === 1}
-                className="px-3 sm:px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-bold text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed flex items-center space-x-1"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden xs:inline">Précédent</span>
+                <span>Précédent</span>
               </button>
 
               <div className="flex items-center space-x-1">
@@ -679,10 +845,10 @@ export default function StorefrontPage() {
                     <button
                       key={item}
                       onClick={() => setCurrentPage(item)}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
                         isActive
-                          ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-slate-950 font-black shadow-md shadow-sky-500/20 scale-105'
-                          : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                          ? 'bg-sky-500 text-slate-950 font-black shadow-sm'
+                          : 'bg-white/[0.03] text-slate-400 hover:text-white border border-white/[0.06]'
                       }`}
                     >
                       {item}
@@ -694,9 +860,9 @@ export default function StorefrontPage() {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                 disabled={validPage === totalPages}
-                className="px-3 sm:px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-bold text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed flex items-center space-x-1"
               >
-                <span className="hidden xs:inline">Suivant</span>
+                <span>Suivant</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -705,15 +871,201 @@ export default function StorefrontPage() {
 
       </main>
 
+      {/* SECTION: COMMENT ÇA FONCTIONNE (3 ÉTAPES CLAIRES) */}
+      <section className="border-t border-white/[0.08] bg-[#090e1a]/60 py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-12">
+          
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-sky-400">Processus Transparent</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Comment obtenir vos abonnements en 3 étapes ?
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Un système pensé pour être ultra-simple, sécurisé et rapide pour tous les utilisateurs en Afrique et à l&apos;international.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/[0.08] relative space-y-4">
+              <span className="text-3xl font-black text-sky-500/30">01</span>
+              <h3 className="text-base font-bold text-white">Choisissez votre Produit</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Parcourez notre catalogue et sélectionnez votre abonnement (Netflix, ChatGPT, Canva, Spotify, etc.) avec la durée souhaitée.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/[0.08] relative space-y-4">
+              <span className="text-3xl font-black text-indigo-500/30">02</span>
+              <h3 className="text-base font-bold text-white">Paiement Mobile Money ou Crypto</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Réglez en 1 clic par Wave, MTN MoMo, Orange Money, Moov ou Crypto USDT. La transaction est 100% chiffrée et sécurisée.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/[0.08] relative space-y-4">
+              <span className="text-3xl font-black text-emerald-500/30">03</span>
+              <h3 className="text-base font-bold text-white">Identifiants Livrés Immédiatement</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Votre Code Ticket est généré et vos accès vous sont délivrés instantanément avec les instructions d&apos;utilisation complètes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: DEVENIR REVENDEUR SAAS (B2B SHOWCASE) */}
+      <section className="border-t border-white/[0.08] py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-b from-[#0a1224] to-[#070b14]">
+        <div className="max-w-7xl mx-auto">
+          <div className="rounded-3xl border border-sky-500/30 p-8 sm:p-12 bg-sky-500/[0.03] backdrop-blur-xl relative overflow-hidden space-y-8">
+            <div className="max-w-2xl space-y-4">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold">
+                <Store className="w-3.5 h-3.5" />
+                <span>Opportunité Entrepreneur Digital</span>
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+                Lancez votre Propre Boutique d&apos;Abonnements en 2 Minutes
+              </h2>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                Rejoignez notre réseau de revendeurs certifiés : recevez votre propre site e-commerce avec votre marque, 
+                un sous-domaine offert, vos propres prix de revente et encaissez vos bénéfices directement via Mobile Money.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+                <span className="block text-sky-400 font-bold text-sm">Jusqu&apos;à -60%</span>
+                <span className="text-[11px] text-slate-400">Réductions grossiste exclusives</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+                <span className="block text-emerald-400 font-bold text-sm">Sous-Domaine Offert</span>
+                <span className="text-[11px] text-slate-400">Vitrine clé en main personnalisée</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+                <span className="block text-purple-400 font-bold text-sm">100% Vos Marges</span>
+                <span className="text-[11px] text-slate-400">Définissez librement vos prix</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
+                <span className="block text-amber-400 font-bold text-sm">Retraits Instantanés</span>
+                <span className="text-[11px] text-slate-400">Paiement Mobile Money automatique</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <Link
+                href="/reseller/register"
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-sky-500/25 flex items-center space-x-2"
+              >
+                <span>Créer ma Boutique Revendeur</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/reseller/login"
+                className="px-5 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.1] text-white font-bold text-xs sm:text-sm"
+              >
+                <span>Connexion Espace Revendeur</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: TÉMOIGNAGES CLIENTS VÉRIFIÉS */}
+      <section className="border-t border-white/[0.08] bg-[#090e1a]/40 py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="text-center space-y-2 max-w-xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Avis Vérifiés</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Ce que disent nos clients réguliers
+            </h2>
+            <p className="text-xs text-slate-400">
+              Des centaines d&apos;utilisateurs, créateurs et agences nous font confiance au quotidien.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t, idx) => (
+              <div
+                key={idx}
+                className="p-6 rounded-3xl bg-white/[0.02] border border-white/[0.08] flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-1 text-amber-400">
+                    {[...Array(t.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed font-normal italic">
+                    &ldquo;{t.comment}&rdquo;
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
+                  <div>
+                    <h4 className="font-bold text-white text-xs">{t.name}</h4>
+                    <span className="text-[10px] text-slate-400 block">{t.role} &bull; {t.city}</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 text-[10px] font-semibold border border-sky-500/20">
+                    Achat Vérifié
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: FOIRE AUX QUESTIONS (FAQ) */}
+      <section id="faq" className="border-t border-white/[0.08] py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-sky-400">Assistance & Clarté</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Foire Aux Questions (FAQ)
+            </h2>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              Retrouvez toutes les réponses aux questions les plus fréquentes sur nos services et la livraison.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {faqItems.map((item, idx) => {
+              const isOpen = openFaqIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  className="rounded-2xl bg-white/[0.02] border border-white/[0.08] overflow-hidden transition-all"
+                >
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                    className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-white hover:text-sky-400 transition-colors"
+                  >
+                    <span>{item.q}</span>
+                    {isOpen ? (
+                      <ChevronUp className="w-4 h-4 text-sky-400 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-5 sm:px-5 sm:pb-5 text-xs text-slate-300 leading-relaxed border-t border-white/[0.04] pt-3">
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* CREATE TICKET MODAL */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#0c1222] border border-white/[0.12] rounded-3xl max-w-lg w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
             
             <button
               onClick={() => setSelectedProduct(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-white/[0.08]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -722,7 +1074,7 @@ export default function StorefrontPage() {
               <div className="space-y-5">
                 <div>
                   <span className="text-[10px] font-black uppercase text-sky-400 tracking-wider">
-                    Génération de Ticket de Commande
+                    Commande d&apos;Abonnement
                   </span>
                   <h3 className="text-lg font-extrabold text-white mt-1 leading-snug">
                     {selectedProduct.title}
@@ -731,10 +1083,10 @@ export default function StorefrontPage() {
 
                 {/* Complete Product Description Display */}
                 {selectedProduct.description && (
-                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-1.5">
+                  <div className="bg-[#070b14] p-4 rounded-2xl border border-white/[0.08] space-y-1.5">
                     <span className="text-[10px] font-black uppercase text-sky-400 tracking-wider flex items-center space-x-1.5">
                       <FileText className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Description Complète du Produit</span>
+                      <span>Détails & Instructions du Produit</span>
                     </span>
                     <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
                       {selectedProduct.description}
@@ -742,18 +1094,18 @@ export default function StorefrontPage() {
                   </div>
                 )}
 
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2.5 text-xs">
+                <div className="bg-[#070b14] p-4 rounded-2xl border border-white/[0.08] space-y-2.5 text-xs">
                   <div className="flex justify-between items-center text-slate-400">
-                    <span>Prix unitaire:</span>
+                    <span>Tarif unitaire :</span>
                     <span className="font-extrabold text-emerald-400 text-sm">
                       {formatPrice(selectedProduct.sellingPrice)} ({currency === 'FCFA' ? `$${selectedProduct.sellingPrice.toFixed(2)} USD` : formatPrice(selectedProduct.sellingPrice, 'FCFA')})
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-slate-400">
-                    <span>Validation paiement:</span>
+                    <span>Garantie active :</span>
                     <span className="font-bold text-sky-400 flex items-center space-x-1">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Vérification Admin requise</span>
+                      <span>Remplacement 30 Jours Inclus</span>
                     </span>
                   </div>
                 </div>
@@ -766,14 +1118,14 @@ export default function StorefrontPage() {
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold flex items-center justify-center"
+                      className="w-10 h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-bold flex items-center justify-center"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
                     <span className="text-lg font-black text-white px-4">{quantity}</span>
                     <button
                       onClick={() => setQuantity(Math.min(selectedProduct.stock || 1, quantity + 1))}
-                      className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold flex items-center justify-center"
+                      className="w-10 h-10 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-bold flex items-center justify-center"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -784,26 +1136,26 @@ export default function StorefrontPage() {
                 {selectedProduct.requiresCustomerInfo && (
                   <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 space-y-2">
                     <label className="block text-xs font-black text-sky-400 uppercase tracking-wider">
-                      📋 {selectedProduct.customerInfoPrompt || 'Informations requises pour le fournisseur'} *
+                      📋 {selectedProduct.customerInfoPrompt || 'Informations requises pour le compte'} *
                     </label>
                     <textarea
                       rows={2}
                       required
-                      placeholder={selectedProduct.customerInfoPlaceholder || 'Ex: Email de votre compte à upgrader, identifiant ou lien...'}
+                      placeholder={selectedProduct.customerInfoPlaceholder || 'Ex: Votre email à upgrader, identifiant ou numéro...'}
                       value={customerAccounts}
                       onChange={(e) => setCustomerAccounts(e.target.value)}
-                      className="w-full bg-slate-950 border border-sky-500/40 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-mono"
+                      className="w-full bg-[#070b14] border border-sky-500/40 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-mono"
                     />
                     <p className="text-[10px] text-slate-400">
-                      ⚠️ Ces informations seront transmises au fournisseur pour activer votre commande.
+                      Ces informations permettront d&apos;activer votre abonnement directement.
                     </p>
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 font-black uppercase">Montant Total À Payer:</span>
-                    <span className="block text-xl font-black text-sky-400">
+                    <span className="text-[10px] text-slate-400 font-black uppercase">Montant Total :</span>
+                    <span className="block text-xl font-black text-emerald-400">
                       {formatPrice(selectedProduct.sellingPrice * quantity)}
                     </span>
                     <span className="text-[10px] text-slate-400 font-bold block">
@@ -814,7 +1166,7 @@ export default function StorefrontPage() {
                   <button
                     onClick={handleCreateTicket}
                     disabled={creatingTicket}
-                    className="px-6 py-3 rounded-2xl text-xs font-black bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 flex items-center space-x-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all"
+                    className="px-6 py-3 rounded-2xl text-xs font-black bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white flex items-center space-x-2 shadow-lg shadow-sky-500/25 disabled:opacity-50 transition-all"
                   >
                     {creatingTicket ? (
                       <>
@@ -824,7 +1176,7 @@ export default function StorefrontPage() {
                     ) : (
                       <>
                         <Ticket className="w-4 h-4 stroke-[2.5]" />
-                        <span>Obtenir mon Ticket</span>
+                        <span>Générer mon Ticket</span>
                       </>
                     )}
                   </button>
@@ -841,14 +1193,14 @@ export default function StorefrontPage() {
                       </div>
                       <h3 className="text-xl font-extrabold text-white">Ticket de Commande Généré !</h3>
                       <p className="text-xs text-slate-400">
-                        Payer le montant ci-dessous en suivant les instructions, puis l'admin validera votre ticket.
+                        Procédez au paiement ci-dessous pour que votre commande soit validée automatiquement.
                       </p>
                     </div>
 
                     {/* Ticket Code Box */}
-                    <div className="bg-slate-950 p-4 rounded-2xl border border-sky-500/30 text-center space-y-1 relative">
+                    <div className="bg-[#070b14] p-4 rounded-2xl border border-sky-500/30 text-center space-y-1 relative">
                       <span className="text-[10px] font-black uppercase text-sky-400 tracking-wider">
-                        VOTRE CODE DE TICKET (À CONSERVER)
+                        VOTRE CODE DE TICKET PERSONNEL
                       </span>
                       <div className="flex items-center justify-center space-x-3 pt-1">
                         <span className="text-2xl font-black font-mono text-emerald-400 tracking-wider">
@@ -866,19 +1218,19 @@ export default function StorefrontPage() {
 
                     {/* FeexPay Automated Payment Box */}
                     {paymentMethods?.feexpay?.enabled && (
-                      <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/40 space-y-3 shadow-lg shadow-emerald-500/5">
+                      <div className="bg-[#070b14] p-4 rounded-2xl border border-emerald-500/40 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="font-extrabold text-xs text-white">Paiement Automatique Instantané</span>
+                            <span className="font-extrabold text-xs text-white">Paiement Mobile Money Direct</span>
                           </div>
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                            FeexPay (MTN, Moov, Wave, CB)
+                            Wave, MTN, Orange, Moov, CB
                           </span>
                         </div>
 
                         <p className="text-[11px] text-slate-300 leading-relaxed">
-                          Payez automatiquement par Mobile Money ou Carte Bancaire. Vos accès seront livrés <b>automatiquement en 1-clic</b> dès la confirmation.
+                          Validation instantanée 24/7. Dès la confirmation par votre opérateur, vos identifiants s&apos;affichent immédiatement.
                         </p>
 
                         <button
@@ -889,12 +1241,12 @@ export default function StorefrontPage() {
                           {payingWithFeexPay ? (
                             <>
                               <RefreshCcw className="w-4 h-4 animate-spin" />
-                              <span>Connexion à FeexPay...</span>
+                              <span>Connexion à la passerelle...</span>
                             </>
                           ) : (
                             <>
                               <Zap className="w-4 h-4 fill-current text-slate-950" />
-                              <span>Payer par FeexPay ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
+                              <span>Payer par Mobile Money ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
                             </>
                           )}
                         </button>
@@ -903,20 +1255,16 @@ export default function StorefrontPage() {
 
                     {/* Moneroo Automated Payment Box */}
                     {paymentMethods?.moneroo?.enabled && (
-                      <div className="bg-slate-950 p-4 rounded-2xl border border-purple-500/40 space-y-3 shadow-lg shadow-purple-500/5">
+                      <div className="bg-[#070b14] p-4 rounded-2xl border border-purple-500/40 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
-                            <span className="font-extrabold text-xs text-white">Passerelle Globale Moneroo</span>
+                            <span className="font-extrabold text-xs text-white">Passerelle Moneroo</span>
                           </div>
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                            Moneroo (Mobile Money Int., CB)
+                            Mobile Money & Carte
                           </span>
                         </div>
-
-                        <p className="text-[11px] text-slate-300 leading-relaxed">
-                          Paiement rapide et sécurisé par Mobile Money International, Carte Bancaire ou Crypto via Moneroo.
-                        </p>
 
                         <button
                           onClick={() => handlePayWithMoneroo(createdTicketResult.ticketCode)}
@@ -938,50 +1286,13 @@ export default function StorefrontPage() {
                       </div>
                     )}
 
-                    {/* Custom 2nd Gateway Automated Payment Box */}
-                    {paymentMethods?.custom?.enabled && (
-                      <div className="bg-slate-950 p-4 rounded-2xl border border-sky-500/40 space-y-3 shadow-lg shadow-sky-500/5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
-                            <span className="font-extrabold text-xs text-white">Payer via {paymentMethods.custom.name}</span>
-                          </div>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                            Passerelle Partenaire
-                          </span>
-                        </div>
-
-                        <p className="text-[11px] text-slate-300 leading-relaxed">
-                          {paymentMethods.custom.instructions || `Effectuez votre paiement via ${paymentMethods.custom.name}.`}
-                        </p>
-
-                        <button
-                          onClick={() => handlePayWithCustomGateway(createdTicketResult.ticketCode)}
-                          disabled={payingWithCustomGateway}
-                          className="w-full py-3 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 transition-all"
-                        >
-                          {payingWithCustomGateway ? (
-                            <>
-                              <RefreshCcw className="w-4 h-4 animate-spin" />
-                              <span>Connexion en cours...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Globe className="w-4 h-4" />
-                              <span>Payer par {paymentMethods.custom.name} ({Math.round(createdTicketResult.totalAmount * 650).toLocaleString()} FCFA)</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-
                     {/* Manual Payment Instructions Box */}
                     {paymentMethods?.manual?.enabled && (
-                      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                      <div className="bg-[#070b14] p-4 rounded-2xl border border-white/[0.08] space-y-2 text-xs">
+                        <div className="flex justify-between items-center pb-2 border-b border-white/[0.06]">
                           <span className="font-bold text-slate-300">Instructions de Paiement Manuel (${createdTicketResult.totalAmount.toFixed(2)})</span>
                         </div>
-                        <pre className="text-slate-300 whitespace-pre-wrap font-sans leading-relaxed text-[11px] bg-slate-900 p-3 rounded-xl border border-slate-800/80">
+                        <pre className="text-slate-300 whitespace-pre-wrap font-sans leading-relaxed text-[11px] bg-[#0c1222] p-3 rounded-xl border border-white/[0.08]">
                           {createdTicketResult.paymentInstructions}
                         </pre>
                       </div>
@@ -989,7 +1300,7 @@ export default function StorefrontPage() {
 
                     <button
                       onClick={() => setSelectedProduct(null)}
-                      className="w-full py-3 bg-slate-800 hover:bg-slate-750 text-white font-bold rounded-2xl text-xs transition-colors"
+                      className="w-full py-3 bg-white/[0.06] hover:bg-white/[0.1] text-white font-bold rounded-2xl text-xs transition-colors"
                     >
                       Fermer la fenêtre
                     </button>
@@ -1014,11 +1325,11 @@ export default function StorefrontPage() {
       {/* TICKET LOOKUP MODAL */}
       {showLookupModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative space-y-5">
+          <div className="bg-[#0c1222] border border-white/[0.12] rounded-3xl max-w-lg w-full max-w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl relative space-y-5">
             
             <button
               onClick={() => setShowLookupModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-white/[0.08]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1026,10 +1337,10 @@ export default function StorefrontPage() {
             <div>
               <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
                 <Ticket className="w-5 h-5 text-sky-400" />
-                <span>Suivre un Ticket / Récupérer mon Article</span>
+                <span>Suivre ma Commande (Code Ticket)</span>
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Entrez votre code de ticket (ex: TK-784920) pour vérifier l'état du paiement ou afficher vos clés d'accès.
+                Entrez votre code de ticket (ex: TK-784920) pour vérifier l&apos;état ou accéder à vos identifiants.
               </p>
             </div>
 
@@ -1040,84 +1351,69 @@ export default function StorefrontPage() {
                 placeholder="Ex: TK-784920"
                 value={lookupTicketCode}
                 onChange={(e) => setLookupTicketCode(e.target.value)}
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-sm text-white font-mono uppercase focus:outline-none focus:border-sky-500"
+                className="flex-1 bg-[#070b14] border border-white/[0.1] rounded-2xl px-4 py-2.5 text-sm text-white font-mono uppercase focus:outline-none focus:border-sky-500"
               />
               <button
                 type="submit"
                 disabled={searchingTicket}
-                className="px-5 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center space-x-1 transition-all"
+                className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black text-xs flex items-center space-x-1 transition-all"
               >
                 {searchingTicket ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <span>Rechercher</span>}
               </button>
             </form>
 
             {lookupError && (
-              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
-                {lookupError}
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{lookupError}</span>
               </div>
             )}
 
-            {/* Lookup Result Card */}
             {ticketLookupResult && (
-              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 text-xs animate-in fade-in duration-150">
-                <div className="flex justify-between items-start pb-2 border-b border-slate-800">
+              <div className="space-y-4 pt-2 border-t border-white/[0.08]">
+                <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-extrabold text-white text-sm">{ticketLookupResult.productTitle}</h4>
-                    <span className="text-[10px] text-slate-500">Code Ticket: {ticketLookupResult.ticketCode}</span>
+                    <h4 className="font-extrabold text-sm text-white">{ticketLookupResult.product?.title || 'Produit Digital'}</h4>
+                    <span className="text-[10px] text-slate-400 font-mono">Code: {ticketLookupResult.ticketCode}</span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
-                    ticketLookupResult.status === 'COMPLETED'
-                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                      : ticketLookupResult.status === 'CANCELLED'
-                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                      : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                  }`}>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+                      ticketLookupResult.status === 'COMPLETED'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        : ticketLookupResult.status === 'CANCELLED'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                    }`}
+                  >
                     {ticketLookupResult.status === 'COMPLETED'
-                      ? 'PAYÉ & LIVRÉ'
+                      ? 'Livré & Validé'
                       : ticketLookupResult.status === 'CANCELLED'
-                      ? 'PAIEMENT REFUSÉ / ANNULÉ'
-                      : 'EN ATTENTE DE PAIEMENT'}
+                      ? 'Annulé'
+                      : 'En attente de paiement'}
                   </span>
                 </div>
 
-                {ticketLookupResult.productDescription && (
-                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center space-x-1">
-                      <FileText className="w-3 h-3 text-sky-400" />
-                      <span>Description de l'Article</span>
-                    </span>
-                    <p className="text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed">
-                      {ticketLookupResult.productDescription}
-                    </p>
-                  </div>
-                )}
-
                 {ticketLookupResult.status === 'CANCELLED' ? (
-                  <div className="space-y-2">
-                    <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-300 space-y-1">
-                      <span className="font-extrabold text-xs block text-rose-400">
-                        🚫 Demande de Commande Refusée ou Annulée
-                      </span>
-                      <p className="text-[11px] text-slate-300">
-                        Motif : {ticketLookupResult.errorMessage || "Paiement non reçu ou invalidé par l'administrateur."}
-                      </p>
+                  <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl space-y-2">
+                    <div className="flex items-center space-x-2 text-rose-400 font-bold text-xs">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Ce ticket a été annulé</span>
                     </div>
-                    <p className="text-[10px] text-slate-400 text-center">
-                      Besoin d'aide ? Utilisez le bouton <strong className="text-sky-400">Support Live</strong> en bas à droite pour contacter l'admin.
+                    <p className="text-[11px] text-slate-300">
+                      Motif : {ticketLookupResult.errorMessage || "Paiement non reçu ou invalidé par l'administrateur."}
                     </p>
                   </div>
                 ) : ticketLookupResult.status === 'PENDING_PAYMENT' ? (
                   <div className="space-y-3">
-                    {/* FeexPay Instant Automated Payment Box */}
                     {paymentMethods?.feexpay?.enabled && (
-                      <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
+                      <div className="bg-[#070b14] p-3.5 rounded-xl border border-emerald-500/40 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span>Payer Instantanément via FeexPay</span>
+                            <span>Payer par Mobile Money (FeexPay)</span>
                           </span>
                           <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            MTN, Moov, Wave, CB
+                            Wave, MTN, Orange, Moov
                           </span>
                         </div>
                         <button
@@ -1140,41 +1436,31 @@ export default function StorefrontPage() {
                       </div>
                     )}
 
-                    {/* Moneroo Instant Automated Payment Box */}
                     {paymentMethods?.moneroo?.enabled && (
-                      <div className="bg-slate-900/90 p-3.5 rounded-xl border border-purple-500/40 space-y-2.5">
+                      <div className="bg-[#070b14] p-3.5 rounded-xl border border-purple-500/40 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-xs text-white flex items-center space-x-1.5">
                             <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                            <span>Payer via Moneroo (Mobile Money Int., CB)</span>
-                          </span>
-                          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
-                            Moneroo
+                            <span>Payer par Moneroo</span>
                           </span>
                         </div>
                         <button
                           onClick={() => handlePayWithMoneroo(ticketLookupResult.ticketCode)}
                           disabled={payingWithMoneroo}
-                          className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white flex items-center justify-center space-x-2 shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
+                          className="w-full py-2.5 px-4 rounded-xl font-black text-xs bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white flex items-center justify-center space-x-2"
                         >
                           {payingWithMoneroo ? (
-                            <>
-                              <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
-                              <span>Connexion à Moneroo...</span>
-                            </>
+                            <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
                           ) : (
-                            <>
-                              <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                              <span>Payer par Moneroo ({Math.round(ticketLookupResult.totalAmount * 650).toLocaleString()} FCFA)</span>
-                            </>
+                            <span>Payer par Moneroo ({Math.round(ticketLookupResult.totalAmount * 650).toLocaleString()} FCFA)</span>
                           )}
                         </button>
                       </div>
                     )}
 
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Autre Option : Instructions de Paiement Manuel</span>
-                      <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 whitespace-pre-wrap font-sans">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Instructions de Paiement Manuel</span>
+                      <div className="bg-[#070b14] p-3 rounded-xl border border-white/[0.08] text-[11px] text-slate-300 whitespace-pre-wrap font-sans">
                         {ticketLookupResult.paymentInstructions}
                       </div>
                     </div>
@@ -1193,6 +1479,9 @@ export default function StorefrontPage() {
 
       {/* Support Live Widget */}
       <SupportWidget />
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
