@@ -1279,17 +1279,22 @@ export default function ResellerDashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
-      {/* Top Navbar */}
+      {/* Top Header - Executive SaaS Design */}
       <header className="sticky top-0 z-40 bg-slate-900/90 border-b border-slate-800 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-base">
+          {/* Left: Brand, Live Store Status & Subdomain */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-base shrink-0">
               {reseller?.storeName ? reseller.storeName.charAt(0).toUpperCase() : 'R'}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-sm sm:text-base tracking-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-white text-sm sm:text-base tracking-tight truncate">
                   {reseller?.storeName || 'Ma Boutique'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  En ligne
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
@@ -1300,41 +1305,55 @@ export default function ResellerDashboardPage() {
                       : 'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}
                 >
-                  Plan {currentPlan?.name || 'Free'} {currentPlan?.id === 'pro' ? '(Jusqu\'à ~30% remise)' : currentPlan?.id === 'starter' ? '(Jusqu\'à ~20% remise)' : ''}
+                  Plan {currentPlan?.name || 'Free'}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400 font-mono hidden sm:block">
-                /store/{reseller?.subdomain}
-              </span>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono truncate">
+                <span>/store/{reseller?.subdomain}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right: Quick Solde Chip & Action Buttons */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Quick Wallet Pill */}
+            <button
+              onClick={() => setActiveTab('wallet')}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 text-xs transition-all group"
+              title="Voir mon portefeuille et demander un retrait"
+            >
+              <Coins className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span className="text-slate-400">Solde :</span>
+              <span className="font-mono font-bold text-amber-400">
+                ${(reseller?.walletBalance || 0).toFixed(2)}
+              </span>
+            </button>
+
             {/* View Store Button */}
             <a
               href={`/store/${reseller?.subdomain}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-sky-500/20"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" />
               <span className="hidden sm:inline">Voir ma vitrine</span>
             </a>
 
-            {/* Copy Link Button */}
+            {/* Share / Copy Link */}
             <button
               onClick={handleCopyLink}
-              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-all"
+              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all"
               title="Copier le lien public"
             >
-              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
             </button>
 
             {/* Logout */}
             <button
               onClick={handleLogout}
-              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-medium flex items-center gap-1.5 transition-all"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-medium flex items-center gap-1.5 transition-all"
               title="Déconnexion"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -1346,80 +1365,67 @@ export default function ResellerDashboardPage() {
 
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-none border-b border-slate-800">
+        {/* Navigation Tabs Bar */}
+        <div className="bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800/80 backdrop-blur-lg mb-6 flex items-center gap-1 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
               activeTab === 'overview'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <TrendingUp className="w-4 h-4" />
+            <TrendingUp className="w-3.5 h-3.5" />
             <span>Vue d'ensemble</span>
           </button>
 
           <button
             onClick={() => setActiveTab('products')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
               activeTab === 'products'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Package className="w-4 h-4" />
-            <span>Mes Produits & Tarifs</span>
+            <Package className="w-3.5 h-3.5" />
+            <span>Catalogue & Marges</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
+                activeTab === 'products' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {products.length}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveTab('storefront')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
               activeTab === 'storefront'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Store className="w-4 h-4" />
-            <span>Personnalisation Vitrine</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('marketing')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'marketing'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Marketing & Visites</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('subscription')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'subscription'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <Crown className="w-4 h-4" />
-            <span>Mon Abonnement SaaS</span>
+            <Store className="w-3.5 h-3.5" />
+            <span>Boutique & Design</span>
           </button>
 
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
               activeTab === 'orders'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingCart className="w-3.5 h-3.5" />
             <span>Commandes</span>
             {orders.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-sky-400/20 text-sky-300">
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
+                  activeTab === 'orders' ? 'bg-slate-950/20 text-slate-950' : 'bg-sky-500/20 text-sky-300'
+                }`}
+              >
                 {orders.length}
               </span>
             )}
@@ -1427,170 +1433,458 @@ export default function ResellerDashboardPage() {
 
           <button
             onClick={() => setActiveTab('wallet')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
               activeTab === 'wallet'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Coins className="w-4 h-4" />
-            <span>Portefeuille & Gains</span>
+            <Coins className="w-3.5 h-3.5" />
+            <span>Finances & Retraits</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('marketing')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'marketing'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Marketing & Pixels</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('subscription')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              activeTab === 'subscription'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span>Abonnement SaaS</span>
           </button>
 
           <button
             onClick={() => setActiveTab('support')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
               activeTab === 'support'
-                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <LifeBuoy className="w-4 h-4" />
-            <span>Support & Assistance</span>
+            <LifeBuoy className="w-3.5 h-3.5" />
+            <span>Support</span>
             {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400/20 text-amber-300 font-mono font-black">
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-amber-400/20 text-amber-300 font-mono font-black">
                 {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length}
               </span>
             )}
           </button>
         </div>
 
-        {/* TAB 1: OVERVIEW */}
+        {/* TAB 1: OVERVIEW - COCKPIT PRO */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Banner info */}
-            <div className="p-6 rounded-3xl bg-gradient-to-r from-sky-900/40 via-indigo-900/30 to-purple-900/40 border border-sky-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-5 h-5 text-sky-400" />
-                  <h2 className="text-lg sm:text-xl font-black text-white">
-                    Bienvenue sur votre espace, {reseller?.name} !
+            {/* Hero Welcome Banner */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl relative overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Vitrine Ouverte 24h/24
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                      Plan {currentPlan?.name || 'Free'}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                      Template : {PRODUCT_TEMPLATES.find((t) => t.id === (storeSettings.productTemplate || 'grid-modern'))?.name || 'Grille'}
+                    </span>
+                  </div>
+
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Bonjour, {reseller?.name} 👋
                   </h2>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+                    Bienvenue sur votre cockpit revendeur. Suivez vos commandes, ajustez vos marges et partagez votre vitrine logicielle officielle pour générer des ventes.
+                  </p>
+
+                  {/* Public link bar */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-sky-400 max-w-full truncate">
+                      <Globe className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">{storeUrl}</span>
+                    </div>
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? 'Lien copié' : 'Copier'}</span>
+                    </button>
+                    <a
+                      href={`/store/${reseller?.subdomain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Tester ma vitrine</span>
+                    </a>
+                  </div>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                  Votre vitrine est active. Votre offre actuelle ({currentPlan?.name}) vous octroie{' '}
-                  <strong className="text-emerald-400">
-                    {currentPlan?.id === 'pro'
-                      ? 'jusqu\'à ~25-30% de réduction réelle'
-                      : currentPlan?.id === 'starter'
-                      ? 'jusqu\'à ~15-20% de réduction réelle'
-                      : 'les tarifs de base catalogue'}
-                  </strong>{' '}
-                  sur vos prix d'achat grossiste pour maximiser vos bénéfices nets.
-                </p>
+
+                {/* Quick Shortcuts */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2 shrink-0">
+                  <button
+                    onClick={() => setActiveTab('products')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Package className="w-4 h-4 text-sky-400" />
+                    <span>Ajuster mes prix</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('storefront')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Store className="w-4 h-4 text-amber-400" />
+                    <span>Changer mon design</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('wallet')}
+                    className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Coins className="w-4 h-4 text-emerald-400" />
+                    <span>Retirer mes gains</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
+            </div>
+
+            {/* Executive KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Turnover */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Chiffre d'Affaires
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  ${orderStats.totalTurnover.toFixed(2)}
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  <span>Volume brut des ventes</span>
+                </div>
+              </div>
+
+              {/* Net Profit */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    Bénéfice Net
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight">
+                  +${orderStats.totalProfit.toFixed(2)}
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-2 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>Gains nets réels (100% à vous)</span>
+                </div>
+              </div>
+
+              {/* Orders */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                    Commandes
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                    <ShoppingCart className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+                  {orderStats.completedOrders}{' '}
+                  <span className="text-base text-slate-500 font-normal">/ {orderStats.totalOrders}</span>
+                </div>
+                <div className="mt-3">
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${
+                          orderStats.totalOrders > 0
+                            ? Math.round((orderStats.completedOrders / orderStats.totalOrders) * 100)
+                            : 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    {orderStats.totalOrders > 0
+                      ? `${Math.round((orderStats.completedOrders / orderStats.totalOrders) * 100)}% livrées avec succès`
+                      : 'Prêt à recevoir des commandes'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Available Balance */}
+              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg relative overflow-hidden group hover:border-amber-500/40 transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    Solde Retirable
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Coins className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                  ${(reseller?.walletBalance || 0).toFixed(2)}
+                </div>
                 <button
-                  onClick={() => setActiveTab('subscription')}
-                  className="px-4 py-2.5 rounded-xl bg-white text-slate-950 font-bold text-xs hover:bg-slate-100 transition-all flex items-center gap-1.5 shadow-lg"
+                  onClick={() => setActiveTab('wallet')}
+                  className="mt-2 text-[11px] font-bold text-amber-300 hover:text-white flex items-center gap-1 transition-colors"
                 >
-                  <Crown className="w-4 h-4 text-amber-500" />
-                  <span>Améliorer mon offre</span>
+                  <span>Demander un virement</span>
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
             </div>
 
-            {/* Quick KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase mb-2">
-                  <span>Chiffre d'Affaires</span>
-                  <DollarSign className="w-4 h-4 text-sky-400" />
+            {/* Quick Launch Checklist (4-Step Store Health) */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Guide de Configuration & Santé de votre Boutique
+                  </h3>
                 </div>
-                <div className="text-2xl font-black text-white">
-                  ${orderStats.totalTurnover.toFixed(2)}
-                </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Volume total généré</span>
+                <span className="text-[10px] text-slate-500">4 étapes clés</span>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase mb-2">
-                  <span>Bénéfice Net</span>
-                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                {/* Step 1 */}
+                <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-emerald-500/20 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">Étape 1</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="font-bold text-white text-xs">Vitrine Opérationnelle</div>
+                  <p className="text-[11px] text-slate-400 truncate">/store/{reseller?.subdomain}</p>
                 </div>
-                <div className="text-2xl font-black text-emerald-400">
-                  +${orderStats.totalProfit.toFixed(2)}
-                </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Vos gains nets perçus</span>
-              </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase mb-2">
-                  <span>Commandes</span>
-                  <ShoppingCart className="w-4 h-4 text-indigo-400" />
+                {/* Step 2 */}
+                <div
+                  onClick={() => setActiveTab('storefront')}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-sky-500/40 cursor-pointer transition-all space-y-1 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-sky-400 font-bold uppercase">Étape 2</span>
+                    <Store className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="font-bold text-white text-xs group-hover:text-sky-300 transition-colors">
+                    Template & Design
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {PRODUCT_TEMPLATES.find((t) => t.id === (storeSettings.productTemplate || 'grid-modern'))?.name || 'Grille Moderne'}
+                  </p>
                 </div>
-                <div className="text-2xl font-black text-white">
-                  {orderStats.completedOrders} / {orderStats.totalOrders}
-                </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Livrées avec succès</span>
-              </div>
 
-              <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase mb-2">
-                  <span>Solde Disponible</span>
-                  <Coins className="w-4 h-4 text-amber-400" />
+                {/* Step 3 */}
+                <div
+                  onClick={() => setActiveTab('products')}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/40 cursor-pointer transition-all space-y-1 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-amber-400 font-bold uppercase">Étape 3</span>
+                    <Package className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="font-bold text-white text-xs group-hover:text-amber-300 transition-colors">
+                    Catalogue & Marges
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {products.length} articles disponibles
+                  </p>
                 </div>
-                <div className="text-2xl font-black text-amber-400">
-                  ${(reseller?.walletBalance || 0).toFixed(2)}
+
+                {/* Step 4 */}
+                <div
+                  onClick={() => setActiveTab('storefront')}
+                  className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-indigo-500/40 cursor-pointer transition-all space-y-1 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-indigo-400 font-bold uppercase">Étape 4</span>
+                    <CreditCard className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="font-bold text-white text-xs group-hover:text-indigo-300 transition-colors">
+                    Paiements Clients
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {storeSettings.feexpayEnabled ? 'FeexPay Actif' : storeSettings.monerooEnabled ? 'Moneroo Actif' : 'Virement direct ticket'}
+                  </p>
                 </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">Prêt pour retrait</span>
               </div>
             </div>
 
-            {/* Storefront Link Box */}
-            <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">
-                  Lien public de votre boutique
-                </span>
-                <div className="text-sm sm:text-base font-mono text-sky-400 font-bold break-all">
-                  {storeUrl}
+            {/* Split: Recent Orders (65%) & Wholesale Discount Card (35%) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Recent Orders Activity (2 cols on lg) */}
+              <div className="lg:col-span-2 p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-sky-400" />
+                    <h3 className="font-bold text-sm text-white">Dernières Commandes Clients</h3>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className="text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                  >
+                    <span>Voir tout ({orders.length})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                {reseller?.customDomain && (
-                  <div className="text-xs text-purple-400 font-mono flex items-center gap-1.5 mt-1">
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Domaine Pro connecté : https://{reseller.customDomain}</span>
+
+                {orders.length === 0 ? (
+                  <div className="py-12 text-center rounded-2xl bg-slate-950/60 border border-slate-800/80 p-6 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                      <ShoppingCart className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-white text-sm">Aucune commande pour le moment</div>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                        Partagez le lien de votre vitrine sur WhatsApp, Telegram ou vos réseaux pour enregistrer vos premières ventes.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition-all"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>Partager ma boutique</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-[10px] font-bold uppercase text-slate-400">
+                          <th className="pb-2.5">Ticket</th>
+                          <th className="pb-2.5">Article</th>
+                          <th className="pb-2.5">Client</th>
+                          <th className="pb-2.5">Prix</th>
+                          <th className="pb-2.5 text-emerald-400">Bénéfice</th>
+                          <th className="pb-2.5">Statut</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-medium">
+                        {orders.slice(0, 5).map((o) => {
+                          const isSuccess = o.status === 'COMPLETED' || o.status === 'VALIDATED';
+                          const isPending = o.status === 'PENDING_PAYMENT' || o.status === 'PENDING';
+                          return (
+                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
+                              <td className="py-2.5 font-mono text-sky-400 font-bold">
+                                {o.ticketCode || o.id.slice(0, 8)}
+                              </td>
+                              <td className="py-2.5 text-white font-bold max-w-[150px] truncate" title={o.productTitle}>
+                                {o.productTitle}
+                              </td>
+                              <td className="py-2.5 text-slate-400 max-w-[120px] truncate">
+                                {o.customerEmail || o.customerName || 'Anonyme'}
+                              </td>
+                              <td className="py-2.5 font-mono font-bold text-white">
+                                ${(o.totalAmount || o.unitSellingPrice || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2.5 font-mono font-bold text-emerald-400">
+                                +${(o.profitMargin || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                    isSuccess
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : isPending
+                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                  }`}
+                                >
+                                  {isSuccess ? 'Livré' : isPending ? 'En attente' : o.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCopyLink}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 transition-all"
-                >
-                  {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedLink ? 'Lien copié' : 'Copier le lien'}</span>
-                </button>
-                <a
-                  href={`/store/${reseller?.subdomain}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-sky-500/20 transition-all"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Tester ma boutique</span>
-                </a>
-              </div>
-            </div>
 
-            {/* Pricing Formula Explanation Box */}
-            <div className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/80">
-              <div className="flex items-center gap-2 mb-3">
-                <Percent className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-sm font-black uppercase tracking-wider text-white">
-                  Comment est calculé votre prix d'achat grossiste ?
-                </h3>
-              </div>
-              <div className="text-xs text-slate-300 space-y-2 leading-relaxed">
-                <p>
-                  En tant que revendeur avec le plan <strong className="text-sky-400">{currentPlan?.name}</strong>, vous bénéficiez d'une{' '}
-                  <span className="text-emerald-400 font-bold">remise grossiste automatique</span> sur les tarifs officiels de la plateforme ({currentPlan?.id === 'pro' ? 'jusqu\'à ~25-30% de remise réelle' : currentPlan?.id === 'starter' ? 'jusqu\'à ~15-20% de remise réelle' : '0% de remise, tarifs catalogue standard'}).
-                </p>
-                <div className="p-3 rounded-xl bg-slate-950 font-mono text-[11px] text-slate-300 border border-slate-800">
-                  Votre Prix d'Achat Grossiste = Tarif Catalogue déduit de votre remise réelle Plan {currentPlan?.name}
-                  <br />
-                  Votre Bénéfice Net = Votre Prix de Vente Client - Votre Prix d'Achat Grossiste
+              {/* Right Column: Wholesale Discount & Plan Box */}
+              <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                      <Crown className="w-4 h-4 text-purple-400" />
+                      Statut Grossiste
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20 font-mono">
+                      Plan {currentPlan?.name || 'Free'}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-black text-white leading-snug">
+                    {currentPlan?.id === 'pro'
+                      ? 'Tarif Grossiste VIP Activé'
+                      : currentPlan?.id === 'starter'
+                      ? 'Tarif Grossiste Starter Activé'
+                      : 'Tarif Standard Plateforme'}
+                  </h3>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Votre marge commerciale est maximale : vous achetez à prix d'usine déduit et vous fixez librement votre prix de vente client.
+                  </p>
+
+                  {/* Clean Visual Calculation Scheme */}
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-2 text-[11px] font-mono">
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Prix Public Catalogue</span>
+                      <span>100%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sky-400 font-bold">
+                      <span>Votre Remise Plan {currentPlan?.name}</span>
+                      <span>
+                        {currentPlan?.id === 'pro' ? 'Jusqu\'à ~30%' : currentPlan?.id === 'starter' ? 'Jusqu\'à ~20%' : 'Standard'}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-emerald-400 font-black">
+                      <span>Votre Marge Nette</span>
+                      <span>100% conservée</span>
+                    </div>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => setActiveTab('subscription')}
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all shadow-sm"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Gérer mon abonnement</span>
+                </button>
               </div>
             </div>
           </div>
