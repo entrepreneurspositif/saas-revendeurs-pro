@@ -139,11 +139,11 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
       if (isAdmin) {
         inlineKeyboard.inline_keyboard.push([
           { text: '📊 Statistiques Admin', callback_data: 'menu_stats' },
-          { text: '🌐 Accéder au Site', url: 'https://revente-abonnement.vercel.app' },
+          { text: '🌐 Accéder au Site', url: 'https://abonnementspro.com' },
         ]);
       } else {
         inlineKeyboard.inline_keyboard.push([
-          { text: '🌐 Accéder au Site Web', url: 'https://revente-abonnement.vercel.app' },
+          { text: '🌐 Accéder au Site Web', url: 'https://abonnementspro.com' },
         ]);
       }
 
@@ -345,7 +345,7 @@ Pour consulter l'état de votre commande et obtenir vos identifiants ou votre co
 
         const keyboard = {
           inline_keyboard: [
-            [{ text: '🌐 Voir tous les produits sur le site', url: 'https://revente-abonnement.vercel.app' }],
+            [{ text: '🌐 Voir tous les produits sur le site', url: 'https://abonnementspro.com' }],
             [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
           ],
         };
@@ -370,7 +370,7 @@ Obtenez des numéros virtuels temporaires pour la vérification SMS de vos compt
 `.trim();
         const keyboard = {
           inline_keyboard: [
-            [{ text: '📱 Accéder à la page OTP', url: 'https://revente-abonnement.vercel.app/otp' }],
+            [{ text: '📱 Accéder à la page OTP', url: 'https://abonnementspro.com/otp' }],
             [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
           ],
         };
@@ -432,7 +432,7 @@ Besoin d'aide avec une commande ou une relecture de ticket ?
 `.trim();
         const keyboard = {
           inline_keyboard: [
-            [{ text: '💬 Accéder au Support Web', url: 'https://revente-abonnement.vercel.app' }],
+            [{ text: '💬 Accéder au Support Web', url: 'https://abonnementspro.com' }],
             [{ text: '🔙 Retour au Menu', callback_data: 'menu_start' }],
           ],
         };
@@ -511,7 +511,7 @@ Besoin d'aide ? Vous pouvez nous contacter directement sur notre site ou suivre 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Retrouvez l'intégralité de nos abonnements, votre tableau de bord et le module OTP en ligne :
 
-👉 https://revente-abonnement.vercel.app
+👉 https://abonnementspro.com
 `.trim();
         await sendTelegramMsg(chatId, text, replyKeyboard);
         return NextResponse.json({ success: true });
@@ -578,7 +578,7 @@ Notre bot va vérifier votre compte et vous délivrer un code de sécurité à 6
           },
         });
 
-        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://revente-abonnement.vercel.app').replace(/\/$/, '');
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
         const host = req.headers.get('host') || '';
         const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
         const resetUrl = `${baseUrl}/reseller/login?email=${encodeURIComponent(tenant.email)}&code=${resetCode}`;

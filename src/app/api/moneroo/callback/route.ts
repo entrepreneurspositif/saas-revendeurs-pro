@@ -46,7 +46,7 @@ function isBrowserRequest(req: NextRequest): boolean {
 }
 
 async function processCallback(req: NextRequest) {
-  const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+  const host = req.headers.get('host') || 'abonnementspro.com';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
   const isBrowser = isBrowserRequest(req);
@@ -369,7 +369,7 @@ export async function POST(req: NextRequest) {
     return await processCallback(req);
   } catch (error: any) {
     console.error('Moneroo Callback POST Error:', error);
-    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+    const host = req.headers.get('host') || 'abonnementspro.com';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     if (isBrowserRequest(req)) {
       return NextResponse.redirect(`${protocol}://${host}/?error=callback_failed`);
@@ -383,7 +383,7 @@ export async function GET(req: NextRequest) {
     return await processCallback(req);
   } catch (error: any) {
     console.error('Moneroo Callback GET Error:', error);
-    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+    const host = req.headers.get('host') || 'abonnementspro.com';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     return NextResponse.redirect(`${protocol}://${host}/?error=callback_failed`);
   }

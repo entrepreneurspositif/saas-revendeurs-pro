@@ -6,9 +6,9 @@ export default function JsonLd() {
     '@type': 'OnlineStore',
     name: 'Entrepreneurs Positifs',
     alternateName: 'Entrepreneurs Positifs PRO',
-    url: 'https://revente-abonnement.vercel.app',
-    logo: 'https://revente-abonnement.vercel.app/logo.png',
-    image: 'https://revente-abonnement.vercel.app/logo.png',
+    url: 'https://abonnementspro.com',
+    logo: 'https://abonnementspro.com/logo.png',
+    image: 'https://abonnementspro.com/logo.png',
     description:
       'Fournisseur direct et officiel d’abonnements digitaux, comptes streaming, outils d’IA, numéros OTP SMS et licences logiciels avec livraison automatique instantanée 24/7.',
     currenciesAccepted: 'XOF, USD',
@@ -25,12 +25,12 @@ export default function JsonLd() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Entrepreneurs Positifs',
-    url: 'https://revente-abonnement.vercel.app',
+    url: 'https://abonnementspro.com',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://revente-abonnement.vercel.app/?search={search_term_string}',
+        urlTemplate: 'https://abonnementspro.com/?search={search_term_string}',
       },
       'query-input': 'required name=search_term_string',
     },

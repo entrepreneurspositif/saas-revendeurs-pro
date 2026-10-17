@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
     const subNonce = Date.now().toString().slice(-6);
     const ticketCode = `SUB_${tenant.id}_${targetPlan.id}_${interval}_${subNonce}`;
     const host = req.headers.get('host') || '';
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://revente-abonnement.vercel.app').replace(/\/$/, '');
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
     const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
 
     // B. FEEXPAY GATEWAY

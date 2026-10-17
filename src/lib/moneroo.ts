@@ -55,7 +55,7 @@ export async function initializeMonerooPayment(params: MonerooInitParams) {
   }
 
   const currency = (params.currency || 'XOF').toUpperCase();
-  const customerEmail = params.customerEmail || 'client@revente-abonnement.com';
+  const customerEmail = params.customerEmail || 'client@abonnementspro.com';
   const customerName = (params.customerName || 'Client Reseller').trim();
   const nameParts = customerName.split(' ');
   const firstName = nameParts[0] || 'Client';

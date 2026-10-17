@@ -7,7 +7,7 @@ import MarketingTracker from '@/components/MarketingTracker';
 import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://revente-abonnement.vercel.app'),
+  metadataBase: new URL('https://abonnementspro.com'),
   title: {
     default: 'Entrepreneurs Positifs - Fournisseur Direct d\'Abonnements & Produits Digitaux',
     template: '%s | Entrepreneurs Positifs',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     'FCFA',
     'Entrepreneurs Positifs',
   ],
-  authors: [{ name: 'Entrepreneurs Positifs', url: 'https://revente-abonnement.vercel.app' }],
+  authors: [{ name: 'Entrepreneurs Positifs', url: 'https://abonnementspro.com' }],
   publisher: 'Entrepreneurs Positifs',
   robots: {
     index: true,
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://revente-abonnement.vercel.app',
+    canonical: 'https://abonnementspro.com',
   },
   icons: {
     icon: '/logo.png',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: 'https://revente-abonnement.vercel.app',
+    url: 'https://abonnementspro.com',
     siteName: 'Entrepreneurs Positifs',
     title: 'Entrepreneurs Positifs - Fournisseur Direct d\'Abonnements & Produits Digitaux',
     description:

@@ -13,11 +13,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Offres Exclusives & Produits Premium | Entrepreneurs Positifs',
     description: 'Offres exclusives et abonnements digitaux haut de gamme avec garantie et livraison instantanée.',
-    url: 'https://revente-abonnement.vercel.app/exclusifs',
+    url: 'https://abonnementspro.com/exclusifs',
     images: ['/logo.png'],
   },
   alternates: {
-    canonical: 'https://revente-abonnement.vercel.app/exclusifs',
+    canonical: 'https://abonnementspro.com/exclusifs',
   },
 };
 

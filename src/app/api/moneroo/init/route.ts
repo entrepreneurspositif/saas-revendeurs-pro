@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (order) {
       amountUsd = order.totalAmount;
       description = `Achat ${order.productTitle}`;
-      customerEmail = order.user?.email || 'client@revente-abonnement.com';
+      customerEmail = order.user?.email || 'client@abonnementspro.com';
       customerName = order.user?.name || 'Client Reseller';
     } else {
       // Look up OTP order
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       if (otpOrder) {
         amountUsd = otpOrder.sellingPrice;
         description = `Commande SMS OTP ${otpOrder.service.toUpperCase()}`;
-        customerEmail = otpOrder.customerEmail || 'client@revente-abonnement.com';
+        customerEmail = otpOrder.customerEmail || 'client@abonnementspro.com';
         customerName = otpOrder.customerName || 'Client OTP';
         targetTenantId = otpOrder.tenantId || null;
       } else {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     // Convert price to FCFA / XOF for Moneroo
     const amountXof = Math.max(50, Math.round((amountUsd || 0) * 650));
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://revente-abonnement.vercel.app').replace(/\/$/, '');
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
     const host = req.headers.get('host') || '';
     const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
     const subdomainParam = tenantSubdomain ? `&subdomain=${encodeURIComponent(tenantSubdomain)}` : '';

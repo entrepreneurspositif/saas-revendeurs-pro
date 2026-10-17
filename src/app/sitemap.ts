@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://revente-abonnement.vercel.app';
+  const baseUrl = 'https://abonnementspro.com';
 
   // Base static routes
   const routes: MetadataRoute.Sitemap = [

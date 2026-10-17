@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/', '/fatjo&prudo/'],
       },
     ],
-    sitemap: 'https://revente-abonnement.vercel.app/sitemap.xml',
+    sitemap: 'https://abonnementspro.com/sitemap.xml',
   };
 }

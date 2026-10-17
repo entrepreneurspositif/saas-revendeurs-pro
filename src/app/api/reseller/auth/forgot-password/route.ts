@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Construct resetUrl dynamically based on incoming request
-      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'abonnements-pro.shop';
+      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'abonnementspro.com';
       const proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
       const resetUrl = `${proto}://${host}/reseller/login?email=${encodeURIComponent(cleanEmail)}&code=${resetCode}`;
 

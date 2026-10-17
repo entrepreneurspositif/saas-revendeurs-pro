@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     let webhookMsg = '';
     if (cleanToken && enabled) {
       try {
-        const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'abonnements-pro.shop';
+        const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'abonnementspro.com';
         const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
         const webhookUrl = `${protocol}://${host}/api/telegram/webhook`;
 

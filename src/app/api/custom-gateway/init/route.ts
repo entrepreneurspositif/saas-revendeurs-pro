@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     const amountXof = convertUsdToXof(amountUsd);
 
-    const host = req.headers.get('host') || 'revente-abonnement.vercel.app';
+    const host = req.headers.get('host') || 'abonnementspro.com';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const callbackUrl = `${protocol}://${host}/api/custom-gateway/callback?custom_id=${encodeURIComponent(ticketCode)}&ticketCode=${encodeURIComponent(ticketCode)}`;
 

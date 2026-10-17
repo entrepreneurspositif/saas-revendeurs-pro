@@ -37,7 +37,7 @@ export async function getSmtpConfig(): Promise<SmtpConfig | null> {
     const user = map['smtp_user'] || process.env.SMTP_USER || '';
     const pass = map['smtp_pass'] || process.env.SMTP_PASS || '';
     const secure = (map['smtp_secure'] || process.env.SMTP_SECURE) === 'true' || port === 465;
-    const from = map['smtp_from'] || process.env.SMTP_FROM || user || 'noreply@abonnements-pro.shop';
+    const from = map['smtp_from'] || process.env.SMTP_FROM || user || 'noreply@abonnementspro.com';
 
     if (!host || !user || !pass) {
       return null;
