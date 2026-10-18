@@ -46,6 +46,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://abonnementspro.com',
   },
+  verification: {
+    google: 'cmtiNiXVNp8o1NmGt_UZN8_w2a7mv1CBUGf8_v9Mg7o',
+  },
   icons: {
     icon: '/logo.png',
     shortcut: '/logo.png',
