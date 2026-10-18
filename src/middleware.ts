@@ -14,7 +14,7 @@ export const config = {
 
 export default function middleware(req: NextRequest) {
   const url = req.nextUrl;
-  const host = req.headers.get('host') || '';
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
   const pathname = url.pathname;
 
   // Extract hostname without port (e.g. 'techstore.abonnementspro.com' or 'techstore.localhost')
