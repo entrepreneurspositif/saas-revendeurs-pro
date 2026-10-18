@@ -755,9 +755,11 @@ export default function StorefrontPage() {
                     </div>
 
                     {/* Product Title */}
-                    <h3 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug">
-                      {product.title}
-                    </h3>
+                    <Link href={`/product/${product.slug}`} className="block group/title">
+                      <h3 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white group-hover/title:text-sky-600 dark:group-hover/title:text-sky-400 transition-colors line-clamp-2 leading-snug">
+                        {product.title}
+                      </h3>
+                    </Link>
 
                     {/* Description preview */}
                     <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 line-clamp-2 sm:line-clamp-3 leading-relaxed">
