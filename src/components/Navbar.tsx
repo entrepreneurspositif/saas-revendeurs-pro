@@ -53,7 +53,7 @@ export default function Navbar() {
               />
               <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-[#070b14]" />
             </div>
-            <div className="flex flex-col">
+            <div className="hidden sm:flex flex-col">
               <div className="flex items-center space-x-1.5">
                 <span className="text-xs sm:text-sm font-black tracking-tight text-slate-900 dark:text-white group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">
                   ENTREPRENEURS <span className="text-sky-500 dark:text-sky-400">POSITIFS</span>
@@ -169,8 +169,13 @@ export default function Navbar() {
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-200 dark:border-white/[0.08] bg-white/95 dark:bg-[#070b14]/98 backdrop-blur-2xl px-4 pt-3 pb-6 space-y-2.5 animate-in slide-in-from-top-2 duration-200 shadow-2xl">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 px-1 pt-1">
-              Navigation Rapide
+            <div className="flex items-center justify-between px-1 pt-1 pb-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                Navigation Rapide
+              </span>
+              <span className="text-[10px] font-black tracking-tight text-slate-700 dark:text-slate-300">
+                ENTREPRENEURS <span className="text-sky-500">POSITIFS</span>
+              </span>
             </div>
             {navItems.map((item) => {
               const Icon = item.icon;
