@@ -17,13 +17,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!product) {
     return {
-      title: 'Produit Introuvable | Abonnements Pro',
+      title: 'Produit Introuvable',
       description: 'Le produit demandé est introuvable ou n\'est plus disponible.',
     };
   }
 
-  const title = `Acheter ${product.title} - Tarif Grossiste & Livraison Immédiate | Abonnements Pro`;
-  const description = `${product.description?.slice(0, 150) || `Achetez ${product.title} au meilleur prix sur Abonnements Pro.`} Livraison automatique et instantanée 24/7. Paiement sécurisé Mobile Money (MTN, Moov, Orange, Wave) et Carte Bancaire.`;
+  // Keep title concise so with " | Abonnements Pro" (18 chars), total length <= 60 chars
+  const maxBaseLen = 42;
+  const baseTitle = `${product.title} - Tarif Grossiste`;
+  const displayTitle =
+    baseTitle.length <= maxBaseLen
+      ? baseTitle
+      : product.title.length <= maxBaseLen
+      ? product.title
+      : `${product.title.slice(0, maxBaseLen - 3)}...`;
+
+  const fullTitle = `${displayTitle} | Abonnements Pro`;
+
+  // Format description targeting 140-155 characters for optimal Google SERP snippet
+  const cleanDesc = product.description
+    ? product.description.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim()
+    : '';
+  let description = '';
+  if (cleanDesc.length >= 75) {
+    description = `${cleanDesc.slice(0, 85).trim()}... Livraison immédiate 24/7 & paiement sécurisé Mobile Money.`;
+  } else {
+    description = `Achetez ${product.title} au meilleur tarif grossiste sur Abonnements Pro. Livraison automatique 24/7 et paiement sécurisé Mobile Money.`;
+  }
+  if (description.length > 158) {
+    description = `${description.slice(0, 155).trim()}...`;
+  }
+
   const url = `https://abonnementspro.com/product/${product.slug}`;
   const imageUrl = product.imageUrl
     ? product.imageUrl.startsWith('http')
@@ -32,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : 'https://abonnementspro.com/logo.png';
 
   return {
-    title,
+    title: displayTitle,
     description,
     keywords: [
       product.title,
@@ -45,13 +69,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       'Mobile Money',
       'FCFA',
       'Abonnements Pro',
-      'Entrepreneurs Positifs',
     ],
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title,
+      title: fullTitle,
       description,
       url,
       siteName: 'Abonnements Pro',
@@ -68,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: fullTitle,
       description,
       images: [imageUrl],
     },

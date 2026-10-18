@@ -1,21 +1,21 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Activation SMS OTP - Numéros Virtuels Temporaires',
+  title: 'Activation SMS OTP & Numéros Virtuels',
   description:
-    'Obtenez des numéros virtuels temporaires pour la réception de SMS de vérification (OTP) WhatsApp, Telegram, Google, OpenAI, TikTok, etc. Réception instantanée et livraison automatique.',
+    'Recevez vos SMS de vérification OTP (WhatsApp, Telegram, Google, OpenAI) avec nos numéros virtuels temporaires. Activation instantanée 24/7.',
   keywords: [
     'numéro virtuel SMS',
     'OTP WhatsApp',
     'activation SMS',
     'numéro temporaire',
     'SMS verification',
-    'Entrepreneurs Positifs',
+    'Abonnements Pro',
   ],
   openGraph: {
-    title: 'Activation SMS OTP - Numéros Virtuels Temporaires | Entrepreneurs Positifs',
+    title: 'Activation SMS OTP & Numéros Virtuels | Abonnements Pro',
     description:
-      'Service d\'activation SMS temporaire pour vérifier vos comptes en ligne rapidement et sans carte SIM physique.',
+      'Recevez vos SMS de vérification OTP (WhatsApp, Telegram, Google, OpenAI) avec nos numéros virtuels temporaires. Activation instantanée 24/7.',
     url: 'https://abonnementspro.com/otp',
     images: ['/logo.png'],
   },

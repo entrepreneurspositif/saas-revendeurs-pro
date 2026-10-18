@@ -9,11 +9,11 @@ import JsonLd from '@/components/JsonLd';
 export const metadata: Metadata = {
   metadataBase: new URL('https://abonnementspro.com'),
   title: {
-    default: 'Entrepreneurs Positifs - Fournisseur Direct d\'Abonnements & Produits Digitaux',
-    template: '%s | Entrepreneurs Positifs',
+    default: 'Abonnements Pro | Fournisseur d\'Abonnements Digitaux & IA',
+    template: '%s | Abonnements Pro',
   },
   description:
-    'Votre fournisseur direct et officiel de comptes de streaming, abonnements IA, clés API, numéros OTP SMS et licences logicielles. Livraison automatique 24/7, paiement sécurisé Mobile Money et Carte Bancaire.',
+    'Fournisseur direct d\'abonnements streaming, outils IA, numéros OTP et licences. Livraison automatique 24/7, paiement sécurisé Mobile Money et Carte.',
   keywords: [
     'abonnements digitaux',
     'fournisseur abonnement',
@@ -28,10 +28,11 @@ export const metadata: Metadata = {
     'IPTV',
     'Mobile Money',
     'FCFA',
+    'Abonnements Pro',
     'Entrepreneurs Positifs',
   ],
-  authors: [{ name: 'Entrepreneurs Positifs', url: 'https://abonnementspro.com' }],
-  publisher: 'Entrepreneurs Positifs',
+  authors: [{ name: 'Abonnements Pro', url: 'https://abonnementspro.com' }],
+  publisher: 'Abonnements Pro',
   robots: {
     index: true,
     follow: true,
@@ -58,26 +59,26 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_FR',
     url: 'https://abonnementspro.com',
-    siteName: 'Entrepreneurs Positifs',
-    title: 'Entrepreneurs Positifs - Fournisseur Direct d\'Abonnements & Produits Digitaux',
+    siteName: 'Abonnements Pro',
+    title: 'Abonnements Pro | Fournisseur d\'Abonnements Digitaux & IA',
     description:
-      'Fournisseur direct de comptes streaming, outils d’IA, clés API, numéros OTP et licences. Livraison instantanée et automatique 24/7.',
+      'Fournisseur direct d\'abonnements streaming, outils IA, numéros OTP et licences. Livraison automatique 24/7, paiement sécurisé Mobile Money et Carte.',
     images: [
       {
         url: '/logo.png',
         width: 800,
         height: 800,
-        alt: 'Entrepreneurs Positifs - Fournisseur de Produits Digitaux',
+        alt: 'Abonnements Pro - Fournisseur de Produits Digitaux',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Entrepreneurs Positifs - Fournisseur Direct d\'Abonnements & Produits Digitaux',
+    title: 'Abonnements Pro | Fournisseur d\'Abonnements Digitaux & IA',
     description:
-      'Fournisseur direct de comptes streaming, outils d’IA, clés API, numéros OTP et licences. Livraison instantanée et automatique 24/7.',
+      'Fournisseur direct d\'abonnements streaming, outils IA, numéros OTP et licences. Livraison automatique 24/7, paiement sécurisé Mobile Money et Carte.',
     images: ['/logo.png'],
-    creator: '@entrepreneurspos',
+    creator: '@abonnementspro',
   },
 };
 

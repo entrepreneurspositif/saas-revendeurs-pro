@@ -2,17 +2,19 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Offres Exclusives & Produits Premium',
-  description: 'Découvrez nos offres exclusives et produits digitaux premium sélectionnés et fournis directement par Entrepreneurs Positifs. Livraison rapide et garanties incluses.',
+  description:
+    'Découvrez nos offres exclusives et produits digitaux premium. Abonnements VIP et comptes garantis avec livraison immédiate 24/7 au meilleur tarif.',
   keywords: [
     'produits exclusifs',
     'offres premium',
     'abonnements VIP',
     'licences exclusives',
-    'Entrepreneurs Positifs',
+    'Abonnements Pro',
   ],
   openGraph: {
-    title: 'Offres Exclusives & Produits Premium | Entrepreneurs Positifs',
-    description: 'Offres exclusives et abonnements digitaux haut de gamme avec garantie et livraison instantanée.',
+    title: 'Offres Exclusives & Produits Premium | Abonnements Pro',
+    description:
+      'Découvrez nos offres exclusives et produits digitaux premium. Abonnements VIP et comptes garantis avec livraison immédiate 24/7 au meilleur tarif.',
     url: 'https://abonnementspro.com/exclusifs',
     images: ['/logo.png'],
   },

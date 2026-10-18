@@ -41,3 +41,4 @@ mobile-release/
 .idea/
 
 .vercel
+*.tsbuildinfo
