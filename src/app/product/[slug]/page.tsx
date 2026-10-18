@@ -101,11 +101,50 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductDetailPage({ params }: Props) {
   const product = await prisma.product.findUnique({
     where: { slug: params.slug },
+    include: {
+      activeSupplierProduct: {
+        include: { supplier: true },
+      },
+    },
   });
 
   if (!product) {
     notFound();
   }
+
+  // Calculate real stock and availability matching the platform's supplier/exclusive rules
+  const suppProd = product.activeSupplierProduct;
+  const isExclusive = !product.activeSupplierProductId || product.badge === 'Exclusif' || product.badge === 'VIP';
+  const isSupplierActive = suppProd ? (suppProd.supplier?.isActive ?? false) : true;
+  const stock = suppProd ? suppProd.stock : 999;
+  const isAvailable = product.isActive && stock > 0 && isSupplierActive;
+
+  // Format client-ready product with availability, stock and customer info requirements
+  const clientProduct = {
+    id: product.id,
+    title: product.title,
+    slug: product.slug,
+    description: product.description,
+    category: product.category,
+    sellingPrice: product.sellingPrice,
+    currency: product.currency,
+    isActive: product.isActive,
+    badge: product.badge,
+    imageUrl: product.imageUrl,
+    deliveryType: product.deliveryType,
+    stock,
+    isAvailable,
+    isExclusive,
+    requiresCustomerInfo: Boolean(
+      product.requiresCustomerInfo || suppProd?.productType === 'upgrade_account'
+    ),
+    customerInfoPrompt:
+      product.customerInfoPrompt ||
+      (suppProd?.productType === 'upgrade_account'
+        ? 'Email / Identifiant de votre compte à upgrader'
+        : null),
+    customerInfoPlaceholder: product.customerInfoPlaceholder || null,
+  };
 
   // Fetch up to 4 related products in the same category
   const relatedProducts = await prisma.product.findMany({
@@ -114,8 +153,36 @@ export default async function ProductDetailPage({ params }: Props) {
       isActive: true,
       NOT: { id: product.id },
     },
+    include: {
+      activeSupplierProduct: {
+        include: { supplier: true },
+      },
+    },
     take: 4,
     orderBy: { createdAt: 'desc' },
+  });
+
+  const clientRelatedProducts = relatedProducts.map((rel) => {
+    const relSupp = rel.activeSupplierProduct;
+    const relIsSupplierActive = relSupp ? (relSupp.supplier?.isActive ?? false) : true;
+    const relStock = relSupp ? relSupp.stock : 999;
+    const relIsAvailable = rel.isActive && relStock > 0 && relIsSupplierActive;
+    return {
+      id: rel.id,
+      title: rel.title,
+      slug: rel.slug,
+      category: rel.category,
+      description: rel.description,
+      sellingPrice: rel.sellingPrice,
+      currency: rel.currency,
+      isActive: rel.isActive,
+      badge: rel.badge,
+      imageUrl: rel.imageUrl,
+      deliveryType: rel.deliveryType,
+      stock: relStock,
+      isAvailable: relIsAvailable,
+      isExclusive: !rel.activeSupplierProductId || rel.badge === 'Exclusif' || rel.badge === 'VIP',
+    };
   });
 
   const fullImageUrl = product.imageUrl
@@ -146,7 +213,7 @@ export default async function ProductDetailPage({ params }: Props) {
       price: product.sellingPrice.toFixed(2),
       priceValidUntil: '2028-12-31',
       itemCondition: 'https://schema.org/NewCondition',
-      availability: product.isActive ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      availability: isAvailable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       seller: {
         '@type': 'Organization',
         name: 'Abonnements Pro',
@@ -239,8 +306,8 @@ export default async function ProductDetailPage({ params }: Props) {
 
       <main>
         <ProductDetailClient
-          product={JSON.parse(JSON.stringify(product))}
-          relatedProducts={JSON.parse(JSON.stringify(relatedProducts))}
+          product={clientProduct}
+          relatedProducts={clientRelatedProducts}
         />
       </main>
 

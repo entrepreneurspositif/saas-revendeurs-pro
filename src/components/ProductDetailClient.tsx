@@ -69,8 +69,11 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
   const [payingWithMoneroo, setPayingWithMoneroo] = useState<boolean>(false);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
 
-  const stock = product.stock || 0;
-  const isAvailable = product.isAvailable && product.isActive && stock > 0;
+  const stock = typeof product.stock === 'number' ? product.stock : 999;
+  const isAvailable =
+    product.isAvailable !== undefined
+      ? Boolean(product.isAvailable && product.isActive !== false && stock > 0)
+      : Boolean(product.isActive !== false && stock > 0);
 
   // Handle Share Product
   const handleShare = async () => {
@@ -232,7 +235,7 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                   {isAvailable ? (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center space-x-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                      <span>En Stock ({stock} disponibles)</span>
+                      <span>En Stock ({stock > 900 ? 'Disponible' : `${stock} disponibles`})</span>
                     </span>
                   ) : (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20 flex items-center space-x-1.5">
@@ -421,7 +424,7 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                     </button>
                   </div>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Max: {stock} en stock
+                    {stock > 900 ? 'Livraison instantanée' : `Max: ${stock} en stock`}
                   </span>
                 </div>
               </div>
