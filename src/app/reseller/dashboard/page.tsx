@@ -880,7 +880,10 @@ export default function ResellerDashboardPage() {
   // Copy Store Link
   const handleCopyLink = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const storeUrl = `${origin}/store/${reseller?.subdomain}`;
+    const sub = reseller?.subdomain || '';
+    const storeUrl = origin.includes('abonnementspro.com')
+      ? `https://${sub}.abonnementspro.com`
+      : `${origin}/store/${sub}`;
     navigator.clipboard.writeText(storeUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -1254,7 +1257,12 @@ export default function ResellerDashboardPage() {
   }
 
   const currentPlan = reseller?.plan;
-  const storeUrl = typeof window !== 'undefined' ? `${window.location.origin}/store/${reseller?.subdomain}` : `/store/${reseller?.subdomain}`;
+  const sub = reseller?.subdomain || '';
+  const storeUrl = typeof window !== 'undefined'
+    ? (window.location.origin.includes('abonnementspro.com')
+        ? `https://${sub}.abonnementspro.com`
+        : `${window.location.origin}/store/${sub}`)
+    : `https://${sub}.abonnementspro.com`;
 
   // Filter products
   const filteredProducts = products.filter((p) => {
@@ -1309,7 +1317,7 @@ export default function ResellerDashboardPage() {
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono truncate">
-                <span>/store/{reseller?.subdomain}</span>
+                <span className="text-sky-400 font-bold">{reseller?.subdomain}.abonnementspro.com</span>
               </div>
             </div>
           </div>
@@ -1331,7 +1339,7 @@ export default function ResellerDashboardPage() {
 
             {/* View Store Button */}
             <a
-              href={`/store/${reseller?.subdomain}`}
+              href={storeUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-sky-500/20"
@@ -1529,7 +1537,7 @@ export default function ResellerDashboardPage() {
                       <span>{copiedLink ? 'Lien copié' : 'Copier'}</span>
                     </button>
                     <a
-                      href={`/store/${reseller?.subdomain}`}
+                      href={storeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition-all"
@@ -1685,7 +1693,7 @@ export default function ResellerDashboardPage() {
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
                   <div className="font-bold text-white text-xs">Vitrine Opérationnelle</div>
-                  <p className="text-[11px] text-slate-400 truncate">/store/{reseller?.subdomain}</p>
+                  <p className="text-[11px] text-sky-400 font-mono truncate">{reseller?.subdomain}.abonnementspro.com</p>
                 </div>
 
                 {/* Step 2 */}
@@ -2592,8 +2600,8 @@ export default function ResellerDashboardPage() {
                       }
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-sky-500"
                     />
-                    <span className="text-[10px] text-slate-500">
-                      URL: /store/{storeSettings.subdomain}
+                    <span className="text-[10px] text-sky-400 font-mono font-bold">
+                      Lien officiel : https://{storeSettings.subdomain || 'votre-nom'}.abonnementspro.com
                     </span>
                   </div>
                 </div>
@@ -4774,7 +4782,7 @@ export default function ResellerDashboardPage() {
                 {/* Refresh Header */}
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-slate-400">
-                    Données consolidées de votre boutique publique <span className="font-mono text-sky-400 font-bold">/store/{reseller?.subdomain}</span>
+                    Données consolidées de votre boutique publique <span className="font-mono text-sky-400 font-bold">{reseller?.subdomain}.abonnementspro.com</span>
                   </div>
                   <button
                     onClick={fetchAnalytics}

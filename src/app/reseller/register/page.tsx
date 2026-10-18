@@ -189,7 +189,7 @@ export default function ResellerRegisterPage() {
                     />
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Adresse : <span className="text-sky-400 font-mono">/store/{subdomain || 'votre-nom'}</span>
+                    Adresse : <span className="text-sky-400 font-mono font-bold">https://{subdomain || 'votre-nom'}.abonnementspro.com</span>
                   </p>
                 </div>
               </div>

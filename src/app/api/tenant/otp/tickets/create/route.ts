@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       ticketCode: otpOrder.ticketCode,
       type: 'OTP',
       amount: `$${pricing.resellerSellingPrice.toFixed(2)} USD`,
-      details: `Boutique : ${tenant.storeName} (/store/${tenant.subdomain})\nService : ${serviceObj.name}\nPays : +${country}\nClient : ${customerName || 'Anonyme'} (${customerEmail || 'Sans email'})`,
+      details: `Boutique : ${tenant.storeName} (${tenant.subdomain}.abonnementspro.com)\nService : ${serviceObj.name}\nPays : +${country}\nClient : ${customerName || 'Anonyme'} (${customerEmail || 'Sans email'})`,
     }).catch((err) => console.error('Telegram notification error:', err));
 
     sendResellerTelegramNotification({

@@ -364,7 +364,7 @@ export default function AdminResellerSupportSection() {
                           {t.tenant?.storeName || t.tenant?.name || 'Revendeur'}
                         </span>
                         <span className="text-slate-600">•</span>
-                        <span className="text-[10px] text-slate-500 truncate">/store/{t.tenant?.subdomain}</span>
+                        <span className="text-[10px] text-sky-400 font-mono truncate">{t.tenant?.subdomain}.abonnementspro.com</span>
                       </div>
                     </div>
 

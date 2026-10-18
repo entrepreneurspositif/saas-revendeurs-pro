@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
           ticketCode: reference,
           type: 'ORDER',
           amount: `$${requestedAmount.toFixed(2)} USD (${feexResult.amountXof} FCFA)`,
-          details: `Revendeur : ${tenant.name} (/store/${tenant.subdomain})\nMéthode : ${paymentMethod}\nNuméro crédité : ${feexResult.phoneNumber}\nRéf FeexPay : ${feexResult.feexReference}\nSolde restant : $${newWalletBalance.toFixed(2)} USD`,
+          details: `Revendeur : ${tenant.name} (${tenant.subdomain}.abonnementspro.com)\nMéthode : ${paymentMethod}\nNuméro crédité : ${feexResult.phoneNumber}\nRéf FeexPay : ${feexResult.feexReference}\nSolde restant : $${newWalletBalance.toFixed(2)} USD`,
         }).catch(console.error);
 
         // Notify Reseller on Telegram
@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
       ticketCode: reference,
       type: 'REQUEST',
       amount: `$${requestedAmount.toFixed(2)} USD`,
-      details: `Revendeur : ${tenant.name} (/store/${tenant.subdomain})\nMéthode : ${paymentMethod}\nCoordonnées : ${paymentDetails}\nInfo Auto-Payout : ${manualReviewReason || 'En attente'}\nSolde restant : $${newWalletBalance.toFixed(2)} USD`,
+      details: `Revendeur : ${tenant.name} (${tenant.subdomain}.abonnementspro.com)\nMéthode : ${paymentMethod}\nCoordonnées : ${paymentDetails}\nInfo Auto-Payout : ${manualReviewReason || 'En attente'}\nSolde restant : $${newWalletBalance.toFixed(2)} USD`,
     }).catch(console.error);
 
     // Notify Reseller on Telegram

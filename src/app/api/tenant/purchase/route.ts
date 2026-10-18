@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
       ticketCode: order.ticketCode,
       type: 'ORDER',
       amount: `$${totalSellingPrice.toFixed(2)} USD`,
-      details: `Boutique : ${tenant.storeName || tenant.name} (/store/${tenant.subdomain})\nBénéfice Plateforme : +$${totalPlatformProfit.toFixed(2)} USD\nCommission Revendeur : +$${totalResellerProfit.toFixed(2)} USD`,
+      details: `Boutique : ${tenant.storeName || tenant.name} (${tenant.subdomain}.abonnementspro.com)\nBénéfice Plateforme : +$${totalPlatformProfit.toFixed(2)} USD\nCommission Revendeur : +$${totalResellerProfit.toFixed(2)} USD`,
     }).catch(console.error);
 
     return NextResponse.json({

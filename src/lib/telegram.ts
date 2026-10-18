@@ -195,7 +195,7 @@ export async function sendResellerTelegramNotification(params: ResellerTelegramN
 
     const messageText = `
 <b>${emoji} ${typeLabel}</b>
-🏬 <b>Boutique :</b> ${tenant.storeName || tenant.name} (<code>/store/${tenant.subdomain}</code>)
+🏬 <b>Boutique :</b> ${tenant.storeName || tenant.name} (<code>https://${tenant.subdomain}.abonnementspro.com</code>)
 
 <b>Titre :</b> ${params.title}
 ${params.ticketCode ? `<b>Code Ticket :</b> <code>${params.ticketCode}</code>\n` : ''}${params.amount ? `<b>Prix Vente Client :</b> ${params.amount}\n` : ''}${params.resellerProfit ? `<b>💎 Votre Bénéfice Net :</b> <code>${params.resellerProfit}</code>\n` : ''}

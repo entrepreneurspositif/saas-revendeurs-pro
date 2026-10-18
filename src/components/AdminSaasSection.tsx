@@ -518,10 +518,10 @@ export default function AdminSaasSection() {
                           <div className="text-[11px] text-slate-400">{r.email}</div>
                           <div className="text-[10px] text-sky-400 font-medium">{r.storeName}</div>
                         </td>
-                        <td className="py-3 px-3 font-mono text-slate-300">
-                          /store/{r.subdomain}
+                        <td className="py-3 px-3 font-mono text-sky-400 font-bold text-[11px]">
+                          {r.subdomain}.abonnementspro.com
                           {r.customDomain && (
-                            <div className="text-[10px] text-purple-400 font-mono">
+                            <div className="text-[10px] text-purple-400 font-mono font-normal">
                               {r.customDomain}
                             </div>
                           )}
@@ -576,7 +576,7 @@ export default function AdminSaasSection() {
                               <span>MDP</span>
                             </button>
                             <a
-                              href={`/store/${r.subdomain}`}
+                              href={`https://${r.subdomain}.abonnementspro.com`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-bold text-[11px] transition-all"
