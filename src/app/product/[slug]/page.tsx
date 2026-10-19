@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -9,11 +10,56 @@ interface Props {
   params: { slug: string };
 }
 
+// Enable ISR (Incremental Static Regeneration) with 5-minute background revalidation
+export const revalidate = 300;
+
+// Deduplicate database queries between generateMetadata and ProductDetailPage
+const getProduct = cache(async (slug: string) => {
+  return prisma.product.findUnique({
+    where: { slug },
+    include: {
+      activeSupplierProduct: {
+        include: { supplier: true },
+      },
+    },
+  });
+});
+
+const getRelatedProducts = cache(async (category: string, currentId: string) => {
+  return prisma.product.findMany({
+    where: {
+      category,
+      isActive: true,
+      NOT: { id: currentId },
+    },
+    include: {
+      activeSupplierProduct: {
+        include: { supplier: true },
+      },
+    },
+    take: 4,
+    orderBy: { createdAt: 'desc' },
+  });
+});
+
+// Pre-render the top popular products at build time for instant TTFB (< 50ms)
+export async function generateStaticParams() {
+  try {
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+      take: 60,
+      orderBy: { updatedAt: 'desc' },
+    });
+    return products.map((p) => ({ slug: p.slug }));
+  } catch (e) {
+    return [];
+  }
+}
+
 // Generate dynamic metadata for search engines (Google, Bing, Yahoo)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
-  });
+  const product = await getProduct(params.slug);
 
   if (!product) {
     return {
@@ -99,14 +145,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
-    include: {
-      activeSupplierProduct: {
-        include: { supplier: true },
-      },
-    },
-  });
+  const product = await getProduct(params.slug);
 
   if (!product) {
     notFound();
@@ -146,21 +185,8 @@ export default async function ProductDetailPage({ params }: Props) {
     customerInfoPlaceholder: product.customerInfoPlaceholder || null,
   };
 
-  // Fetch up to 4 related products in the same category
-  const relatedProducts = await prisma.product.findMany({
-    where: {
-      category: product.category,
-      isActive: true,
-      NOT: { id: product.id },
-    },
-    include: {
-      activeSupplierProduct: {
-        include: { supplier: true },
-      },
-    },
-    take: 4,
-    orderBy: { createdAt: 'desc' },
-  });
+  // Fetch up to 4 related products in the same category (cached with React cache)
+  const relatedProducts = await getRelatedProducts(product.category, product.id);
 
   const clientRelatedProducts = relatedProducts.map((rel) => {
     const relSupp = rel.activeSupplierProduct;

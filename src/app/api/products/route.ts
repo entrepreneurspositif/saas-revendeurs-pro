@@ -109,7 +109,11 @@ export async function GET(req: NextRequest) {
       return publicProduct;
     });
 
-    return NextResponse.json({ success: true, products: formattedProducts });
+    const response = NextResponse.json({ success: true, products: formattedProducts });
+    if (!adminMode) {
+      response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    }
+    return response;
   } catch (error: any) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
