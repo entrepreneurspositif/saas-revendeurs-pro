@@ -410,8 +410,26 @@ export default function StorefrontPage() {
     },
   ];
 
+  // Schema.org FAQPage for Google Rich Snippets directly in SERP
+  const homeFaqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#070b14] text-slate-900 dark:text-slate-100 font-sans selection:bg-sky-500 selection:text-white transition-colors">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeFaqSchema) }}
+      />
       <Navbar />
 
       {/* HERO SECTION - REFINED FINTECH & SAAS LOOK */}
