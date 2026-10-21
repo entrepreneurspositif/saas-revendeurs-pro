@@ -5468,25 +5468,31 @@ export default function AdminDashboardPage() {
 
       {/* ADD MANUAL PRODUCT MODAL */}
       {showAddProductModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative animate-in fade-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setShowAddProductModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+            {/* Modal Header (Pinned) */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0 bg-slate-900">
+              <div>
+                <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                  <Package className="w-5 h-5 text-emerald-400" />
+                  <span>Ajouter un Produit Manuellement</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Créez un nouveau produit qui sera immédiatement disponible sur la vitrine client.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddProductModal(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors ml-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
-              <Package className="w-5 h-5 text-emerald-400" />
-              <span>Ajouter un Produit Manuellement</span>
-            </h3>
-
-            <p className="text-xs text-slate-400">
-              Créez un nouveau produit qui sera immédiatement disponible sur la vitrine client.
-            </p>
-
-            <form onSubmit={handleCreateProductSubmit} className="space-y-4 text-xs">
+            {/* Form wrapping scrollable content + pinned footer */}
+            <form onSubmit={handleCreateProductSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                   Titre du Produit *
@@ -5756,19 +5762,21 @@ export default function AdminDashboardPage() {
                   className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed font-sans"
                 />
               </div>
+            </div>
 
-              <div className="pt-2 flex justify-end space-x-3">
+              {/* Modal Footer (Pinned at the bottom - always visible) */}
+              <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950 flex items-center justify-end space-x-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddProductModal(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={creatingProduct}
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center space-x-2 transition-all"
+                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center space-x-2 transition-all hover:scale-[1.02]"
                 >
                   {creatingProduct ? (
                     <RefreshCcw className="w-4 h-4 animate-spin" />
@@ -5787,29 +5795,33 @@ export default function AdminDashboardPage() {
 
       {/* EDIT PRODUCT MODAL */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative">
-            <button
-              onClick={() => setEditingProduct(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
-              <Edit className="w-5 h-5 text-indigo-400" />
-              <span>Modifier le Prix & Statut du Produit</span>
-            </h3>
-
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
-              <div className="font-extrabold text-white">{editingProduct.title}</div>
-              <div className="flex justify-between text-slate-400">
-                <span>Prix Grossiste Fournisseur:</span>
-                <span className="font-bold text-slate-200">${editingProduct.costPrice.toFixed(2)}</span>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+            {/* Modal Header (Pinned) */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0 bg-slate-900">
+              <div>
+                <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                  <Edit className="w-5 h-5 text-indigo-400" />
+                  <span>Modifier le Produit</span>
+                </h3>
+                <div className="mt-2 text-xs font-bold text-white flex items-center gap-2">
+                  <span className="truncate max-w-[280px] sm:max-w-md">{editingProduct.title}</span>
+                  <span className="text-slate-400 font-normal">
+                    (Grossiste: <strong className="text-slate-200">${editingProduct.costPrice ? editingProduct.costPrice.toFixed(2) : '0.00'}</strong>)
+                  </span>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors ml-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
@@ -6097,17 +6109,20 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-2">
+            {/* Modal Footer (Pinned at the bottom - always visible) */}
+            <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950 flex items-center justify-end space-x-3 flex-shrink-0">
               <button
+                type="button"
                 onClick={() => setEditingProduct(null)}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
               >
                 Annuler
               </button>
               <button
+                type="button"
                 onClick={handleSaveProductEdit}
                 disabled={savingProduct}
-                className="px-6 py-2.5 rounded-2xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white flex items-center space-x-2 shadow-lg shadow-indigo-500/20"
+                className="px-6 py-2.5 rounded-2xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white flex items-center space-x-2 shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02]"
               >
                 {savingProduct && <RefreshCcw className="w-3.5 h-3.5 animate-spin" />}
                 <span>Enregistrer les Modifications</span>
