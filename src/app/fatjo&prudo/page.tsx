@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import ThemeSelector from '@/components/ThemeSelector';
 import AdminAnalyticsSection from '@/components/AdminAnalyticsSection';
 import AdminSaasSection from '@/components/AdminSaasSection';
+import AiDescriptionModal from '@/components/AiDescriptionModal';
 import {
   Crown,
   ShieldCheck,
@@ -689,6 +690,10 @@ export default function AdminDashboardPage() {
   const [newProdImageUrl, setNewProdImageUrl] = useState<string>('');
   const [creatingProduct, setCreatingProduct] = useState<boolean>(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+
+  // AI Description Enhancer Modal State
+  const [showAiDescModal, setShowAiDescModal] = useState<boolean>(false);
+  const [aiModalTarget, setAiModalTarget] = useState<'create' | 'edit'>('create');
 
   // Add Supplier Modal State
   const [showAddSupplierModal, setShowAddSupplierModal] = useState<boolean>(false);
@@ -5726,15 +5731,29 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                  Description Publique du Produit (Visible sur la boutique avant achat)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    Description Publique du Produit (Visible sur la boutique avant achat)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiModalTarget('create');
+                      setShowAiDescModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-violet-600/25 to-fuchsia-600/25 hover:from-violet-600/40 hover:to-fuchsia-600/40 text-violet-300 border border-violet-500/30 transition-all shadow-sm hover:scale-[1.02]"
+                    title="Optimiser ou rédiger automatiquement avec l'IA"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-fuchsia-400 animate-pulse" />
+                    <span>✨ Arranger avec l'IA</span>
+                  </button>
+                </div>
                 <textarea
                   rows={3}
                   placeholder="Ex: Compte privé avec accès garanti. Livraison par ticket après validation..."
                   value={newProdDescription}
                   onChange={(e) => setNewProdDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed font-sans"
                 />
               </div>
 
@@ -5978,15 +5997,29 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                  Description Publique du Produit
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    Description Publique du Produit
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiModalTarget('edit');
+                      setShowAiDescModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-violet-600/25 to-fuchsia-600/25 hover:from-violet-600/40 hover:to-fuchsia-600/40 text-violet-300 border border-violet-500/30 transition-all shadow-sm hover:scale-[1.02]"
+                    title="Optimiser ou enrichir avec l'IA"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-fuchsia-400 animate-pulse" />
+                    <span>✨ Arranger avec l'IA</span>
+                  </button>
+                </div>
                 <textarea
-                  rows={2}
+                  rows={3}
                   placeholder="Description publique visible par les clients..."
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 leading-relaxed"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 leading-relaxed font-sans"
                 />
               </div>
 
@@ -6083,6 +6116,22 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* AI DESCRIPTION ENHANCER MODAL */}
+      <AiDescriptionModal
+        isOpen={showAiDescModal}
+        onClose={() => setShowAiDescModal(false)}
+        productTitle={aiModalTarget === 'create' ? newProdTitle : (editingProduct?.title || '')}
+        category={aiModalTarget === 'create' ? newProdCategory : (editingProduct?.category || editCategory)}
+        initialDescription={aiModalTarget === 'create' ? newProdDescription : editDescription}
+        onApply={(enhancedDesc) => {
+          if (aiModalTarget === 'create') {
+            setNewProdDescription(enhancedDesc);
+          } else {
+            setEditDescription(enhancedDesc);
+          }
+        }}
+      />
 
       {/* ADD SUPPLIER MODAL */}
       {showAddSupplierModal && (
