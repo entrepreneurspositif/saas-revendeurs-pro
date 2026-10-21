@@ -133,10 +133,10 @@ export default function AiDescriptionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl relative overflow-hidden">
+    <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md overflow-y-auto flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-3xl w-full h-[88vh] max-h-[720px] flex flex-col shadow-2xl relative overflow-hidden my-auto">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-violet-950/40 via-slate-900 to-indigo-950/30">
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-violet-950/40 via-slate-900 to-indigo-950/30 flex-shrink-0">
           <div className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-md shadow-violet-500/20">
               <Sparkles className="w-5 h-5 text-white" />
@@ -165,7 +165,7 @@ export default function AiDescriptionModal({
         </div>
 
         {/* Body (Split Controls & Preview) */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+        <div className="p-4 sm:p-5 overflow-y-auto min-h-0 space-y-4 flex-1 text-xs">
           {errorMsg && (
             <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-between">
               <span>{errorMsg}</span>

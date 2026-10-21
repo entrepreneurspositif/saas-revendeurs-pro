@@ -5468,16 +5468,19 @@ export default function AdminDashboardPage() {
 
       {/* ADD MANUAL PRODUCT MODAL */}
       {showAddProductModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-            {/* Modal Header (Pinned) */}
-            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0 bg-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md overflow-y-auto flex items-center justify-center p-2 sm:p-4">
+          <form
+            onSubmit={handleCreateProductSubmit}
+            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full h-[88vh] max-h-[720px] flex flex-col shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden my-auto"
+          >
+            {/* Modal Header (Pinned at Top) */}
+            <div className="p-4 sm:p-5 pb-3 sm:pb-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0 bg-slate-900">
               <div>
-                <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center space-x-2">
                   <Package className="w-5 h-5 text-emerald-400" />
                   <span>Ajouter un Produit Manuellement</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
                   Créez un nouveau produit qui sera immédiatement disponible sur la vitrine client.
                 </p>
               </div>
@@ -5490,9 +5493,8 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            {/* Form wrapping scrollable content + pinned footer */}
-            <form onSubmit={handleCreateProductSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
+            {/* Scrollable Form Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                   Titre du Produit *
@@ -5790,21 +5792,20 @@ export default function AdminDashboardPage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
 
       {/* EDIT PRODUCT MODAL */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-            {/* Modal Header (Pinned) */}
-            <div className="p-5 sm:p-6 pb-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0 bg-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md overflow-y-auto flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full h-[88vh] max-h-[720px] flex flex-col shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden my-auto">
+            {/* Modal Header (Pinned at Top) */}
+            <div className="p-4 sm:p-5 pb-3 sm:pb-4 border-b border-slate-800 flex items-start justify-between flex-shrink-0 bg-slate-900">
               <div>
-                <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center space-x-2">
                   <Edit className="w-5 h-5 text-indigo-400" />
                   <span>Modifier le Produit</span>
                 </h3>
-                <div className="mt-2 text-xs font-bold text-white flex items-center gap-2">
+                <div className="mt-1.5 text-xs font-bold text-white flex items-center gap-2">
                   <span className="truncate max-w-[280px] sm:max-w-md">{editingProduct.title}</span>
                   <span className="text-slate-400 font-normal">
                     (Grossiste: <strong className="text-slate-200">${editingProduct.costPrice ? editingProduct.costPrice.toFixed(2) : '0.00'}</strong>)
@@ -5821,7 +5822,7 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Scrollable Form Content */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
