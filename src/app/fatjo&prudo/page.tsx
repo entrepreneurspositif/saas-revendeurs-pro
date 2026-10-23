@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ThemeSelector from '@/components/ThemeSelector';
@@ -1770,6 +1773,9 @@ export default function AdminDashboardPage() {
                 <h1 className="text-2xl font-black text-white">Console d'Administration</h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   SESSION ACCORDÉE
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-violet-500/20 text-violet-300 border border-violet-500/40">
+                  v1.2.1 ✨ IA & Modals OK
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
