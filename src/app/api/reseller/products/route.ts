@@ -139,35 +139,42 @@ export async function PUT(req: NextRequest) {
 
     // Handle bulk updates
     if (Array.isArray(bulkUpdates)) {
-      for (const item of bulkUpdates) {
-        if (!item.productId) continue;
-        await prisma.tenantProductPrice.upsert({
-          where: {
-            tenantId_productId: {
+      const validItems = bulkUpdates.filter((item: any) => item && item.productId);
+      
+      if (validItems.length > 0) {
+        const transactions = validItems.map((item: any) => {
+          const parsedPrice =
+            item.customSellingPrice !== undefined && item.customSellingPrice !== null && item.customSellingPrice !== ''
+              ? parseFloat(Number(item.customSellingPrice).toFixed(2))
+              : null;
+
+          return prisma.tenantProductPrice.upsert({
+            where: {
+              tenantId_productId: {
+                tenantId: tenant.id,
+                productId: item.productId,
+              },
+            },
+            update: {
+              customSellingPrice: parsedPrice,
+              ...(item.isEnabled !== undefined ? { isEnabled: Boolean(item.isEnabled) } : {}),
+            },
+            create: {
               tenantId: tenant.id,
               productId: item.productId,
+              customSellingPrice: parsedPrice,
+              isEnabled: item.isEnabled !== undefined ? Boolean(item.isEnabled) : true,
             },
-          },
-          update: {
-            customSellingPrice: item.customSellingPrice !== undefined && item.customSellingPrice !== null
-              ? parseFloat(Number(item.customSellingPrice).toFixed(2))
-              : null,
-            isEnabled: item.isEnabled !== undefined ? Boolean(item.isEnabled) : true,
-          },
-          create: {
-            tenantId: tenant.id,
-            productId: item.productId,
-            customSellingPrice: item.customSellingPrice !== undefined && item.customSellingPrice !== null
-              ? parseFloat(Number(item.customSellingPrice).toFixed(2))
-              : null,
-            isEnabled: item.isEnabled !== undefined ? Boolean(item.isEnabled) : true,
-          },
+          });
         });
+
+        await prisma.$transaction(transactions);
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Tarifs et visibilité mis à jour en masse avec succès',
+        message: `${validItems.length} tarif(s) et visibilité(s) mis à jour avec succès`,
+        count: validItems.length,
       });
     }
 

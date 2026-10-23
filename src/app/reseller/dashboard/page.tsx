@@ -55,8 +55,11 @@ import {
   Plus,
   LayoutGrid,
   List,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
+import BulkProductPricingModal from '@/components/BulkProductPricingModal';
 
 const THEME_PRESETS = [
   {
@@ -230,6 +233,11 @@ export default function ResellerDashboardPage() {
   const [editedVisibility, setEditedVisibility] = useState<Record<string, boolean>>({});
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [productSaveMsg, setProductSaveMsg] = useState<{ id: string; success: boolean; text: string } | null>(null);
+  // Reseller Products Bulk Pricing & Selection State
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [showBulkPricingModal, setShowBulkPricingModal] = useState<boolean>(false);
+  const [savingAllProducts, setSavingAllProducts] = useState<boolean>(false);
+  const [productBulkMsg, setProductBulkMsg] = useState<string | null>(null);
   const [editedOtpPrices, setEditedOtpPrices] = useState<Record<string, number>>({});
   const [editedOtpVisibility, setEditedOtpVisibility] = useState<Record<string, boolean>>({});
   const [globalApplyOtp, setGlobalApplyOtp] = useState<Record<string, boolean>>({});
@@ -931,6 +939,143 @@ export default function ResellerDashboardPage() {
     }
   };
 
+  // Apply Bulk Product Pricing from Modal
+  const handleBulkApplyPricing = async (
+    updates: { productId: string; customSellingPrice: number | null; isEnabled?: boolean }[]
+  ) => {
+    setSavingAllProducts(true);
+    setProductBulkMsg(null);
+    try {
+      const res = await fetch('/api/reseller/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bulkUpdates: updates }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur lors de la mise à jour');
+
+      const updatesMap = new Map(updates.map((u) => [u.productId, u]));
+      const newEditedPrices = { ...editedPrices };
+      const newEditedVis = { ...editedVisibility };
+
+      setProducts((prev) =>
+        prev.map((p) => {
+          const u = updatesMap.get(p.id);
+          if (!u) return p;
+          const newPrice = u.customSellingPrice ?? p.baseSellingPrice;
+          newEditedPrices[p.id] = newPrice;
+          if (u.isEnabled !== undefined) newEditedVis[p.id] = u.isEnabled;
+          const newProfit = Math.max(0, newPrice - p.resellerBuyPrice);
+          return {
+            ...p,
+            resellerSellingPrice: newPrice,
+            resellerProfit: parseFloat(newProfit.toFixed(2)),
+            isEnabled: u.isEnabled !== undefined ? u.isEnabled : p.isEnabled,
+            hasCustomPrice: u.customSellingPrice !== null,
+          };
+        })
+      );
+      setEditedPrices(newEditedPrices);
+      setEditedVisibility(newEditedVis);
+      setSelectedProductIds([]);
+      setProductBulkMsg(data.message || `${updates.length} articles mis à jour avec succès !`);
+      setTimeout(() => setProductBulkMsg(null), 5000);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSavingAllProducts(false);
+    }
+  };
+
+  // Save all manual inline product edits in one click
+  const handleSaveAllProductsOnPage = async () => {
+    setSavingAllProducts(true);
+    setProductBulkMsg(null);
+    try {
+      const bulkUpdates = products.map((p) => ({
+        productId: p.id,
+        customSellingPrice: editedPrices[p.id] ?? p.resellerSellingPrice,
+        isEnabled: editedVisibility[p.id] !== undefined ? editedVisibility[p.id] : p.isEnabled,
+      }));
+
+      const res = await fetch('/api/reseller/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bulkUpdates }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur');
+
+      // Update local product calculations
+      setProducts((prev) =>
+        prev.map((p) => {
+          const newPrice = editedPrices[p.id] ?? p.resellerSellingPrice;
+          const newProfit = Math.max(0, newPrice - p.resellerBuyPrice);
+          return {
+            ...p,
+            resellerSellingPrice: newPrice,
+            resellerProfit: parseFloat(newProfit.toFixed(2)),
+            isEnabled: editedVisibility[p.id] !== undefined ? editedVisibility[p.id] : p.isEnabled,
+            hasCustomPrice: true,
+          };
+        })
+      );
+
+      setProductBulkMsg('Tous les tarifs et visibilités du catalogue ont été enregistrés avec succès !');
+      setTimeout(() => setProductBulkMsg(null), 5000);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSavingAllProducts(false);
+    }
+  };
+
+  // Toggle visibility in bulk for selected products
+  const handleToggleSelectedVisibility = async (enable: boolean) => {
+    if (selectedProductIds.length === 0) return;
+    setSavingAllProducts(true);
+    setProductBulkMsg(null);
+    try {
+      const bulkUpdates = selectedProductIds.map((id) => ({
+        productId: id,
+        customSellingPrice: editedPrices[id] ?? null,
+        isEnabled: enable,
+      }));
+
+      const res = await fetch('/api/reseller/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bulkUpdates }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur');
+
+      const newVis = { ...editedVisibility };
+      selectedProductIds.forEach((id) => {
+        newVis[id] = enable;
+      });
+      setEditedVisibility(newVis);
+      setProducts((prev) =>
+        prev.map((p) => (selectedProductIds.includes(p.id) ? { ...p, isEnabled: enable } : p))
+      );
+      setProductBulkMsg(
+        `${selectedProductIds.length} article(s) ${enable ? 'activé(s)' : 'masqué(s)'} sur votre vitrine !`
+      );
+      setTimeout(() => setProductBulkMsg(null), 5000);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSavingAllProducts(false);
+    }
+  };
+
+  // Toggle selection for a single product
+  const toggleSelectProduct = (productId: string) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+  };
+
   // Save Single OTP Service
   const handleSaveOtpService = async (serviceCode: string) => {
     const key = `${selectedOtpCountry}_${serviceCode.toLowerCase()}`;
@@ -1284,6 +1429,29 @@ export default function ResellerDashboardPage() {
   const paginatedDashboardProducts = filteredProducts.slice(dashboardProductStartIndex, dashboardProductEndIndex);
 
   const categories = ['Tous', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
+
+  const isAllCurrentPageSelected =
+    paginatedDashboardProducts.length > 0 &&
+    paginatedDashboardProducts.every((p) => selectedProductIds.includes(p.id));
+
+  const toggleSelectAllCurrentPage = () => {
+    if (isAllCurrentPageSelected) {
+      const pageIds = paginatedDashboardProducts.map((p) => p.id);
+      setSelectedProductIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      const pageIds = paginatedDashboardProducts.map((p) => p.id);
+      setSelectedProductIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
+
+  const modifiedProductsCount = products.filter((p) => {
+    const priceChanged =
+      editedPrices[p.id] !== undefined &&
+      Math.abs(editedPrices[p.id] - p.resellerSellingPrice) > 0.001;
+    const visChanged =
+      editedVisibility[p.id] !== undefined && editedVisibility[p.id] !== p.isEnabled;
+    return priceChanged || visChanged;
+  }).length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
@@ -1992,40 +2160,131 @@ export default function ResellerDashboardPage() {
                     </div>
                   </div>
                 )}
-                {/* Search & Filter */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      value={searchProduct}
-                      onChange={(e) => setSearchProduct(e.target.value)}
-                      placeholder="Chercher un article..."
-                      className="pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                    />
+                {/* Search & Filter & Bulk Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                      <input
+                        type="text"
+                        value={searchProduct}
+                        onChange={(e) => setSearchProduct(e.target.value)}
+                        placeholder="Chercher un article..."
+                        className="pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+
+                    <select
+                      value={productCategoryFilter}
+                      onChange={(e) => setProductCategoryFilter(e.target.value)}
+                      className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
+                    >
+                      {categories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={fetchProducts}
+                      disabled={loadingProducts}
+                      className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
+                      title="Actualiser"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingProducts ? 'animate-spin' : ''}`} />
+                    </button>
                   </div>
 
-                  <select
-                    value={productCategoryFilter}
-                    onChange={(e) => setProductCategoryFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
-                  >
-                    {categories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Bulk Pricing Trigger & Save All Buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => setShowBulkPricingModal(true)}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-sky-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs shadow-md shadow-sky-500/10 flex items-center gap-1.5 transition-all"
+                      title="Ouvrir le configurateur de tarifs en masse"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>⚡ Ajuster les prix en bloc</span>
+                    </button>
 
-                  <button
-                    onClick={fetchProducts}
-                    disabled={loadingProducts}
-                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
-                    title="Actualiser"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${loadingProducts ? 'animate-spin' : ''}`} />
-                  </button>
+                    <button
+                      onClick={handleSaveAllProductsOnPage}
+                      disabled={savingAllProducts || loadingProducts}
+                      className="px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      title="Enregistrer toutes les modifications manuelles de la page"
+                    >
+                      {savingAllProducts ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5" />
+                      )}
+                      <span>
+                        Enregistrer tout
+                        {modifiedProductsCount > 0 ? ` (${modifiedProductsCount})` : ''}
+                      </span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Bulk Status message */}
+                {productBulkMsg && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-bold text-emerald-300 flex items-center gap-2 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{productBulkMsg}</span>
+                  </div>
+                )}
+
+                {/* Selection Bar when items are selected */}
+                {selectedProductIds.length > 0 && (
+                  <div className="p-3 bg-gradient-to-r from-sky-950/80 via-slate-900 to-indigo-950/80 border border-sky-500/30 rounded-2xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in shadow-xl">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
+                        {selectedProductIds.length}
+                      </span>
+                      <span className="font-bold text-white">
+                        {selectedProductIds.length} article(s) sélectionné(s)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setShowBulkPricingModal(true)}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition-all"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Ajuster les prix de la sélection</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleSelectedVisibility(true)}
+                        disabled={savingAllProducts}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold transition-all"
+                        title="Activer ces articles sur la vitrine"
+                      >
+                        <Eye className="w-3.5 h-3.5 inline mr-1" />
+                        Tout afficher
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleSelectedVisibility(false)}
+                        disabled={savingAllProducts}
+                        className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold transition-all"
+                        title="Masquer ces articles de la vitrine"
+                      >
+                        <EyeOff className="w-3.5 h-3.5 inline mr-1" />
+                        Tout masquer
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedProductIds([])}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+                      >
+                        <X className="w-3.5 h-3.5 inline mr-0.5" />
+                        Désélectionner
+                      </button>
+                    </div>
+                  </div>
+                )}
 
             {/* Products Table */}
             {loadingProducts ? (
@@ -2042,6 +2301,15 @@ export default function ResellerDashboardPage() {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-800 bg-slate-950/70 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                        <th className="py-3 px-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isAllCurrentPageSelected}
+                            onChange={toggleSelectAllCurrentPage}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                            title="Sélectionner tous les articles de cette page"
+                          />
+                        </th>
                         <th className="py-3 px-4">Article</th>
                         <th className="py-3 px-3">Catégorie</th>
                         <th className="py-3 px-3">Prix Public Base</th>
@@ -2061,7 +2329,20 @@ export default function ResellerDashboardPage() {
                         const msg = productSaveMsg?.id === p.id ? productSaveMsg : null;
 
                         return (
-                          <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
+                          <tr
+                            key={p.id}
+                            className={`hover:bg-slate-800/30 transition-colors ${
+                              selectedProductIds.includes(p.id) ? 'bg-sky-950/20' : ''
+                            }`}
+                          >
+                            <td className="py-3 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedProductIds.includes(p.id)}
+                                onChange={() => toggleSelectProduct(p.id)}
+                                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                              />
+                            </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 {p.imageUrl ? (
@@ -6160,6 +6441,16 @@ export default function ResellerDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Bulk Product Pricing Modal */}
+        <BulkProductPricingModal
+          isOpen={showBulkPricingModal}
+          onClose={() => setShowBulkPricingModal(false)}
+          products={products}
+          selectedProductIds={selectedProductIds}
+          categories={categories}
+          onApply={handleBulkApplyPricing}
+        />
       </div>
     </div>
   );
