@@ -59,6 +59,7 @@ import {
   Square,
   Flame,
   Bot,
+  Menu,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 import BulkProductPricingModal from '@/components/BulkProductPricingModal';
@@ -223,9 +224,24 @@ const BUTTON_COLOR_PRESETS = [
   { name: 'Blanc Pur', color: '#ffffff' },
 ];
 
+interface NavItem {
+  id: 'overview' | 'products' | 'storefront' | 'subscription' | 'orders' | 'wallet' | 'marketing' | 'support';
+  label: string;
+  shortLabel: string;
+  icon: any;
+  description: string;
+  badge?: string | number | null;
+  badgeColor?: string;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
 export default function ResellerDashboardPage() {
   const router = useRouter();
-  const { formatPrice, formatBoth, currency } = useCurrency();
+  const { formatPrice, formatBoth, currency, setCurrency } = useCurrency();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [reseller, setReseller] = useState<any>(null);
@@ -272,6 +288,7 @@ export default function ResellerDashboardPage() {
   const [otpSaveMsg, setOtpSaveMsg] = useState<{ code: string; success: boolean; text: string } | null>(null);
   const [savingAllOtp, setSavingAllOtp] = useState<boolean>(false);
   const [otpBulkMsg, setOtpBulkMsg] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   // Storefront Tab State
   const [storeSettings, setStoreSettings] = useState<any>({
@@ -1492,13 +1509,127 @@ export default function ResellerDashboardPage() {
     return priceChanged || visChanged;
   }).length;
 
+  const pendingOrdersCount = orders.filter((o) => o.status === 'PENDING_PAYMENT').length;
+  const pendingTicketsCount = resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
+
+  const switchTab = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const NAV_GROUPS: NavGroup[] = [
+    {
+      title: 'Activité & Ventes',
+      items: [
+        {
+          id: 'overview' as const,
+          label: "Vue d'ensemble",
+          shortLabel: 'Accueil',
+          icon: TrendingUp,
+          description: 'Cockpit de pilotage & métriques clés',
+          badge: null,
+          badgeColor: '',
+        },
+        {
+          id: 'products' as const,
+          label: 'Catalogue & Marges',
+          shortLabel: 'Catalogue',
+          icon: Package,
+          description: 'Articles, prix grossiste & marges',
+          badge: products.length > 0 ? products.length : null,
+          badgeColor: 'bg-slate-800 text-slate-300 border-slate-700',
+        },
+        {
+          id: 'orders' as const,
+          label: 'Commandes & Tickets',
+          shortLabel: 'Commandes',
+          icon: ShoppingCart,
+          description: 'Suivi et livraisons clients',
+          badge: pendingOrdersCount > 0 ? `${pendingOrdersCount} attente` : orders.length > 0 ? orders.length : null,
+          badgeColor: pendingOrdersCount > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-slate-800 text-slate-300 border-slate-700',
+        },
+        {
+          id: 'wallet' as const,
+          label: 'Finances & Retraits',
+          shortLabel: 'Portefeuille',
+          icon: Coins,
+          description: 'Solde & demandes de paiement',
+          badge: reseller?.walletBalance ? `$${(reseller.walletBalance).toFixed(0)}` : null,
+          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        },
+      ],
+    },
+    {
+      title: 'Boutique & Marketing',
+      items: [
+        {
+          id: 'storefront' as const,
+          label: 'Boutique & Design',
+          shortLabel: 'Boutique',
+          icon: Store,
+          description: '7 templates, couleurs, logo & paiements',
+          badge: '7 Styles',
+          badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+        },
+        {
+          id: 'marketing' as const,
+          label: 'Marketing & Pixels',
+          shortLabel: 'Marketing',
+          icon: Share2,
+          description: 'Pixels Facebook/TikTok & Telegram',
+          badge: null,
+          badgeColor: '',
+        },
+      ],
+    },
+    {
+      title: 'Compte & Partenariat',
+      items: [
+        {
+          id: 'subscription' as const,
+          label: 'Abonnement Grossiste',
+          shortLabel: 'Abonnement',
+          icon: Crown,
+          description: `Plan ${currentPlan?.name || 'Free'} & remises d'usine`,
+          badge: currentPlan?.id === 'pro' ? 'VIP' : currentPlan?.id === 'starter' ? 'STARTER' : 'STANDARD',
+          badgeColor: currentPlan?.id === 'pro' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+        },
+        {
+          id: 'support' as const,
+          label: 'Support & Assistance',
+          shortLabel: 'Support',
+          icon: LifeBuoy,
+          description: 'Assistance directe Super Admin',
+          badge: pendingTicketsCount > 0 ? `${pendingTicketsCount}` : null,
+          badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+        },
+      ],
+    },
+  ];
+
+  const currentTabMeta = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === activeTab) || NAV_GROUPS[0].items[0];
+  const CurrentTabIcon = currentTabMeta.icon;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white pb-20 lg:pb-0">
       {/* Top Header - Executive SaaS Design */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 border-b border-slate-800 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Left: Brand, Live Store Status & Subdomain */}
+      <header className="sticky top-0 z-40 bg-slate-900/95 border-b border-slate-800 backdrop-blur-xl shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+          {/* Left: Mobile Menu Button + Brand & Subdomain */}
           <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger button for mobile */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all shrink-0"
+              title="Ouvrir le menu de navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-base shrink-0">
               {reseller?.storeName ? reseller.storeName.charAt(0).toUpperCase() : 'R'}
             </div>
@@ -1511,17 +1642,19 @@ export default function ResellerDashboardPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   En ligne
                 </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                <button
+                  onClick={() => switchTab('subscription')}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all hover:scale-105 ${
                     currentPlan?.id === 'pro'
                       ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                       : currentPlan?.id === 'starter'
                       ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
                       : 'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}
+                  title="Gérer mon abonnement et mes remises"
                 >
                   Plan {currentPlan?.name || 'Free'}
-                </span>
+                </button>
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono truncate">
                 <span className="text-sky-400 font-bold">{reseller?.subdomain}.abonnementspro.com</span>
@@ -1529,16 +1662,29 @@ export default function ResellerDashboardPage() {
             </div>
           </div>
 
-          {/* Right: Quick Solde Chip & Action Buttons */}
+          {/* Right: Currency Switcher, Solde, Store link & Actions */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Quick Currency Selector */}
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as any)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-sky-500 cursor-pointer hidden sm:block"
+              title="Devise d'affichage"
+            >
+              <option value="XOF">XOF (FCFA)</option>
+              <option value="XAF">XAF (FCFA)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+            </select>
+
             {/* Quick Wallet Pill */}
             <button
-              onClick={() => setActiveTab('wallet')}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 text-xs transition-all group"
+              onClick={() => switchTab('wallet')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 text-xs transition-all group"
               title="Voir mon portefeuille et demander un retrait"
             >
               <Coins className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-              <span className="text-slate-400">Solde :</span>
+              <span className="text-slate-400 hidden sm:inline">Solde :</span>
               <span className="font-mono font-bold text-amber-400">
                 ${(reseller?.walletBalance || 0).toFixed(2)}
               </span>
@@ -1552,17 +1698,17 @@ export default function ResellerDashboardPage() {
               className="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-sky-500/20"
             >
               <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="hidden sm:inline">Voir ma vitrine</span>
+              <span className="hidden md:inline">Voir ma vitrine</span>
             </a>
 
             {/* Share / Copy Link */}
             <button
               onClick={handleCopyLink}
               className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all"
-              title="Copier le lien public"
+              title="Copier le lien public de ma boutique"
             >
               {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
+              <span className="hidden lg:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
             </button>
 
             {/* Logout */}
@@ -1572,133 +1718,132 @@ export default function ResellerDashboardPage() {
               title="Déconnexion"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Quitter</span>
+              <span className="hidden lg:inline">Quitter</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
-        {/* Navigation Tabs Bar */}
-        <div className="bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800/80 backdrop-blur-lg mb-6 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'overview'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Vue d'ensemble</span>
-          </button>
+      {/* Main Container: Desktop Sidebar + Content Area */}
+      <div className="flex-1 flex max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-5 gap-6 items-start">
+        {/* ======================================================== */}
+        {/* DESKTOP SIDEBAR (Visible on lg+)                        */}
+        {/* ======================================================== */}
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-20 bg-slate-900/80 border border-slate-800/80 rounded-3xl p-4 shadow-xl backdrop-blur-xl space-y-5">
+          {/* Navigation Groups */}
+          <div className="space-y-4">
+            {NAV_GROUPS.map((group, gIdx) => (
+              <div key={gIdx} className="space-y-1">
+                <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  {group.title}
+                </div>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const isActive = activeTab === item.id;
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => switchTab(item.id)}
+                        className={`w-full px-3 py-2 rounded-2xl text-xs font-bold flex items-center justify-between transition-all group ${
+                          isActive
+                            ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20 font-black'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon className={`w-4 h-4 shrink-0 transition-transform ${isActive ? 'scale-110 text-slate-950' : 'text-slate-400 group-hover:text-white'}`} />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        {item.badge && (
+                          <span
+                            className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold shrink-0 border ${
+                              isActive
+                                ? 'bg-slate-950/20 text-slate-950 border-slate-950/30'
+                                : item.badgeColor || 'bg-slate-800 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
 
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'products'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Package className="w-3.5 h-3.5" />
-            <span>Catalogue & Marges</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
-                activeTab === 'products' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              {products.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('storefront')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'storefront'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Store className="w-3.5 h-3.5" />
-            <span>Boutique & Design</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'orders'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>Commandes</span>
-            {orders.length > 0 && (
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold ${
-                  activeTab === 'orders' ? 'bg-slate-950/20 text-slate-950' : 'bg-sky-500/20 text-sky-300'
-                }`}
+          {/* Mini Wallet Card on Sidebar */}
+          <div className="pt-3 border-t border-slate-800/80 space-y-2">
+            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-1.5">
+              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Solde Disponible</span>
+              <div className="text-xl font-black text-amber-400 font-mono">
+                ${(reseller?.walletBalance || 0).toFixed(2)}
+              </div>
+              <button
+                onClick={() => switchTab('wallet')}
+                className="w-full mt-1 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-bold text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition-all"
               >
-                {orders.length}
-              </span>
-            )}
-          </button>
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span>Demander un retrait</span>
+              </button>
+            </div>
+          </div>
+        </aside>
 
-          <button
-            onClick={() => setActiveTab('wallet')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'wallet'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Coins className="w-3.5 h-3.5" />
-            <span>Finances & Retraits</span>
-          </button>
+        {/* ======================================================== */}
+        {/* MAIN TAB CONTENT CONTAINER                              */}
+        {/* ======================================================== */}
+        <main className="flex-1 min-w-0 space-y-6">
+          {/* Active Section Breadcrumb & Quick Toolbar */}
+          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center shrink-0">
+                <CurrentTabIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-base font-black text-white leading-tight">
+                  {currentTabMeta.label}
+                </h1>
+                <p className="text-[11px] text-slate-400">
+                  {currentTabMeta.description}
+                </p>
+              </div>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('marketing')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'marketing'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Marketing & Pixels</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('subscription')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'subscription'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Crown className="w-3.5 h-3.5" />
-            <span>Abonnement SaaS</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('support')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
-              activeTab === 'support'
-                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <LifeBuoy className="w-3.5 h-3.5" />
-            <span>Support</span>
-            {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-amber-400/20 text-amber-300 font-mono font-black">
-                {resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length}
-              </span>
-            )}
-          </button>
-        </div>
+            {/* Quick Contextual Action Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {activeTab === 'products' && (
+                <button
+                  onClick={() => setShowBulkPricingModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition-all"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Ajuster en bloc</span>
+                </button>
+              )}
+              {activeTab === 'orders' && (
+                <button
+                  onClick={fetchOrders}
+                  disabled={loadingOrders}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingOrders ? 'animate-spin' : ''}`} />
+                  <span>Actualiser</span>
+                </button>
+              )}
+              <a
+                href={storeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 font-bold text-xs flex items-center gap-1.5 transition-all"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Tester ma vitrine</span>
+              </a>
+            </div>
+          </div>
 
         {/* TAB 1: OVERVIEW - COCKPIT PRO */}
         {activeTab === 'overview' && (
@@ -6531,7 +6676,173 @@ export default function ResellerDashboardPage() {
           categories={categories}
           onApply={handleBulkApplyPricing}
         />
-      </div>
+      </main>
     </div>
-  );
+
+    {/* ======================================================== */}
+    {/* MOBILE OFF-CANVAS SLIDE-OVER DRAWER                     */}
+    {/* ======================================================== */}
+    {mobileMenuOpen && (
+      <div className="lg:hidden fixed inset-0 z-50 flex">
+        {/* Backdrop blur */}
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md animate-fadeIn transition-opacity"
+        />
+
+        {/* Drawer content */}
+        <div className="relative w-4/5 max-w-xs bg-slate-900 border-r border-slate-800 h-full p-5 flex flex-col justify-between shadow-2xl z-10 animate-slideRight overflow-y-auto">
+          <div className="space-y-6">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm">
+                  {reseller?.storeName ? reseller.storeName.charAt(0).toUpperCase() : 'R'}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-extrabold text-white text-xs truncate">
+                    {reseller?.storeName || 'Ma Boutique'}
+                  </div>
+                  <div className="text-[10px] text-sky-400 font-mono truncate">
+                    {reseller?.subdomain}.abonnementspro.com
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Navigation Items Grouped */}
+            <div className="space-y-5">
+              {NAV_GROUPS.map((group, gIdx) => (
+                <div key={gIdx} className="space-y-1.5">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-500 px-2">
+                    {group.title}
+                  </div>
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const isActive = activeTab === item.id;
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => switchTab(item.id)}
+                          className={`w-full px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-all ${
+                            isActive
+                              ? 'bg-sky-500 text-slate-950 font-black shadow-md'
+                              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </div>
+                          {item.badge && (
+                            <span
+                              className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold font-mono border ${
+                                isActive
+                                  ? 'bg-slate-950/20 text-slate-950 border-slate-950/30'
+                                  : item.badgeColor || 'bg-slate-800 text-slate-400 border-slate-700'
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Drawer Footer */}
+          <div className="pt-4 border-t border-slate-800 space-y-2 mt-6">
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Voir ma vitrine en ligne</span>
+            </a>
+
+            <button
+              onClick={handleLogout}
+              className="w-full py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-rose-500/20"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Se déconnecter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ======================================================== */}
+    {/* MOBILE BOTTOM APP DOCK BAR (Visible on screens < lg)    */}
+    {/* ======================================================== */}
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800 backdrop-blur-xl px-3 py-2 flex items-center justify-between shadow-2xl">
+      <button
+        onClick={() => switchTab('overview')}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 ${
+          activeTab === 'overview' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <TrendingUp className="w-5 h-5" />
+        <span className="text-[10px] tracking-tight">Accueil</span>
+      </button>
+
+      <button
+        onClick={() => switchTab('products')}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 relative ${
+          activeTab === 'products' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <Package className="w-5 h-5" />
+        <span className="text-[10px] tracking-tight">Catalogue</span>
+      </button>
+
+      <button
+        onClick={() => switchTab('orders')}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 relative ${
+          activeTab === 'orders' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <ShoppingCart className="w-5 h-5" />
+        <span className="text-[10px] tracking-tight">Commandes</span>
+        {pendingOrdersCount > 0 && (
+          <span className="absolute -top-1 right-2 w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-black text-[9px] flex items-center justify-center animate-bounce">
+            {pendingOrdersCount}
+          </span>
+        )}
+      </button>
+
+      <button
+        onClick={() => switchTab('wallet')}
+        className={`flex flex-col items-center gap-1 transition-all flex-1 ${
+          activeTab === 'wallet' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+        }`}
+      >
+        <Coins className="w-5 h-5" />
+        <span className="text-[10px] tracking-tight">Finances</span>
+      </button>
+
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-all flex-1"
+      >
+        <Menu className="w-5 h-5" />
+        <span className="text-[10px] tracking-tight">Menu</span>
+      </button>
+    </nav>
+  </div>
+);
 }
