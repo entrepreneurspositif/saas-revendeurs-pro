@@ -57,6 +57,8 @@ import {
   List,
   CheckSquare,
   Square,
+  Flame,
+  Bot,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 import BulkProductPricingModal from '@/components/BulkProductPricingModal';
@@ -167,6 +169,30 @@ const PRODUCT_TEMPLATES = [
     description: 'Design épuré et ultra-moderne effet verre poli. Typographie fine, reflets subtils et focus absolu sur la valeur du produit.',
     features: ['Effet verre translucide', 'Bordures fines & reflets', 'Design épuré tech luxury', 'Bouton capsule sobre'],
   },
+  {
+    id: 'marketplace-flash',
+    name: 'Marketplace Gaming & Ventes Flash',
+    badge: 'Style Eneba / G2A',
+    badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    description: 'Ambiance marketplace & gaming percutante avec étiquettes de remise rouge vif (-50%), jauges de stock en temps réel et effet d\'urgence.',
+    features: ['Tag de réduction animé (-50%)', 'Jauge de stock en direct', 'Effet d\'urgence & rareté', 'Achat éclair instantané'],
+  },
+  {
+    id: 'agency-ai',
+    name: 'Studio IA & Tech Cyberpunk',
+    badge: 'Design Futuriste',
+    badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    description: 'Design ultra-technologique aux reflets néon cyan et violet, idéal pour valoriser les outils d\'IA (ChatGPT, Midjourney, Canva Pro, CapCut) et logiciels pro.',
+    features: ['Bordures néon cyan & violettes', 'Typographie tech monospace', 'Bouton lumineux avec halo', 'Tags IA & Licences officielles'],
+  },
+  {
+    id: 'whatsapp-express',
+    name: 'Catalogue WhatsApp & Mobile-First',
+    badge: 'Spécial Afrique Mobile',
+    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    description: 'Format cartes sociales ultra-rapides conçu pour smartphone. Intègre un double bouton : Commande directe sur le site ou Commande directe par WhatsApp pré-rempli.',
+    features: ['Double CTA : Site + WhatsApp', 'Format vertical très fluide', 'Chargement ultra-léger', 'Message WhatsApp pré-rempli'],
+  },
 ];
 
 const AVAILABLE_FONTS = [
@@ -233,6 +259,7 @@ export default function ResellerDashboardPage() {
   const [editedVisibility, setEditedVisibility] = useState<Record<string, boolean>>({});
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [productSaveMsg, setProductSaveMsg] = useState<{ id: string; success: boolean; text: string } | null>(null);
+  const [copiedPageSlug, setCopiedPageSlug] = useState<string | null>(null);
   // Reseller Products Bulk Pricing & Selection State
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [showBulkPricingModal, setShowBulkPricingModal] = useState<boolean>(false);
@@ -895,6 +922,18 @@ export default function ResellerDashboardPage() {
     navigator.clipboard.writeText(storeUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // Copy Dedicated Product Sales Funnel Link (for WhatsApp / Ads)
+  const handleCopyProductSalesPageLink = (slugOrId: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const sub = reseller?.subdomain || '';
+    const pageUrl = origin.includes('abonnementspro.com')
+      ? `https://${sub}.abonnementspro.com/p/${slugOrId}`
+      : `${origin}/store/${sub}/p/${slugOrId}`;
+    navigator.clipboard.writeText(pageUrl);
+    setCopiedPageSlug(slugOrId);
+    setTimeout(() => setCopiedPageSlug(null), 2500);
   };
 
   // Save Single Product
@@ -2445,7 +2484,42 @@ export default function ResellerDashboardPage() {
                               )}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Copy Sales Page Funnel Link */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyProductSalesPageLink(p.slug || p.id)}
+                                  title="Copier le lien Page de Vente directe (Tunnel Pub TikTok/FB & WhatsApp)"
+                                  className="px-2 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold transition-all flex items-center gap-1 shadow-sm"
+                                >
+                                  {copiedPageSlug === (p.slug || p.id) ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                      <span className="text-emerald-400 font-bold">Lien copié !</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Share2 className="w-3 h-3" />
+                                      <span className="hidden xl:inline">Page Pub/WhatsApp</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Preview Sales Page in new tab */}
+                                <a
+                                  href={
+                                    typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+                                      ? `http://${reseller?.subdomain}.localhost:3000/p/${p.slug || p.id}`
+                                      : `https://${reseller?.subdomain}.abonnementspro.com/p/${p.slug || p.id}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Ouvrir la page de vente dans un nouvel onglet"
+                                  className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all border border-slate-700/80"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+
                                 {msg && (
                                   <span
                                     className={`text-[10px] font-bold ${
@@ -2458,7 +2532,7 @@ export default function ResellerDashboardPage() {
                                 <button
                                   onClick={() => handleSaveProduct(p.id)}
                                   disabled={isSaving}
-                                  className="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-bold text-[11px] transition-all disabled:opacity-50"
+                                  className="px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-bold text-[11px] transition-all disabled:opacity-50 shadow-sm"
                                 >
                                   {isSaving ? '...' : 'Sauvegarder'}
                                 </button>
@@ -3263,7 +3337,7 @@ export default function ResellerDashboardPage() {
                       <LayoutGrid className="w-4 h-4 text-sky-400" />
                       <span>Template d'Affichage des Produits (Page de Vente)</span>
                     </label>
-                    <span className="text-[10px] text-slate-400">4 styles de vitrine haute conversion</span>
+                    <span className="text-[10px] text-slate-400">7 styles de vitrine haute conversion</span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     Définissez la manière dont vos abonnements et licences sont mis en scène pour vos clients sur votre boutique publique. Vos visiteurs peuvent aussi basculer d'un mode à l'autre en 1 clic.
@@ -3279,7 +3353,13 @@ export default function ResellerDashboardPage() {
                           ? List
                           : tmpl.id === 'pricing-saas'
                           ? Layers
-                          : Sparkles;
+                          : tmpl.id === 'minimal-glass'
+                          ? Sparkles
+                          : tmpl.id === 'marketplace-flash'
+                          ? Flame
+                          : tmpl.id === 'agency-ai'
+                          ? Bot
+                          : MessageSquare;
 
                       return (
                         <div

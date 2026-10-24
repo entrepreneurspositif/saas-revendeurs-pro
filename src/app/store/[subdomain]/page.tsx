@@ -39,6 +39,9 @@ import {
   Hash,
   LayoutGrid,
   List,
+  Flame,
+  Bot,
+  Share2,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -1055,6 +1058,42 @@ export default function TenantStorefrontPage() {
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('marketplace-flash')}
+                    title="Marketplace Gaming & Ventes Flash"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'marketplace-flash'
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('agency-ai')}
+                    title="Studio IA & Tech Cyberpunk"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'agency-ai'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplate('whatsapp-express')}
+                    title="Catalogue WhatsApp & Mobile-First"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      activeTemplate === 'whatsapp-express'
+                        ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -1415,6 +1454,329 @@ export default function TenantStorefrontPage() {
                           <span>Commander</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : activeTemplate === 'marketplace-flash' ? (
+              /* ======================================================== */
+              /* TEMPLATE 5: MARKETPLACE GAMING & VENTES FLASH            */
+              /* ======================================================== */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {paginatedProducts.map((p) => {
+                  const inStock = p.stock > 0 && p.isAvailable;
+                  const regularPrice = Math.round(p.sellingPrice * 1.55);
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-slate-900/90 border border-slate-800 hover:border-rose-500/50 rounded-2xl p-4 flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-rose-950/20 group relative overflow-hidden"
+                    >
+                      {/* Diagonal Flash ribbon */}
+                      <div className="absolute -top-6 -right-6 w-20 h-20 bg-rose-600 rotate-45 flex items-end justify-center pointer-events-none shadow-md">
+                        <span className="text-[8px] font-black uppercase text-white pb-1 tracking-wider">
+                          -55%
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Visual with countdown pill */}
+                        <div className="aspect-video w-full rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden relative flex items-center justify-center">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="text-slate-600 font-black text-2xl uppercase">
+                              {p.title.charAt(0)}
+                            </div>
+                          )}
+                          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-md text-[9px] font-bold text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                            <Flame className="w-3 h-3 text-rose-500 fill-current animate-pulse" />
+                            <span>Vente Flash</span>
+                          </div>
+                        </div>
+
+                        {/* Category & Title */}
+                        <div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold mb-1">
+                            <span className="uppercase tracking-wider text-rose-400 font-bold">{p.category}</span>
+                            <span className="text-emerald-400 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                              {inStock ? (p.badge || 'En Stock') : 'Épuisé'}
+                            </span>
+                          </div>
+                          <h3 className="font-extrabold text-sm text-white group-hover:text-rose-400 transition-colors line-clamp-1" title={p.title}>
+                            {p.title}
+                          </h3>
+                        </div>
+
+                        {/* Artificial Stock progress meter */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
+                            <span>Stock disponible :</span>
+                            <span className="text-amber-400 font-bold">85% vendu</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                            <div className="bg-gradient-to-r from-amber-500 to-rose-500 h-full rounded-full w-[85%]" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pricing & Double CTA */}
+                      <div className="pt-3 border-t border-slate-800/80 mt-3 space-y-2">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-slate-500 line-through font-mono">
+                            {formatPrice(regularPrice)}
+                          </span>
+                          <span className="text-base font-black text-white font-mono">
+                            {formatPrice(p.sellingPrice)}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px] text-center transition-all flex items-center justify-center gap-1 border border-slate-700/80"
+                          >
+                            <span>Détails</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setQuantity(1);
+                              setCustomerEmail('');
+                              setCustomerName('');
+                              setCustomerAccounts('');
+                              setCreatedTicketResult(null);
+                              setTicketError(null);
+                              triggerPixelEvent('ViewContent', {
+                                content_name: p.title || p.name,
+                                content_type: 'product',
+                                value: p.sellingPrice,
+                                currency,
+                              });
+                            }}
+                            disabled={!inStock}
+                            style={{
+                              backgroundColor: activeBtnColor,
+                              color: activeBtnTextColor,
+                            }}
+                            className={`py-2 px-2 ${activeBtnRadius} font-black text-[11px] uppercase tracking-wider transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-1 shadow-md`}
+                          >
+                            <Zap className="w-3 h-3 fill-current" />
+                            <span>Acheter</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : activeTemplate === 'agency-ai' ? (
+              /* ======================================================== */
+              /* TEMPLATE 6: STUDIO IA & TECH CYBERPUNK                   */
+              /* ======================================================== */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {paginatedProducts.map((p) => {
+                  const inStock = p.stock > 0 && p.isAvailable;
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-slate-950/90 border border-cyan-500/20 hover:border-cyan-400/60 rounded-3xl p-5 flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-cyan-950/20 group relative overflow-hidden"
+                    >
+                      {/* Top neon glow bar */}
+                      <div className="h-1 w-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-fuchsia-500 absolute top-0 left-0" />
+
+                      <div className="space-y-3.5">
+                        <div className="flex items-center justify-between">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center gap-1">
+                            <Bot className="w-3 h-3" />
+                            <span>{p.category}</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            PRO LICENCE
+                          </span>
+                        </div>
+
+                        {/* Futuristic Tech Visual */}
+                        <div className="aspect-video w-full rounded-2xl bg-black border border-cyan-500/10 overflow-hidden relative flex items-center justify-center">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="text-cyan-500/30 font-black text-2xl uppercase font-mono">
+                              {p.title.charAt(0)}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
+                        </div>
+
+                        <div>
+                          <h3 className="font-bold text-sm text-white group-hover:text-cyan-300 transition-colors line-clamp-1" title={p.title}>
+                            {p.title}
+                          </h3>
+                          {p.description && (
+                            <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 font-mono">
+                              {p.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tech Footer */}
+                      <div className="pt-4 border-t border-cyan-500/10 mt-4 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-widest text-slate-500 block font-mono">TARIF OFFICIEL</span>
+                          <span className="text-base font-black font-mono text-cyan-300">
+                            {formatPrice(p.sellingPrice)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            title="Page complète du produit"
+                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-all"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setQuantity(1);
+                              setCustomerEmail('');
+                              setCustomerName('');
+                              setCustomerAccounts('');
+                              setCreatedTicketResult(null);
+                              setTicketError(null);
+                              triggerPixelEvent('ViewContent', {
+                                content_name: p.title || p.name,
+                                content_type: 'product',
+                                value: p.sellingPrice,
+                                currency,
+                              });
+                            }}
+                            disabled={!inStock}
+                            style={{
+                              backgroundColor: activeBtnColor,
+                              color: activeBtnTextColor,
+                            }}
+                            className={`px-3.5 py-2 ${activeBtnRadius} font-mono font-bold text-xs shadow-lg transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1`}
+                          >
+                            <span>DÉPLOYER</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : activeTemplate === 'whatsapp-express' ? (
+              /* ======================================================== */
+              /* TEMPLATE 7: CATALOGUE WHATSAPP & MOBILE-FIRST            */
+              /* ======================================================== */
+              <div className="space-y-3.5">
+                {paginatedProducts.map((p) => {
+                  const inStock = p.stock > 0 && p.isAvailable;
+                  const cleanWhatsApp = (storeData?.contactWhatsApp || storeData?.contactPhone || '').replace(/[^0-9]/g, '');
+                  const waMessage = `Bonjour ! Je souhaite commander : *${p.title}* (${formatPrice(p.sellingPrice)}). Est-il disponible ?`;
+                  return (
+                    <div
+                      key={p.id}
+                      className="bg-[#0b1713]/90 border border-emerald-900/50 hover:border-emerald-500/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-lg hover:shadow-emerald-950/20 group"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 border border-emerald-900/40 shrink-0 relative flex items-center justify-center">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            />
+                          ) : (
+                            <span className="text-emerald-500/50 font-black text-xl uppercase">
+                              {p.title.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                              {p.category}
+                            </span>
+                            <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                              Livraison WhatsApp &lt; 2 min
+                            </span>
+                          </div>
+                          <h3 className="font-extrabold text-sm sm:text-base text-white truncate group-hover:text-emerald-300 transition-colors">
+                            {p.title}
+                          </h3>
+                          {p.description && (
+                            <p className="text-xs text-slate-400 truncate max-w-xl mt-0.5">
+                              {p.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Price & Dual Actions */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-emerald-950/60 w-full sm:w-auto">
+                        <div className="sm:text-right">
+                          <span className="text-[10px] text-slate-400 block">Prix garanti</span>
+                          <span className="text-base font-black font-mono text-emerald-400">
+                            {formatPrice(p.sellingPrice)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Direct WhatsApp CTA */}
+                          {cleanWhatsApp ? (
+                            <a
+                              href={`https://wa.me/${cleanWhatsApp}?text=${encodeURIComponent(waMessage)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>Commander sur WhatsApp</span>
+                            </a>
+                          ) : null}
+
+                          {/* Site Checkout CTA */}
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setQuantity(1);
+                              setCustomerEmail('');
+                              setCustomerName('');
+                              setCustomerAccounts('');
+                              setCreatedTicketResult(null);
+                              setTicketError(null);
+                              triggerPixelEvent('ViewContent', {
+                                content_name: p.title || p.name,
+                                content_type: 'product',
+                                value: p.sellingPrice,
+                                currency,
+                              });
+                            }}
+                            disabled={!inStock}
+                            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1 transition-all border border-slate-700"
+                          >
+                            <Ticket className="w-3.5 h-3.5" />
+                            <span>Sur le site</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
