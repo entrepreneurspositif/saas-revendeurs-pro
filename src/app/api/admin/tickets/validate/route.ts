@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
             },
           },
         },
+        tenant: true,
       },
     });
 

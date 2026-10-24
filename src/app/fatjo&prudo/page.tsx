@@ -55,6 +55,7 @@ import {
   Upload,
   Image as ImageIcon,
   Globe,
+  Store,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -658,6 +659,7 @@ export default function AdminDashboardPage() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING_PAYMENT' | 'COMPLETED' | 'CANCELLED' | 'FAILED'>('ALL');
   const [orderSearchQuery, setOrderSearchQuery] = useState<string>('');
   const [orderSortBy, setOrderSortBy] = useState<'NEWEST' | 'OLDEST' | 'AMOUNT_DESC' | 'AMOUNT_ASC'>('NEWEST');
+  const [orderStoreFilter, setOrderStoreFilter] = useState<string>('ALL');
 
   // Edit Product Modal State
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
@@ -1455,6 +1457,14 @@ export default function AdminDashboardPage() {
     failed: recentOrders.filter((o) => o.status !== 'PENDING_PAYMENT' && o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length,
   };
 
+  const uniqueStoresForOrders = Array.from(
+    new Map(
+      recentOrders
+        .filter((o) => o.tenant)
+        .map((o) => [o.tenant.id, o.tenant])
+    ).values()
+  );
+
   const filteredAndSortedOrders = recentOrders
     .filter((ord) => {
       if (orderStatusFilter !== 'ALL') {
@@ -1465,12 +1475,24 @@ export default function AdminDashboardPage() {
         }
       }
 
+      if (orderStoreFilter !== 'ALL') {
+        if (orderStoreFilter === 'OFFICIAL') {
+          if (ord.tenantId || ord.tenant) return false;
+        } else if (ord.tenantId !== orderStoreFilter && ord.tenant?.id !== orderStoreFilter) {
+          return false;
+        }
+      }
+
       if (orderSearchQuery.trim()) {
         const query = orderSearchQuery.trim().toLowerCase();
         const ticketMatch = (ord.ticketCode || '').toLowerCase().includes(query);
         const titleMatch = (ord.productTitle || '').toLowerCase().includes(query);
         const idMatch = (ord.id || '').toLowerCase().includes(query);
-        if (!ticketMatch && !titleMatch && !idMatch) return false;
+        const storeMatch =
+          (ord.tenant?.storeName || '').toLowerCase().includes(query) ||
+          (ord.tenant?.subdomain || '').toLowerCase().includes(query) ||
+          (ord.tenant?.name || '').toLowerCase().includes(query);
+        if (!ticketMatch && !titleMatch && !idMatch && !storeMatch) return false;
       }
 
       return true;
@@ -2000,7 +2022,7 @@ export default function AdminDashboardPage() {
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Rechercher par Code Ticket (ex: TK-XXXXXX) ou Produit..."
+                    placeholder="Rechercher par Code Ticket, Produit ou Boutique..."
                     value={orderSearchQuery}
                     onChange={(e) => setOrderSearchQuery(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-9 pr-8 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
@@ -2015,18 +2037,37 @@ export default function AdminDashboardPage() {
                   )}
                 </div>
 
-                <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Trier par:</span>
-                  <select
-                    value={orderSortBy}
-                    onChange={(e) => setOrderSortBy(e.target.value as any)}
-                    className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3.5 py-2.5 font-bold focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="NEWEST">📅 Plus récents (Date ↓)</option>
-                    <option value="OLDEST">📅 Plus anciens (Date ↑)</option>
-                    <option value="AMOUNT_DESC">💲 Montant élevé (Prix ↓)</option>
-                    <option value="AMOUNT_ASC">💲 Montant bas (Prix ↑)</option>
-                  </select>
+                <div className="flex items-center space-x-2 w-full md:w-auto justify-end flex-wrap gap-2">
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Boutique :</span>
+                    <select
+                      value={orderStoreFilter}
+                      onChange={(e) => setOrderStoreFilter(e.target.value)}
+                      className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 font-bold focus:outline-none focus:border-sky-500"
+                    >
+                      <option value="ALL">🌐 Toutes les boutiques</option>
+                      <option value="OFFICIAL">👑 Boutique Officielle</option>
+                      {uniqueStoresForOrders.map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          🏬 {s.storeName || s.name} ({s.subdomain})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Trier par :</span>
+                    <select
+                      value={orderSortBy}
+                      onChange={(e) => setOrderSortBy(e.target.value as any)}
+                      className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 font-bold focus:outline-none focus:border-sky-500"
+                    >
+                      <option value="NEWEST">📅 Plus récents (Date ↓)</option>
+                      <option value="OLDEST">📅 Plus anciens (Date ↑)</option>
+                      <option value="AMOUNT_DESC">💲 Montant élevé (Prix ↓)</option>
+                      <option value="AMOUNT_ASC">💲 Montant bas (Prix ↑)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2037,6 +2078,7 @@ export default function AdminDashboardPage() {
                   <thead className="bg-slate-900/90 text-slate-400 uppercase font-black text-[10px] tracking-wider border-b border-slate-800">
                     <tr>
                       <th className="px-5 py-4">Code Ticket</th>
+                      <th className="px-5 py-4">Boutique / Vitrine</th>
                       <th className="px-5 py-4">Produit Commandé</th>
                       <th className="px-5 py-4 text-center">Quantité</th>
                       <th className="px-5 py-4 text-right">Montant Vente ($)</th>
@@ -2047,8 +2089,8 @@ export default function AdminDashboardPage() {
                   <tbody className="divide-y divide-slate-850">
                     {filteredAndSortedOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-12 text-slate-500">
-                          {orderSearchQuery || orderStatusFilter !== 'ALL'
+                        <td colSpan={7} className="text-center py-12 text-slate-500">
+                          {orderSearchQuery || orderStatusFilter !== 'ALL' || orderStoreFilter !== 'ALL'
                             ? 'Aucun ticket ne correspond à vos filtres de recherche.'
                             : 'Aucun ticket de commande enregistré.'}
                         </td>
@@ -2068,6 +2110,47 @@ export default function AdminDashboardPage() {
                               <span className="text-[10px] text-slate-500 block mt-1">
                                 {new Date(ord.createdAt).toLocaleString('fr-FR')}
                               </span>
+                            </td>
+
+                            {/* BOUTIQUE / VITRINE D'ORIGINE */}
+                            <td className="px-5 py-4 min-w-[170px]">
+                              {ord.tenant ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                                      <span>🏬</span>
+                                      <span className="max-w-[130px] truncate">{ord.tenant.storeName || ord.tenant.name}</span>
+                                    </span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                                    <span>🌐</span>
+                                    <a
+                                      href={`https://${ord.tenant.subdomain}.abonnementspro.com`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sky-400 hover:underline truncate"
+                                      title={`Ouvrir la vitrine ${ord.tenant.subdomain}.abonnementspro.com`}
+                                    >
+                                      {ord.tenant.subdomain}
+                                    </a>
+                                  </div>
+                                  {ord.resellerProfit > 0 && (
+                                    <span className="text-[10px] text-amber-400 font-mono font-bold block">
+                                      Com. revendeur: +${ord.resellerProfit.toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30 inline-flex items-center gap-1">
+                                    <span>👑</span>
+                                    <span>Boutique Officielle</span>
+                                  </span>
+                                  <span className="text-[10px] text-slate-500 font-mono block">
+                                    abonnementspro.com
+                                  </span>
+                                </div>
+                              )}
                             </td>
 
                             <td className="px-5 py-4 max-w-xs">
@@ -3632,6 +3715,9 @@ export default function AdminDashboardPage() {
                   status: o.status,
                   date: new Date(o.createdAt),
                   targetTab: 'tickets' as const,
+                  storeName: o.tenant?.storeName || o.tenant?.name || null,
+                  subdomain: o.tenant?.subdomain || null,
+                  isReseller: Boolean(o.tenant),
                 })),
                 ...recentOtpOrders.map((o) => ({
                   id: `otp-${o.id}`,
@@ -3645,6 +3731,9 @@ export default function AdminDashboardPage() {
                   status: o.status,
                   date: new Date(o.createdAt),
                   targetTab: 'onlinesim' as const,
+                  storeName: o.tenant?.storeName || o.tenant?.name || null,
+                  subdomain: o.tenant?.subdomain || null,
+                  isReseller: Boolean(o.tenant),
                 })),
                 ...supportConversations.map((c) => ({
                   id: `supp-${c.ticketCode}`,
@@ -3660,6 +3749,9 @@ export default function AdminDashboardPage() {
                   status: c.supportStatus === 'RESOLVED' ? 'RESOLVED' : 'OPEN',
                   date: new Date(c.lastMessage?.createdAt || c.createdAt),
                   targetTab: 'support' as const,
+                  storeName: null,
+                  subdomain: null,
+                  isReseller: false,
                 })),
                 ...productRequests.map((r) => ({
                   id: `req-${r.id}`,
@@ -3673,6 +3765,9 @@ export default function AdminDashboardPage() {
                   status: r.status,
                   date: new Date(r.createdAt),
                   targetTab: 'product_requests' as const,
+                  storeName: null,
+                  subdomain: null,
+                  isReseller: false,
                 })),
               ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -3684,7 +3779,9 @@ export default function AdminDashboardPage() {
                   act.code.toLowerCase().includes(q) ||
                   act.title.toLowerCase().includes(q) ||
                   act.subtitle.toLowerCase().includes(q) ||
-                  act.status.toLowerCase().includes(q)
+                  act.status.toLowerCase().includes(q) ||
+                  (act.storeName && act.storeName.toLowerCase().includes(q)) ||
+                  (act.subdomain && act.subdomain.toLowerCase().includes(q))
                 );
               });
 
@@ -3794,6 +3891,7 @@ export default function AdminDashboardPage() {
                         <thead>
                           <tr className="border-b border-slate-800 text-[10px] font-black uppercase text-slate-400">
                             <th className="py-3 px-4">Type</th>
+                            <th className="py-3 px-4">Boutique</th>
                             <th className="py-3 px-4">Référence</th>
                             <th className="py-3 px-4">Détails / Client</th>
                             <th className="py-3 px-4">Montant</th>
@@ -3826,6 +3924,29 @@ export default function AdminDashboardPage() {
                                   >
                                     {act.kindLabel}
                                   </span>
+                                </td>
+
+                                {/* Boutique / Vitrine */}
+                                <td className="py-3.5 px-4 whitespace-nowrap">
+                                  {act.isReseller ? (
+                                    <div className="flex flex-col">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                        <Store className="w-3 h-3 text-purple-400" />
+                                        {act.storeName}
+                                      </span>
+                                      {act.subdomain && (
+                                        <span className="text-[9px] text-purple-400/80 font-mono pl-1">
+                                          {act.subdomain}.abonnementspro.com
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : isOrder || isOtp ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      👑 Officielle
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-600 text-[10px]">—</span>
+                                  )}
                                 </td>
 
                                 {/* Code / Reference */}
@@ -4139,6 +4260,7 @@ export default function AdminDashboardPage() {
                     <thead className="bg-slate-950 text-slate-400 font-extrabold uppercase text-[10px] tracking-wider border-b border-slate-800">
                       <tr>
                         <th className="py-3 px-4">Ticket</th>
+                        <th className="py-3 px-4">Boutique</th>
                         <th className="py-3 px-4">Service</th>
                         <th className="py-3 px-4">Numéro Attribué</th>
                         <th className="py-3 px-4">Code SMS Reçu</th>
@@ -4151,6 +4273,26 @@ export default function AdminDashboardPage() {
                       {recentOtpOrders.map((o) => (
                         <tr key={o.id} className="hover:bg-slate-900/50 transition-colors">
                           <td className="py-3 px-4 font-mono font-bold text-sky-400">{o.ticketCode}</td>
+                          <td className="py-3 px-4 min-w-[140px]">
+                            {o.tenant ? (
+                              <div className="space-y-0.5">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 inline-flex items-center gap-1">
+                                  <span>🏬</span>
+                                  <span className="max-w-[110px] truncate">{o.tenant.storeName || o.tenant.name}</span>
+                                </span>
+                                <span className="text-[10px] text-sky-400 font-mono block">
+                                  {o.tenant.subdomain}
+                                </span>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30 inline-flex items-center gap-1">
+                                  <span>👑</span>
+                                  <span>Officielle</span>
+                                </span>
+                              </div>
+                            )}
+                          </td>
                           <td className="py-3 px-4 font-extrabold text-white capitalize">{o.service} (Pays: {o.country})</td>
                           <td className="py-3 px-4 font-mono text-white font-bold">{o.phone || 'Non attribué'}</td>
                           <td className="py-3 px-4">

@@ -7,6 +7,11 @@ export interface TelegramNotificationParams {
   type: 'ORDER' | 'OTP' | 'SUPPORT' | 'REQUEST';
   details: string;
   amount?: string;
+  storeName?: string;
+  storeSubdomain?: string;
+  tenantId?: string;
+  resellerProfit?: number | string;
+  platformProfit?: number | string;
 }
 
 export async function sendTelegramNotification(params: TelegramNotificationParams) {
@@ -54,13 +59,36 @@ export async function sendTelegramNotification(params: TelegramNotificationParam
         break;
     }
 
+    // Determine store/boutique information
+    let storeInfo = '👑 <b>Boutique :</b> Boutique Officielle Plateforme (<code>abonnementspro.com</code>)';
+    if (params.storeName) {
+      storeInfo = `🏬 <b>Boutique :</b> <b>${params.storeName}</b>${
+        params.storeSubdomain ? ` (<code>https://${params.storeSubdomain}.abonnementspro.com</code>)` : ''
+      }`;
+    } else if (params.tenantId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: params.tenantId },
+        select: { storeName: true, name: true, subdomain: true },
+      });
+      if (tenant) {
+        storeInfo = `🏬 <b>Boutique :</b> <b>${tenant.storeName || tenant.name}</b> (<code>https://${tenant.subdomain}.abonnementspro.com</code>)`;
+      }
+    }
+
+    const profitLines = [];
+    if (params.platformProfit !== undefined && params.platformProfit !== null) {
+      profitLines.push(`💰 <b>Gain Plateforme :</b> +$${Number(params.platformProfit).toFixed(2)} USD`);
+    }
+    if (params.resellerProfit !== undefined && params.resellerProfit !== null && Number(params.resellerProfit) > 0) {
+      profitLines.push(`💎 <b>Com. Revendeur :</b> +$${Number(params.resellerProfit).toFixed(2)} USD`);
+    }
+
     const messageText = `
 <b>${emoji} ${typeLabel}</b>
+${storeInfo}
 
 <b>Titre :</b> ${params.title}
-${params.ticketCode ? `<b>Code Ticket :</b> <code>${params.ticketCode}</code>` : ''}
-${params.amount ? `<b>Montant :</b> ${params.amount}` : ''}
-
+${params.ticketCode ? `<b>Code Ticket :</b> <code>${params.ticketCode}</code>\n` : ''}${params.amount ? `<b>Montant Vente :</b> ${params.amount}\n` : ''}${profitLines.length > 0 ? `${profitLines.join('\n')}\n` : ''}
 <b>Détails :</b>
 ${params.details}
 

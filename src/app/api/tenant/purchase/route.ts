@@ -217,11 +217,16 @@ export async function POST(req: NextRequest) {
 
     // Notify Super Admin on Telegram
     sendTelegramNotification({
-      title: `Vente Boutique Revendeur — ${product.title}`,
+      title: product.title,
       ticketCode: order.ticketCode,
       type: 'ORDER',
       amount: `$${totalSellingPrice.toFixed(2)} USD`,
-      details: `Boutique : ${tenant.storeName || tenant.name} (${tenant.subdomain}.abonnementspro.com)\nBénéfice Plateforme : +$${totalPlatformProfit.toFixed(2)} USD\nCommission Revendeur : +$${totalResellerProfit.toFixed(2)} USD`,
+      storeName: tenant.storeName || tenant.name,
+      storeSubdomain: tenant.subdomain,
+      tenantId: tenant.id,
+      platformProfit: totalPlatformProfit,
+      resellerProfit: totalResellerProfit,
+      details: `Vente instantanée livrée automatiquement !\nClient : ${user.email}`,
     }).catch(console.error);
 
     return NextResponse.json({

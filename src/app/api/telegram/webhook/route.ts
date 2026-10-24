@@ -653,9 +653,14 @@ Votre compte Telegram a été synchronisé avec votre boutique. Cliquez sur le b
           if (order.status === 'COMPLETED') statusBadge = '🟢 LIVRÉ & PAYÉ';
           if (order.status === 'CANCELLED') statusBadge = '🔴 ANNULÉ / REFUSÉ';
 
+          const storeBadge = (order as any).tenant
+            ? `🏬 <b>Boutique :</b> ${(order as any).tenant.storeName || (order as any).tenant.name} (<code>${(order as any).tenant.subdomain}.abonnementspro.com</code>)`
+            : '👑 <b>Boutique :</b> Boutique Officielle (<code>abonnementspro.com</code>)';
+
           let responseText = `
 <b>🎟️ SUIVI DU TICKET DE COMMANDE</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
+${storeBadge}
 <b>Produit :</b> ${order.productTitle}
 <b>Code Ticket :</b> <code>${order.ticketCode}</code>
 <b>Montant :</b> $${order.totalAmount.toFixed(2)} USD
@@ -678,6 +683,9 @@ Votre compte Telegram a été synchronisé avec votre boutique. Cliquez sur le b
           where: {
             OR: [{ ticketCode: candidateCode.toUpperCase() }, { id: candidateCode }],
           },
+          include: {
+            tenant: true,
+          },
         });
 
         if (otpOrder) {
@@ -686,9 +694,14 @@ Votre compte Telegram a été synchronisé avec votre boutique. Cliquez sur le b
           if (otpOrder.status === 'COMPLETED') otpStatus = '🟢 SMS REÇU & LIVRÉ';
           if (otpOrder.status === 'CANCELLED') otpStatus = '🔴 ANNULÉ';
 
+          const otpStoreBadge = (otpOrder as any).tenant
+            ? `🏬 <b>Boutique :</b> ${(otpOrder as any).tenant.storeName || (otpOrder as any).tenant.name} (<code>${(otpOrder as any).tenant.subdomain}.abonnementspro.com</code>)`
+            : '👑 <b>Boutique :</b> Boutique Officielle (<code>abonnementspro.com</code>)';
+
           let responseText = `
 <b>📱 SUIVI DU TICKET OTP</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
+${otpStoreBadge}
 <b>Service :</b> ${otpOrder.service.toUpperCase()} (${otpOrder.country})
 <b>Code Ticket :</b> <code>${otpOrder.ticketCode}</code>
 <b>Téléphone :</b> <code>${otpOrder.phone || 'Génération en cours'}</code>

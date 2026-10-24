@@ -118,6 +118,7 @@ async function processCallback(req: NextRequest) {
           },
         },
       },
+      tenant: true,
     },
   });
 
@@ -225,6 +226,11 @@ async function processCallback(req: NextRequest) {
         ticketCode: order.ticketCode,
         type: 'ORDER',
         amount: `$${order.totalAmount.toFixed(2)} USD`,
+        tenantId: order.tenantId || undefined,
+        storeName: (order as any).tenant?.storeName || (order as any).tenant?.name,
+        storeSubdomain: (order as any).tenant?.subdomain,
+        platformProfit: order.platformProfit,
+        resellerProfit: order.resellerProfit,
         details: `Paiement automatique FeexPay validé avec succès !\nStatut : Livré et exécuté.`,
       }).catch(console.error);
     }
@@ -252,6 +258,9 @@ async function processCallback(req: NextRequest) {
   const otpOrder = await prisma.otpOrder.findFirst({
     where: {
       OR: [{ ticketCode: ticketCode.toUpperCase() }, { id: ticketCode }],
+    },
+    include: {
+      tenant: true,
     },
   });
 
@@ -295,6 +304,11 @@ async function processCallback(req: NextRequest) {
         ticketCode: otpOrder.ticketCode,
         type: 'OTP',
         amount: `$${otpOrder.sellingPrice.toFixed(2)} USD`,
+        tenantId: otpOrder.tenantId || undefined,
+        storeName: (otpOrder as any).tenant?.storeName || (otpOrder as any).tenant?.name,
+        storeSubdomain: (otpOrder as any).tenant?.subdomain,
+        platformProfit: otpOrder.platformProfit,
+        resellerProfit: otpOrder.resellerProfit,
         details: `Paiement automatique FeexPay validé ! En attente de réception du SMS.`,
       }).catch(console.error);
     }

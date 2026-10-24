@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { buyOnlineSimNumber } from '@/lib/onlinesim';
+import { sendResellerTelegramNotification } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,18 @@ export async function POST(req: NextRequest) {
         errorMessage: null,
       },
     });
+
+    if (otpOrder.tenantId) {
+      sendResellerTelegramNotification({
+        tenantId: otpOrder.tenantId,
+        eventType: 'NEW_OTP',
+        title: `Commande OTP Validée (${otpOrder.ticketCode})`,
+        ticketCode: otpOrder.ticketCode,
+        amount: `$${(otpOrder.sellingPrice || 0).toFixed(2)} USD`,
+        resellerProfit: `$${(otpOrder.resellerProfit || 0).toFixed(2)} USD`,
+        details: `Numéro attribué : ${result.phone}\nService : ${otpOrder.service.toUpperCase()}\nStatut : Validé par le Super Admin, en attente de SMS !`,
+      }).catch(console.error);
+    }
 
     return NextResponse.json({
       success: true,

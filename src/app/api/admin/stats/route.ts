@@ -22,30 +22,70 @@ export async function GET() {
     let totalCost = 0;
     let totalProfit = 0;
 
+    let officialOrdersCount = 0;
+    let resellerOrdersCount = 0;
+    let resellerTotalProfit = 0;
+    let platformProfitFromResellers = 0;
+
     orders.forEach((o) => {
       totalRevenue += o.totalAmount;
       totalCost += o.unitCostPrice * o.quantity;
       totalProfit += o.profitMargin;
+      if (o.tenantId) {
+        resellerOrdersCount++;
+        resellerTotalProfit += o.resellerProfit || 0;
+        platformProfitFromResellers += o.platformProfit || 0;
+      } else {
+        officialOrdersCount++;
+      }
     });
 
     otpCompletedOrders.forEach((o) => {
       totalRevenue += o.sellingPrice;
       totalCost += o.costPrice;
       totalProfit += (o.sellingPrice - o.costPrice);
+      if (o.tenantId) {
+        resellerOrdersCount++;
+        resellerTotalProfit += o.resellerProfit || 0;
+        platformProfitFromResellers += o.platformProfit || 0;
+      } else {
+        officialOrdersCount++;
+      }
     });
 
     const recentOrders = await prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 15,
+      take: 100,
       include: {
         product: true,
         supplier: true,
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            storeName: true,
+            subdomain: true,
+            customDomain: true,
+            planId: true,
+          },
+        },
       },
     });
 
     const recentOtpOrders = await prisma.otpOrder.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 15,
+      take: 100,
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            storeName: true,
+            subdomain: true,
+            customDomain: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({
@@ -56,6 +96,10 @@ export async function GET() {
         totalProfit: parseFloat(totalProfit.toFixed(2)),
         profitMarginPercent: totalRevenue > 0 ? parseFloat(((totalProfit / totalRevenue) * 100).toFixed(1)) : 0,
         totalOrdersCount: orders.length + otpCompletedOrders.length,
+        officialOrdersCount,
+        resellerOrdersCount,
+        resellerTotalProfit: parseFloat(resellerTotalProfit.toFixed(2)),
+        platformProfitFromResellers: parseFloat(platformProfitFromResellers.toFixed(2)),
         totalProducts,
         activeProducts,
         totalSuppliers,

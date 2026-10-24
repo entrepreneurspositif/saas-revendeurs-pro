@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateSaasPrices } from '@/lib/saasPricingHelper';
+import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -160,6 +161,31 @@ export async function POST(req: NextRequest) {
         idempotencyKey,
       },
     });
+
+    // Notify Super Admin on Telegram with clear store origin
+    sendTelegramNotification({
+      title: product.title,
+      ticketCode: order.ticketCode,
+      type: 'ORDER',
+      amount: `$${totalSellingPrice.toFixed(2)} USD`,
+      storeName: tenant.storeName || tenant.name,
+      storeSubdomain: tenant.subdomain,
+      tenantId: tenant.id,
+      platformProfit: totalPlatformProfit,
+      resellerProfit: totalResellerProfit,
+      details: `Quantité : ${quantity}\nClient : ${user.email}${customerAccounts ? `\nInfos Fournisseur : ${customerAccounts}` : ''}`,
+    }).catch(console.error);
+
+    // Notify Reseller on Telegram
+    sendResellerTelegramNotification({
+      tenantId: tenant.id,
+      eventType: 'NEW_ORDER',
+      title: `Nouveau Ticket Client : ${product.title}`,
+      ticketCode: order.ticketCode,
+      amount: `$${totalSellingPrice.toFixed(2)} USD`,
+      resellerProfit: `+$${totalResellerProfit.toFixed(2)} USD`,
+      details: `Un client vient de générer un ticket de commande sur votre boutique !\nEn attente de réception de son règlement.`,
+    }).catch(console.error);
 
     return NextResponse.json({
       success: true,

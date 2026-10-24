@@ -14,17 +14,29 @@ export async function findOrderByCodeOrId(input: string, includeProduct: boolean
     new Set([raw, upper, formattedTK, cleanNoPrefix, digitsOnly].filter(Boolean))
   );
 
-  const includeClause = includeProduct
-    ? {
-        product: {
-          include: {
-            activeSupplierProduct: {
-              include: { supplier: true },
+  const includeClause: any = {
+    tenant: {
+      select: {
+        id: true,
+        name: true,
+        storeName: true,
+        subdomain: true,
+        customDomain: true,
+        planId: true,
+      },
+    },
+    ...(includeProduct
+      ? {
+          product: {
+            include: {
+              activeSupplierProduct: {
+                include: { supplier: true },
+              },
             },
           },
-        },
-      }
-    : undefined;
+        }
+      : {}),
+  };
 
   return await prisma.order.findFirst({
     where: {
