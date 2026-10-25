@@ -4,8 +4,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   return NextResponse.json({
-    version: '1.2.4',
+    version: '1.2.6',
     deployedAt: new Date().toISOString(),
+    commit: '2c598cd',
     features: {
       aiDescriptionEnhancer: true,
       modalScrollFix: true,
@@ -16,6 +17,8 @@ export async function GET() {
       marketplaceFlashTemplate: true,
       agencyAiTemplate: true,
       whatsAppExpressTemplate: true,
+      stickyResellerSidebarFixed: true,
+      resellerRegistrationPaymentGateway: true,
     },
     status: 'online',
   });
