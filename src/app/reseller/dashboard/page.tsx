@@ -1729,7 +1729,7 @@ export default function ResellerDashboardPage() {
         {/* ======================================================== */}
         {/* DESKTOP SIDEBAR (Visible on lg+)                        */}
         {/* ======================================================== */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-20 bg-slate-900/80 border border-slate-800/80 rounded-3xl p-4 shadow-xl backdrop-blur-xl space-y-5">
+        <aside className="hidden lg:flex flex-col w-64 xl:w-72 shrink-0 self-start sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain bg-slate-900/80 border border-slate-800/80 rounded-3xl p-4 shadow-xl backdrop-blur-xl space-y-5 z-30 custom-scrollbar">
           {/* Navigation Groups */}
           <div className="space-y-4">
             {NAV_GROUPS.map((group, gIdx) => (

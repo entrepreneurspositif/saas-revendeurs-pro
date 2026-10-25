@@ -101,11 +101,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-theme="cyberpunk" className="overflow-x-hidden">
+    <html lang="fr" data-theme="cyberpunk" className="overflow-x-clip">
       <head>
         <JsonLd />
       </head>
-      <body className="antialiased min-h-screen overflow-x-hidden w-full max-w-full">
+      <body className="antialiased min-h-screen overflow-x-clip w-full max-w-full">
         <ThemeProvider>
           <CurrencyProvider>
             <MarketingTracker />

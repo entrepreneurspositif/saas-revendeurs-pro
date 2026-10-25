@@ -1894,7 +1894,7 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Desktop Navigation Sidebar */}
-            <div className="hidden lg:block glass-panel rounded-3xl border border-slate-800/80 p-4 space-y-6 shadow-xl sticky top-24">
+            <div className="hidden lg:block glass-panel rounded-3xl border border-slate-800/80 p-4 space-y-6 shadow-xl sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain custom-scrollbar">
               {menuGroups.map((group, idx) => (
                 <div key={group.title} className={idx > 0 ? 'pt-4 border-t border-slate-850' : ''}>
                   <h3 className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
