@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
+import { initializeMonerooPayment } from '@/lib/moneroo';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,7 +94,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, email, password, name, storeName, subdomain, planId } = body;
+    const { action, email, password, name, storeName, subdomain, planId, billingInterval, paymentMethod } = body;
 
     // LOGIN ACTION
     if (action === 'login') {
@@ -194,12 +196,12 @@ export async function POST(req: NextRequest) {
 
       const chosenPlanId = planId || 'free';
       // Verify plan exists
-      const plan = await prisma.saasPlan.findUnique({
+      const targetPlan = await prisma.saasPlan.findUnique({
         where: { id: chosenPlanId },
       });
 
-      const assignedPlanId = plan ? plan.id : 'free';
-
+      // SECURITY RULE: Every new reseller account is strictly created with planId: 'free'!
+      // Paid plans (starter, pro) are ONLY activated once payment is confirmed via payment gateway callback.
       const newTenant = await prisma.tenant.create({
         data: {
           name: name.trim(),
@@ -207,7 +209,8 @@ export async function POST(req: NextRequest) {
           password: password,
           storeName: storeName?.trim() || `${name.trim()}'s Store`,
           subdomain: cleanSubdomain,
-          planId: assignedPlanId,
+          planId: 'free',
+          planStatus: targetPlan && targetPlan.id !== 'free' ? 'PENDING_PAYMENT' : 'ACTIVE',
           themeColor: 'sky',
           tagline: 'Boutique officielle de licences et abonnements digitaux',
           walletBalance: 0.0,
@@ -215,9 +218,150 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // If a paid plan was chosen (starter or pro), trigger the payment gateway checkout
+      if (targetPlan && targetPlan.id !== 'free') {
+        const interval = billingInterval === 'yearly' ? 'yearly' : 'monthly';
+        const priceUsd = interval === 'yearly' ? targetPlan.priceYearly : targetPlan.priceMonthly;
+        const priceXof = Math.max(50, Math.round(priceUsd * 650));
+        const subNonce = Date.now().toString().slice(-6);
+        const ticketCode = `SUB_${newTenant.id}_${targetPlan.id}_${interval}_${subNonce}`;
+
+        const host = req.headers.get('host') || '';
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
+        const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+
+        // A. Moneroo Payment Gateway
+        if (paymentMethod === 'MONEROO') {
+          try {
+            const returnUrl = `${baseUrl}/api/moneroo/callback?ticketCode=${encodeURIComponent(ticketCode)}`;
+            const { checkoutUrl } = await initializeMonerooPayment({
+              amount: priceXof,
+              currency: 'XOF',
+              amountUsd: priceUsd,
+              ticketCode,
+              description: `Abonnement ${targetPlan.name} ${interval === 'yearly' ? 'Annuel' : 'Mensuel'} - ${newTenant.storeName}`.replace(/[^a-zA-Z0-9 _-]/g, ''),
+              customerEmail: newTenant.email,
+              customerName: newTenant.name,
+              returnUrl,
+            });
+
+            if (checkoutUrl) {
+              const resWithPay = NextResponse.json({
+                success: true,
+                paymentUrl: checkoutUrl,
+                ticketCode,
+                message: `Compte créé ! Redirection vers le paiement Moneroo pour l'offre ${targetPlan.name}...`,
+                reseller: {
+                  id: newTenant.id,
+                  name: newTenant.name,
+                  email: newTenant.email,
+                  subdomain: newTenant.subdomain,
+                  storeName: newTenant.storeName,
+                  planId: newTenant.planId,
+                },
+              });
+              resWithPay.cookies.set('reseller_session', newTenant.id, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 30,
+              });
+              return resWithPay;
+            }
+          } catch (monerooErr) {
+            console.error('Moneroo register payment error:', monerooErr);
+          }
+        }
+
+        // B. FeexPay Payment Gateway (Default & Recommended)
+        try {
+          const feexConfig = await getFeexPayConfig();
+          if (feexConfig.enabled && feexConfig.apiKey && feexConfig.shopId) {
+            const callbackUrl = `${baseUrl}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&ticketCode=${encodeURIComponent(ticketCode)}`;
+            const callbackErrorUrl = `${baseUrl}/api/feexpay/callback?custom_id=${encodeURIComponent(ticketCode)}&status=FAILED`;
+
+            const feexPayRes = await fetch('https://api-v2.feexpay.me/api/feexlinks/generate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${feexConfig.apiKey}`,
+              },
+              body: JSON.stringify({
+                shop: feexConfig.shopId,
+                amount: convertUsdToXof(priceUsd),
+                description: `Abonnement ${targetPlan.name} ${interval === 'yearly' ? 'Annuel' : 'Mensuel'} #${subNonce}`.replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 80),
+                paymentMethod: 'ALL',
+                expireIn: 60,
+                range: 0,
+                custom_id: ticketCode,
+                callback_url: callbackUrl,
+                callback_error: callbackErrorUrl,
+              }),
+            });
+
+            const feexData = await feexPayRes.json().catch(() => ({}));
+            const paymentUrl = feexData.urlPay || feexData.url;
+
+            if (feexPayRes.ok && paymentUrl) {
+              const resWithPay = NextResponse.json({
+                success: true,
+                paymentUrl,
+                ticketCode,
+                message: `Compte créé ! Redirection vers FeexPay pour activer l'offre ${targetPlan.name}...`,
+                reseller: {
+                  id: newTenant.id,
+                  name: newTenant.name,
+                  email: newTenant.email,
+                  subdomain: newTenant.subdomain,
+                  storeName: newTenant.storeName,
+                  planId: newTenant.planId,
+                },
+              });
+              resWithPay.cookies.set('reseller_session', newTenant.id, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 30,
+              });
+              return resWithPay;
+            }
+          }
+        } catch (feexErr) {
+          console.error('FeexPay register payment error:', feexErr);
+        }
+
+        // C. Fallback: If gateway is temporarily unavailable, account remains on Free
+        // and user is redirected to their subscription tab to retry
+        const resFallback = NextResponse.json({
+          success: true,
+          redirectTo: `/reseller/dashboard?tab=subscription&pendingPlan=${targetPlan.id}`,
+          message: `Compte revendeur créé avec succès sur l'offre Free ! Veuillez finaliser le paiement de votre offre ${targetPlan.name} dans la rubrique Abonnement.`,
+          reseller: {
+            id: newTenant.id,
+            name: newTenant.name,
+            email: newTenant.email,
+            subdomain: newTenant.subdomain,
+            storeName: newTenant.storeName,
+            planId: newTenant.planId,
+          },
+        });
+        resFallback.cookies.set('reseller_session', newTenant.id, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 30,
+        });
+        return resFallback;
+      }
+
+      // Free Plan Flow
       const res = NextResponse.json({
         success: true,
-        message: 'Compte revendeur créé avec succès',
+        message: 'Compte revendeur créé avec succès sur l\'offre Free',
+        redirectTo: '/reseller/dashboard',
         reseller: {
           id: newTenant.id,
           name: newTenant.name,
