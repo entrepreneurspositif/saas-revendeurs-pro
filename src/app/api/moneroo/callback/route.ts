@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
 import { verifyMonerooPayment } from '@/lib/moneroo';
+import { sendResellerOrderNotificationEmail } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,7 @@ async function processCallback(req: NextRequest) {
         },
       },
       tenant: true,
+      user: true,
     },
   });
 
@@ -226,6 +228,23 @@ async function processCallback(req: NextRequest) {
         resellerProfit: order.resellerProfit,
         details: `Paiement automatique Moneroo validé avec succès !\nStatut : Livré et exécuté.`,
       }).catch(console.error);
+
+      // Send Email Notification to Reseller if enabled
+      if (order.tenantId && (order as any).tenant) {
+        const t = (order as any).tenant;
+        if (t.email && t.notifyEmailOnOrder !== false) {
+          sendResellerOrderNotificationEmail({
+            to: t.email,
+            name: t.name,
+            storeName: t.storeName || t.name,
+            productName: (order as any).product?.name || order.productTitle || 'Produit Digital',
+            amount: `$${(order.totalAmount || 0).toFixed(2)} USD`,
+            customerName: (order as any).user?.name || undefined,
+            customerEmail: (order as any).user?.email || undefined,
+            ticketCode: order.ticketCode,
+          }).catch(console.error);
+        }
+      }
     }
 
     if (isBrowser) {
@@ -304,6 +323,23 @@ async function processCallback(req: NextRequest) {
         resellerProfit: otpOrder.resellerProfit,
         details: `Paiement automatique Moneroo validé ! En attente de réception du SMS.`,
       }).catch(console.error);
+
+      // Send Email Notification to Reseller if enabled
+      if (otpOrder.tenantId && (otpOrder as any).tenant) {
+        const t = (otpOrder as any).tenant;
+        if (t.email && t.notifyEmailOnOtp !== false) {
+          sendResellerOrderNotificationEmail({
+            to: t.email,
+            name: t.name,
+            storeName: t.storeName || t.name,
+            productName: `Activation Numéro OTP (${otpOrder.service.toUpperCase()})`,
+            amount: `$${otpOrder.sellingPrice.toFixed(2)} USD`,
+            customerName: otpOrder.customerName,
+            customerEmail: otpOrder.customerEmail,
+            ticketCode: otpOrder.ticketCode,
+          }).catch(console.error);
+        }
+      }
     }
 
     if (isBrowser) {

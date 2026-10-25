@@ -48,19 +48,26 @@ async function main() {
   const expectedColumns = [
     { name: 'themePreset', def: "TEXT DEFAULT 'cyber-dark'" },
     { name: 'fontFamily', def: "TEXT DEFAULT 'Inter'" },
-    { name: 'buttonColor', def: "#0284c7" },
-    { name: 'buttonTextColor', def: "#ffffff" },
-    { name: 'buttonRadius', def: "rounded-xl" },
+    { name: 'buttonColor', def: "TEXT DEFAULT '#0284c7'" },
+    { name: 'buttonTextColor', def: "TEXT DEFAULT '#ffffff'" },
+    { name: 'buttonRadius', def: "TEXT DEFAULT 'rounded-xl'" },
     { name: 'bannerAnnouncement', def: "TEXT" },
     { name: 'resetToken', def: "TEXT" },
     { name: 'resetTokenExpiresAt', def: "DATETIME" },
+    { name: 'emailVerified', def: "INTEGER DEFAULT 0" },
+    { name: 'emailVerificationCode', def: "TEXT" },
+    { name: 'emailVerificationExpiresAt', def: "DATETIME" },
+    { name: 'emailVerifiedAt', def: "DATETIME" },
+    { name: 'notifyEmailOnOrder', def: "INTEGER DEFAULT 1" },
+    { name: 'notifyEmailOnOtp', def: "INTEGER DEFAULT 1" },
+    { name: 'notifyEmailOnPayout', def: "INTEGER DEFAULT 1" },
   ];
 
   for (const col of expectedColumns) {
     if (!existingColumns.includes(col.name)) {
       console.log(`Adding missing column ${col.name} to Tenant...`);
       try {
-        await client.execute(`ALTER TABLE Tenant ADD COLUMN ${col.name} ${col.def.startsWith('TEXT') || col.def.startsWith('DATETIME') ? col.def : `TEXT DEFAULT '${col.def}'`};`);
+        await client.execute(`ALTER TABLE Tenant ADD COLUMN ${col.name} ${col.def};`);
         console.log(`Successfully added ${col.name}!`);
       } catch (err) {
         console.error(`Error adding ${col.name}:`, err.message);

@@ -60,6 +60,9 @@ import {
   Flame,
   Bot,
   Menu,
+  UserCheck,
+  Lock,
+  Mail,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 import BulkProductPricingModal from '@/components/BulkProductPricingModal';
@@ -225,7 +228,7 @@ const BUTTON_COLOR_PRESETS = [
 ];
 
 interface NavItem {
-  id: 'overview' | 'products' | 'storefront' | 'subscription' | 'orders' | 'wallet' | 'marketing' | 'support';
+  id: 'overview' | 'products' | 'storefront' | 'subscription' | 'orders' | 'wallet' | 'marketing' | 'support' | 'profile';
   label: string;
   shortLabel: string;
   icon: any;
@@ -245,7 +248,31 @@ export default function ResellerDashboardPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [reseller, setReseller] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'storefront' | 'subscription' | 'orders' | 'wallet' | 'marketing' | 'support'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'storefront' | 'subscription' | 'orders' | 'wallet' | 'marketing' | 'support' | 'profile'>('overview');
+
+  // Profile & Security Tab State
+  const [profileName, setProfileName] = useState<string>('');
+  const [profilePhone, setProfilePhone] = useState<string>('');
+  const [profileWhatsApp, setProfileWhatsApp] = useState<string>('');
+  const [profileTelegram, setProfileTelegram] = useState<string>('');
+  const [notifyEmailOrder, setNotifyEmailOrder] = useState<boolean>(true);
+  const [notifyEmailOtp, setNotifyEmailOtp] = useState<boolean>(true);
+  const [notifyEmailPayout, setNotifyEmailPayout] = useState<boolean>(true);
+  const [savingProfile, setSavingProfile] = useState<boolean>(false);
+  const [profileMsg, setProfileMsg] = useState<{ success: boolean; text: string } | null>(null);
+
+  // Change Password State
+  const [currentPassword, setCurrentPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [changingPassword, setChangingPassword] = useState<boolean>(false);
+  const [passwordMsg, setPasswordMsg] = useState<{ success: boolean; text: string } | null>(null);
+
+  // Email Verification State
+  const [verificationCodeInput, setVerificationCodeInput] = useState<string>('');
+  const [sendingVerification, setSendingVerification] = useState<boolean>(false);
+  const [verifyingEmail, setVerifyingEmail] = useState<boolean>(false);
+  const [verifyMsg, setVerifyMsg] = useState<{ success: boolean; text: string } | null>(null);
 
   // Copy feedback
   const [copiedLink, setCopiedLink] = useState(false);
@@ -464,6 +491,13 @@ export default function ResellerDashboardPage() {
         return;
       }
       setReseller(data.reseller);
+      setProfileName(data.reseller.name || '');
+      setProfilePhone(data.reseller.contactPhone || '');
+      setProfileWhatsApp(data.reseller.contactWhatsApp || '');
+      setProfileTelegram(data.reseller.contactTelegram || '');
+      setNotifyEmailOrder(data.reseller.notifyEmailOnOrder !== false);
+      setNotifyEmailOtp(data.reseller.notifyEmailOnOtp !== false);
+      setNotifyEmailPayout(data.reseller.notifyEmailOnPayout !== false);
       setStoreSettings({
         storeName: data.reseller.storeName || '',
         tagline: data.reseller.tagline || '',
@@ -1512,6 +1546,112 @@ export default function ResellerDashboardPage() {
   const pendingOrdersCount = orders.filter((o) => o.status === 'PENDING_PAYMENT').length;
   const pendingTicketsCount = resellerTickets.filter((t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
 
+  // Profile Update Handler
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileMsg(null);
+    try {
+      const res = await fetch('/api/reseller/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_profile',
+          name: profileName,
+          contactPhone: profilePhone,
+          contactWhatsApp: profileWhatsApp,
+          contactTelegram: profileTelegram,
+          notifyEmailOnOrder: notifyEmailOrder,
+          notifyEmailOnOtp: notifyEmailOtp,
+          notifyEmailOnPayout: notifyEmailPayout,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur lors de la mise à jour');
+      setProfileMsg({ success: true, text: data.message });
+      fetchSession();
+    } catch (err: any) {
+      setProfileMsg({ success: false, text: err.message });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Change Password Handler
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangingPassword(true);
+    setPasswordMsg(null);
+    try {
+      const res = await fetch('/api/reseller/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change_password',
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur lors du changement de mot de passe');
+      setPasswordMsg({ success: true, text: data.message });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordMsg({ success: false, text: err.message });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  // Send Verification Email Handler
+  const handleSendVerificationEmail = async () => {
+    setSendingVerification(true);
+    setVerifyMsg(null);
+    try {
+      const res = await fetch('/api/reseller/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Erreur lors de l'envoi");
+      setVerifyMsg({ success: true, text: data.message });
+      if (data.mockCode) {
+        setVerificationCodeInput(data.mockCode);
+      }
+    } catch (err: any) {
+      setVerifyMsg({ success: false, text: err.message });
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
+  // Verify Email Code Handler
+  const handleVerifyEmailCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifyingEmail(true);
+    setVerifyMsg(null);
+    try {
+      const res = await fetch('/api/reseller/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', code: verificationCodeInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Code invalide');
+      setVerifyMsg({ success: true, text: data.message });
+      setReseller((prev: any) => ({ ...prev, emailVerified: true }));
+      fetchSession();
+    } catch (err: any) {
+      setVerifyMsg({ success: false, text: err.message });
+    } finally {
+      setVerifyingEmail(false);
+    }
+  };
+
   const switchTab = (tab: typeof activeTab) => {
     setActiveTab(tab);
     setMobileMenuOpen(false);
@@ -1844,6 +1984,34 @@ export default function ResellerDashboardPage() {
               </a>
             </div>
           </div>
+
+        {/* Unverified Email Global Notification Banner */}
+        {!reseller?.emailVerified && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-slate-900 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-black text-amber-300 flex items-center gap-2">
+                  <span>Adresse e-mail non vérifiée</span>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Confirmez votre e-mail ({reseller?.email}) pour activer les alertes en direct dès qu'une commande est passée sur votre boutique.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => switchTab('profile')}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 shrink-0 transition-all hover:scale-105 active:scale-95"
+            >
+              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+              <span>Vérifier mon e-mail maintenant</span>
+            </button>
+          </div>
+        )}
 
         {/* TAB 1: OVERVIEW - COCKPIT PRO */}
         {activeTab === 'overview' && (
@@ -6708,6 +6876,370 @@ export default function ResellerDashboardPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 9: PROFIL & SÉCURITÉ */}
+        {activeTab === 'profile' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header Profile Identity Card */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-xl shadow-sky-500/20 text-white font-black text-2xl shrink-0">
+                    {reseller?.name ? reseller.name.charAt(0).toUpperCase() : 'R'}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-xl font-black text-white">{reseller?.name || 'Mon Profil'}</h2>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                        reseller?.emailVerified
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      }`}>
+                        {reseller?.emailVerified ? 'E-mail Vérifié' : 'E-mail En Attente'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">{reseller?.email}</p>
+                    <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-500">
+                      <span>Boutique : <strong className="text-white font-mono">{reseller?.subdomain}.abonnementspro.com</strong></span>
+                      <span>&bull;</span>
+                      <span>Offre : <strong className="text-indigo-400 uppercase">{currentPlan?.name || 'Free'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={storeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Voir ma boutique</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 1: VÉRIFICATION DE L'ADRESSE E-MAIL */}
+            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Vérification de l&apos;adresse e-mail</h3>
+                    <p className="text-[11px] text-slate-400">Nécessaire pour recevoir les alertes instantanées de commandes et de paiements</p>
+                  </div>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                  reseller?.emailVerified
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {reseller?.emailVerified ? 'Actif' : 'Action Requise'}
+                </span>
+              </div>
+
+              {verifyMsg && (
+                <div className={`p-3.5 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                  verifyMsg.success
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                    : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                }`}>
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{verifyMsg.text}</span>
+                </div>
+              )}
+
+              {reseller?.emailVerified ? (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3 text-xs text-emerald-300">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block">Votre adresse e-mail ({reseller?.email}) est 100% vérifiée et sécurisée.</span>
+                    <span className="text-[11px] text-emerald-400/80">
+                      Vous recevez automatiquement un e-mail à chaque fois qu&apos;un client passe commande ou achète un numéro OTP sur votre vitrine.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-300">
+                    Cliquez ci-dessous pour recevoir un code à 6 chiffres par e-mail, ou entrez le code déjà reçu lors de votre inscription :
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSendVerificationEmail}
+                      disabled={sendingVerification}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0"
+                    >
+                      {sendingVerification ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>{sendingVerification ? 'Envoi en cours...' : 'Envoyer un code de vérification'}</span>
+                    </button>
+
+                    <form onSubmit={handleVerifyEmailCode} className="flex-1 flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={verificationCodeInput}
+                        onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Entrez le code (ex: 123456)"
+                        className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 text-center tracking-widest"
+                      />
+                      <button
+                        type="submit"
+                        disabled={verifyingEmail || verificationCodeInput.length < 6}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 shadow-lg shadow-emerald-600/20 shrink-0"
+                      >
+                        {verifyingEmail ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>Valider mon e-mail</span>
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* GRID: INFORMATIONS PERSONNELLES & CHANGEMENT MOT DE PASSE */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* CARD 2: COORDONNÉES DU REVENDEUR */}
+              <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Coordonnées personnelles</h3>
+                    <p className="text-[11px] text-slate-400">Informations de contact et notifications</p>
+                  </div>
+                </div>
+
+                {profileMsg && (
+                  <div className={`p-3 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                    profileMsg.success
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                      : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                  }`}>
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{profileMsg.text}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleUpdateProfile} className="space-y-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Nom complet *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500 font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Adresse E-mail (Identifiant)
+                    </label>
+                    <input
+                      type="email"
+                      disabled
+                      value={reseller?.email || ''}
+                      className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-xs text-slate-400 cursor-not-allowed font-mono"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">L&apos;adresse e-mail principale ne peut être modifiée que par le support.</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                        Téléphone / WhatsApp
+                      </label>
+                      <input
+                        type="text"
+                        value={profileWhatsApp}
+                        onChange={(e) => setProfileWhatsApp(e.target.value)}
+                        placeholder="+229 90 00 00 00"
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                        Pseudo Telegram
+                      </label>
+                      <input
+                        type="text"
+                        value={profileTelegram}
+                        onChange={(e) => setProfileTelegram(e.target.value)}
+                        placeholder="@monpseudo"
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-sky-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notification Switches */}
+                  <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Alertes e-mail automatiques :
+                    </span>
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-950/50 border border-slate-800 text-xs cursor-pointer">
+                      <span className="text-slate-300">Recevoir un e-mail à chaque commande produit</span>
+                      <input
+                        type="checkbox"
+                        checked={notifyEmailOrder}
+                        onChange={(e) => setNotifyEmailOrder(e.target.checked)}
+                        className="w-4 h-4 rounded text-sky-500 bg-slate-900 border-slate-700"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-950/50 border border-slate-800 text-xs cursor-pointer">
+                      <span className="text-slate-300">Recevoir un e-mail à chaque vente OTP</span>
+                      <input
+                        type="checkbox"
+                        checked={notifyEmailOtp}
+                        onChange={(e) => setNotifyEmailOtp(e.target.checked)}
+                        className="w-4 h-4 rounded text-sky-500 bg-slate-900 border-slate-700"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-950/50 border border-slate-800 text-xs cursor-pointer">
+                      <span className="text-slate-300">Recevoir un e-mail lors de la validation d&apos;un retrait</span>
+                      <input
+                        type="checkbox"
+                        checked={notifyEmailPayout}
+                        onChange={(e) => setNotifyEmailPayout(e.target.checked)}
+                        className="w-4 h-4 rounded text-sky-500 bg-slate-900 border-slate-700"
+                      />
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+                  >
+                    {savingProfile ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    )}
+                    <span>{savingProfile ? 'Enregistrement...' : 'Enregistrer mes informations'}</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* CARD 3: SÉCURITÉ & MODIFICATION DU MOT DE PASSE */}
+              <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+                <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Sécurité du compte</h3>
+                    <p className="text-[11px] text-slate-400">Modifier votre mot de passe de connexion</p>
+                  </div>
+                </div>
+
+                {passwordMsg && (
+                  <div className={`p-3 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+                    passwordMsg.success
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                      : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                  }`}>
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{passwordMsg.text}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleChangePassword} className="space-y-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Mot de passe actuel *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        type="password"
+                        required
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Nouveau mot de passe *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Minimum 6 caractères"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Confirmer le nouveau mot de passe *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Répétez le nouveau mot de passe"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                    <span className="font-bold text-slate-300 block">Conseils de sécurité :</span>
+                    <p>Utilisez au moins 8 caractères combinant lettres majuscules, minuscules et chiffres pour un niveau de protection optimal de votre solde et de vos clients.</p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 transition-all disabled:opacity-50"
+                  >
+                    {changingPassword ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Shield className="w-3.5 h-3.5" />
+                    )}
+                    <span>{changingPassword ? 'Modification en cours...' : 'Mettre à jour mon mot de passe'}</span>
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}

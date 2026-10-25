@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
 import { initializeMonerooPayment } from '@/lib/moneroo';
+import { sendEmailVerificationEmail } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +76,11 @@ export async function GET(req: NextRequest) {
         feexpayEnabled: Boolean(tenant.feexpayEnabled),
         monerooSecretKey: tenant.monerooSecretKey || '',
         monerooEnabled: Boolean(tenant.monerooEnabled),
+        emailVerified: Boolean(tenant.emailVerified),
+        emailVerifiedAt: tenant.emailVerifiedAt,
+        notifyEmailOnOrder: tenant.notifyEmailOnOrder !== false,
+        notifyEmailOnOtp: tenant.notifyEmailOnOtp !== false,
+        notifyEmailOnPayout: tenant.notifyEmailOnPayout !== false,
         plan: {
           id: tenant.plan?.id || tenant.planId,
           name: tenant.plan?.name || 'Free',
@@ -201,6 +207,10 @@ export async function POST(req: NextRequest) {
       });
 
       // SECURITY RULE: Every new reseller account is strictly created with planId: 'free'!
+      // Generate email verification code (6 digits)
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
       // Paid plans (starter, pro) are ONLY activated once payment is confirmed via payment gateway callback.
       const newTenant = await prisma.tenant.create({
         data: {
@@ -215,8 +225,27 @@ export async function POST(req: NextRequest) {
           tagline: 'Boutique officielle de licences et abonnements digitaux',
           walletBalance: 0.0,
           totalEarnings: 0.0,
+          emailVerified: false,
+          emailVerificationCode: verificationCode,
+          emailVerificationExpiresAt: verificationExpires,
+          notifyEmailOnOrder: true,
+          notifyEmailOnOtp: true,
+          notifyEmailOnPayout: true,
         },
       });
+
+      // Send verification email in background
+      const host = req.headers.get('host') || '';
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
+      const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+      const verifyUrl = `${baseUrl}/api/reseller/verify-email?token=${verificationCode}`;
+
+      sendEmailVerificationEmail({
+        to: newTenant.email,
+        name: newTenant.name,
+        code: verificationCode,
+        verifyUrl,
+      }).catch((e) => console.error('Verification email error on register:', e));
 
       // If a paid plan was chosen (starter or pro), trigger the payment gateway checkout
       if (targetPlan && targetPlan.id !== 'free') {
