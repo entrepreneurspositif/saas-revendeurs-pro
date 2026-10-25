@@ -19,9 +19,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Identifiant de boutique requis' }, { status: 400 });
     }
 
+    const cleanSub = subdomain?.toLowerCase().trim();
+    const cleanSubWithoutWww = cleanSub?.replace(/^www\./, '');
+
     // Resolve tenant
     const tenant = await prisma.tenant.findFirst({
-      where: tenantId ? { id: tenantId } : { subdomain: subdomain?.toLowerCase().trim() },
+      where: tenantId
+        ? { id: tenantId }
+        : {
+            OR: [
+              { subdomain: cleanSub },
+              { customDomain: cleanSub },
+              ...(cleanSubWithoutWww ? [{ customDomain: cleanSubWithoutWww }] : []),
+            ],
+          },
       include: { plan: true },
     });
 

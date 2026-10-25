@@ -18,8 +18,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { subdomain },
+    const cleanSub = subdomain.toLowerCase().trim();
+    const cleanSubWithoutWww = cleanSub.replace(/^www\./, '');
+
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [
+          { subdomain: cleanSub },
+          { customDomain: cleanSub },
+          { customDomain: cleanSubWithoutWww },
+        ],
+      },
       include: { plan: true },
     });
 

@@ -3160,14 +3160,59 @@ export default function ResellerDashboardPage() {
                     />
                   </div>
                   {currentPlan?.id !== 'pro' ? (
-                    <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
-                      <Crown className="w-3.5 h-3.5" />
-                      Passez à l'offre Pro pour connecter votre propre nom de domaine.
-                    </p>
+                    <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Passez à l'offre Pro pour connecter votre propre nom de domaine.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => switchTab('subscription')}
+                        className="px-2 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-[10px] shrink-0"
+                      >
+                        Passer en Pro VIP
+                      </button>
+                    </div>
                   ) : (
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Pointez votre enregistrement CNAME DNS vers notre plateforme.
-                    </p>
+                    <div className="mt-2.5 p-3.5 rounded-2xl bg-slate-950 border border-purple-500/30 text-xs space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-purple-300 font-bold text-[11px]">
+                          <Crown className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Configuration DNS de votre domaine propre</span>
+                        </div>
+                        {storeSettings.customDomain && (
+                          <a
+                            href={`https://${storeSettings.customDomain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:underline font-mono"
+                          >
+                            <span>Tester mon domaine</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Chez votre registraire de domaine (Hostinger, Namecheap, OVH, GoDaddy, Cloudflare...) :
+                      </p>
+                      <div className="space-y-1.5 font-mono text-[11px] bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                        <div className="flex items-center justify-between text-slate-300">
+                          <span className="text-slate-500">Type d'enregistrement :</span>
+                          <span className="font-bold text-sky-400">CNAME</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-300">
+                          <span className="text-slate-500">Nom / Hôte (Host) :</span>
+                          <span className="font-bold text-white">@ (ou sous-domaine ex: shop)</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-300">
+                          <span className="text-slate-500">Cible / Valeur :</span>
+                          <span className="font-bold text-emerald-400">abonnementspro.com</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-tight">
+                        ℹ️ La propagation DNS prend généralement 5 à 30 minutes (jusqu'à 24h selon votre opérateur). Une fois propagé, votre boutique sera 100% accessible sous votre propre marque.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

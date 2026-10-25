@@ -17,29 +17,39 @@ export default function middleware(req: NextRequest) {
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // Extract hostname without port (e.g. 'techstore.abonnementspro.com' or 'techstore.localhost')
+  // Extract hostname without port (e.g. 'techstore.abonnementspro.com' or 'techstore.localhost' or 'shop.maboutique.com')
   const hostname = host.split(':')[0].toLowerCase();
 
-  // Detect reseller subdomains (excluding root domain and technical subdomains like www)
-  let subdomain: string | null = null;
+  // Root platform domains and technical hosts
+  const isPlatformHost =
+    hostname === 'abonnementspro.com' ||
+    hostname === 'www.abonnementspro.com' ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.endsWith('.up.railway.app');
+
+  let tenantKey: string | null = null;
 
   if (hostname.endsWith('.abonnementspro.com')) {
     const candidate = hostname.replace('.abonnementspro.com', '').trim();
     if (candidate && candidate !== 'www' && candidate !== 'app' && candidate !== 'admin') {
-      subdomain = candidate;
+      tenantKey = candidate;
     }
   } else if (hostname.endsWith('.localhost')) {
     const candidate = hostname.replace('.localhost', '').trim();
     if (candidate && candidate !== 'www') {
-      subdomain = candidate;
+      tenantKey = candidate;
     }
+  } else if (!isPlatformHost) {
+    // Custom domain scenario (e.g. 'shop.maboutique.com' or 'digitaldeals.net')
+    tenantKey = hostname;
   }
 
-  // If a valid reseller subdomain is visited:
-  if (subdomain) {
-    // If accessing root '/' on subdomain, rewrite internally to '/store/[subdomain]'
+  // If a valid reseller subdomain OR custom domain is visited:
+  if (tenantKey) {
+    // If accessing root '/' on tenant domain, rewrite internally to '/store/[subdomain]'
     if (pathname === '/') {
-      return NextResponse.rewrite(new URL(`/store/${subdomain}`, req.url));
+      return NextResponse.rewrite(new URL(`/store/${tenantKey}`, req.url));
     }
 
     // If already targeting /store/, let it proceed
@@ -47,8 +57,8 @@ export default function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Rewrite any subpath on the subdomain (e.g. '/otp' or any future store subpages)
-    return NextResponse.rewrite(new URL(`/store/${subdomain}${pathname}`, req.url));
+    // Rewrite any subpath on the tenant domain (e.g. '/p/slug', '/otp', etc.)
+    return NextResponse.rewrite(new URL(`/store/${tenantKey}${pathname}`, req.url));
   }
 
   return NextResponse.next();

@@ -16,10 +16,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const queryKey = (subdomain || domain || '').toLowerCase().trim();
+    const queryWithoutWww = queryKey.replace(/^www\./, '');
+
     const tenant = await prisma.tenant.findFirst({
-      where: subdomain
-        ? { subdomain: subdomain.toLowerCase().trim() }
-        : { customDomain: domain?.toLowerCase().trim() },
+      where: {
+        OR: [
+          { subdomain: queryKey },
+          { customDomain: queryKey },
+          { customDomain: queryWithoutWww },
+          { customDomain: `www.${queryWithoutWww}` },
+        ],
+      },
       include: {
         plan: true,
       },
