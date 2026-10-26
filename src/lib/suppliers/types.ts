@@ -27,6 +27,7 @@ export interface PurchaseResult {
   deliveredCredentials?: string | object;
   message?: string;
   errorCode?: string;
+  isOutOfStock?: boolean;
 }
 
 export interface ISupplierDriver {

@@ -75,6 +75,21 @@ async function main() {
     }
   }
 
+  // 3. Ensure required Unique Indexes exist for Prisma upsert and queries
+  try {
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "SupplierProduct_supplierId_externalId_key" ON "SupplierProduct"("supplierId", "externalId");`);
+    console.log('Verified index: SupplierProduct_supplierId_externalId_key');
+  } catch (err) {
+    console.error('Error creating SupplierProduct index:', err.message);
+  }
+
+  try {
+    await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS "Product_slug_key" ON "Product"("slug");`);
+    console.log('Verified index: Product_slug_key');
+  } catch (err) {
+    console.error('Error creating Product slug index:', err.message);
+  }
+
   console.log('Migration check complete!');
 }
 

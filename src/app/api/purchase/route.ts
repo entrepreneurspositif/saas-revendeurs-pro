@@ -99,6 +99,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (!purchaseRes.success) {
+      const isOutOfStock = purchaseRes.isOutOfStock || /stock|exceeds available stock|rupture/i.test(purchaseRes.message || '');
+      if (isOutOfStock && suppProd) {
+        await prisma.supplierProduct.update({
+          where: { id: suppProd.id },
+          data: { stock: 0, isAvailable: false },
+        }).catch(console.error);
+      }
+
       await prisma.order.create({
         data: {
           userId: user.id,
@@ -120,9 +128,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: `Erreur d'achat auprès du fournisseur (${supplier.name}): ${purchaseRes.message}`,
+          message: isOutOfStock
+            ? `Rupture de stock chez le fournisseur (${supplier.name}) : ce produit n'est actuellement plus disponible. Le stock a été actualisé à 0.`
+            : `Erreur d'achat auprès du fournisseur (${supplier.name}): ${purchaseRes.message}`,
         },
-        { status: 500 }
+        { status: isOutOfStock ? 400 : 500 }
       );
     }
 

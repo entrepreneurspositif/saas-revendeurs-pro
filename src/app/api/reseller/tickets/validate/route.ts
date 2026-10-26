@@ -85,6 +85,14 @@ export async function POST(req: NextRequest) {
       });
 
       if (!purchaseRes.success) {
+        const isOutOfStock = purchaseRes.isOutOfStock || /stock|exceeds available stock|rupture/i.test(purchaseRes.message || '');
+        if (isOutOfStock && suppProd) {
+          await prisma.supplierProduct.update({
+            where: { id: suppProd.id },
+            data: { stock: 0, isAvailable: false },
+          }).catch(console.error);
+        }
+
         await prisma.order.update({
           where: { id: order.id },
           data: {
@@ -95,9 +103,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: `Échec d'achat auprès du fournisseur (${supplier.name}): ${purchaseRes.message}. Vous pouvez saisir les identifiants manuellement si vous disposez d'un compte de remplacement.`,
+            message: isOutOfStock
+              ? `Rupture de stock chez le fournisseur (${supplier.name}) : ce produit est épuisé chez le grossiste (${purchaseRes.message}). Le stock a été actualisé à 0. Vous pouvez saisir les identifiants manuellement si vous disposez d'un compte de remplacement.`
+              : `Échec d'achat auprès du fournisseur (${supplier.name}): ${purchaseRes.message}. Vous pouvez saisir les identifiants manuellement si vous disposez d'un compte de remplacement.`,
           },
-          { status: 500 }
+          { status: isOutOfStock ? 400 : 500 }
         );
       }
 

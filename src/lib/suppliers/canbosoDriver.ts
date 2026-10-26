@@ -36,20 +36,33 @@ export class CanbosoDriver implements ISupplierDriver {
       const data = await res.json();
       const rawProducts: any[] = Array.isArray(data) ? data : (data.products || []);
 
-      return rawProducts.map((item) => ({
-        externalId: String(item.productId || item.id),
-        name: item.name || 'Produit Sans Nom',
-        description: item.description || '',
-        productType: item.productType || 'account',
-        costPrice: Number(item.price?.amount ?? item.price ?? 0),
-        currency: item.price?.currency || 'USD',
-        stock: Number(item.availability?.available ?? item.stock ?? 10),
-        sold: Number(item.availability?.sold ?? item.sold ?? 0),
-        image: item.image || null,
-        emoji: item.emoji || null,
-        isAvailable: Number(item.availability?.available ?? 1) > 0,
-        rawPayload: item,
-      }));
+      return rawProducts.map((item) => {
+        const rawAvailable = item.availability?.available;
+        let stock = 0;
+        if (typeof rawAvailable === 'number' && !isNaN(rawAvailable)) {
+          stock = Math.max(0, Math.floor(rawAvailable));
+        } else if (typeof item.stock === 'number' && !isNaN(item.stock)) {
+          stock = Math.max(0, Math.floor(item.stock));
+        } else {
+          // If null or undefined, stock is 0 (out of stock / manual upgrade)
+          stock = 0;
+        }
+
+        return {
+          externalId: String(item.productId || item.id),
+          name: item.name || 'Produit Sans Nom',
+          description: item.description || '',
+          productType: item.productType || 'account',
+          costPrice: Number(item.price?.amount ?? item.price ?? 0),
+          currency: item.price?.currency || 'USD',
+          stock: stock,
+          sold: Number(item.availability?.sold ?? item.sold ?? 0),
+          image: item.image || null,
+          emoji: item.emoji || null,
+          isAvailable: stock > 0,
+          rawPayload: item,
+        };
+      });
     } catch (error: any) {
       console.error('Canboso fetchProducts failed:', error);
       throw error;
@@ -106,10 +119,15 @@ export class CanbosoDriver implements ISupplierDriver {
       }
 
       if (!res.ok || resJson.success === false) {
+        const rawMsg = resJson.message || resJson.error || `Échec d'achat fournisseur (HTTP ${res.status})`;
+        const isOutOfStock = /stock|exceeds available stock|out of stock|quantité demandée/i.test(rawMsg);
         return {
           success: false,
-          message: resJson.message || resJson.error || `Échec d'achat fournisseur (HTTP ${res.status})`,
-          errorCode: resJson.code || 'SUPPLIER_ERROR',
+          message: isOutOfStock
+            ? `Rupture de stock chez le fournisseur Canboso : ${rawMsg}`
+            : rawMsg,
+          errorCode: isOutOfStock ? 'OUT_OF_STOCK' : (resJson.code || 'SUPPLIER_ERROR'),
+          isOutOfStock,
         };
       }
 

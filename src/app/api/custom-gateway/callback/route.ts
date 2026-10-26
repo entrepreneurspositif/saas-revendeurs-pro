@@ -160,11 +160,21 @@ async function processCallback(req: NextRequest) {
             },
           });
         } else {
+          const isOutOfStock = purchaseRes.isOutOfStock || /stock|exceeds available stock|rupture/i.test(purchaseRes.message || '');
+          if (isOutOfStock && suppProd) {
+            await prisma.supplierProduct.update({
+              where: { id: suppProd.id },
+              data: { stock: 0, isAvailable: false },
+            }).catch(console.error);
+          }
+
           await prisma.order.update({
             where: { id: order.id },
             data: {
               status: 'PENDING_PAYMENT',
-              errorMessage: `Paiement Passerelle reçu mais erreur fournisseur: ${purchaseRes.message}`,
+              errorMessage: isOutOfStock
+                ? `Paiement validé mais rupture de stock chez le fournisseur (${purchaseRes.message}). Veuillez livrer manuellement ou contacter le support.`
+                : `Paiement Passerelle reçu mais erreur fournisseur: ${purchaseRes.message}`,
             },
           });
         }
