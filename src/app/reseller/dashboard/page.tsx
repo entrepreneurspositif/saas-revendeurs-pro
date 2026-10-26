@@ -348,6 +348,7 @@ export default function ResellerDashboardPage() {
   const [storeMsg, setStoreMsg] = useState<{ success: boolean; text: string } | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState<boolean>(false);
   const [uploadLogoError, setUploadLogoError] = useState<string | null>(null);
+  const [uploadLogoSuccess, setUploadLogoSuccess] = useState<string | null>(null);
 
   // Marketing & Traffic Analytics State
   const [marketingSubTab, setMarketingSubTab] = useState<'analytics' | 'pixels' | 'telegram'>('analytics');
@@ -451,6 +452,58 @@ export default function ResellerDashboardPage() {
   const [submittingPayout, setSubmittingPayout] = useState<boolean>(false);
   const [payoutMsg, setPayoutMsg] = useState<{ success: boolean; text: string } | null>(null);
 
+  // Helper to compress and convert image to optimized base64 Data URL
+  const processImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // If SVG, read directly as Data URL without canvas rasterization
+      if (file.type === 'image/svg+xml') {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 512;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(outputType, 0.9);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Upload Logo Handler
   const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -461,18 +514,41 @@ export default function ResellerDashboardPage() {
       return;
     }
 
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setUploadLogoError('Format non supporté. Utilisez PNG, JPG, WebP ou SVG.');
+      return;
+    }
+
     setUploadingLogo(true);
     setUploadLogoError(null);
+    setUploadLogoSuccess(null);
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      // 1. Optimize image client-side to fast, lightweight Data URL
+      const optimizedDataUrl = await processImageFile(file);
+
+      // Instant preview in the UI
+      setStoreSettings((prev: any) => ({ ...prev, logoUrl: optimizedDataUrl }));
+
+      // 2. Persist in database
       const res = await fetch('/api/reseller/upload', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: optimizedDataUrl,
+          filename: file.name,
+        }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur d\'upload');
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Erreur lors de l'enregistrement du logo");
+      }
+
       setStoreSettings((prev: any) => ({ ...prev, logoUrl: data.url }));
+      setUploadLogoSuccess('Logo téléversé et appliqué avec succès !');
+      setTimeout(() => setUploadLogoSuccess(null), 4000);
     } catch (err: any) {
       setUploadLogoError(err.message);
     } finally {
@@ -3464,6 +3540,12 @@ export default function ResellerDashboardPage() {
 
                       {uploadLogoError && (
                         <p className="text-[11px] text-rose-400 font-medium">{uploadLogoError}</p>
+                      )}
+                      {uploadLogoSuccess && (
+                        <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span>{uploadLogoSuccess}</span>
+                        </p>
                       )}
 
                       {/* Manual URL input fallback */}
