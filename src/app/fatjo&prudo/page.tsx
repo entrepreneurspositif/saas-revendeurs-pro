@@ -19,6 +19,9 @@ import {
   Sliders,
   CheckCircle2,
   XCircle,
+  Menu,
+  ExternalLink,
+  ChevronRight,
   ToggleLeft,
   ToggleRight,
   Plus,
@@ -80,6 +83,7 @@ export default function AdminDashboardPage() {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules' | 'analytics' | 'saas'>('tickets');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [productRequests, setProductRequests] = useState<any[]>([]);
 
   // OnlineSIM OTP State
@@ -1777,190 +1781,392 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col font-sans">
-      <Navbar />
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans relative antialiased selection:bg-indigo-500 selection:text-white">
+      {/* Ambient background glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-40 left-1/4 w-[600px] h-[500px] bg-indigo-600/10 rounded-full blur-[140px]" />
+        <div className="absolute top-1/3 -right-40 w-[600px] h-[500px] bg-purple-600/10 rounded-full blur-[140px]" />
+        <div className="absolute -bottom-40 left-1/3 w-[600px] h-[500px] bg-sky-600/10 rounded-full blur-[140px]" />
+      </div>
 
-      {/* Admin Top Header */}
-      <section className="border-b border-slate-800/80 glass-panel py-6 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 border border-indigo-500/30 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-black text-white">Console d'Administration</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  SESSION ACCORDÉE
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-violet-500/20 text-violet-300 border border-violet-500/40">
-                  v1.2.1 ✨ IA & Modals OK
+      {/* Modern Executive Admin Header */}
+      <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl transition-all">
+        <div className="max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Mobile hamburger + Brand identity */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            {/* Mobile drawer toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Ouvrir le menu de navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Brand Logo & Tag */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 ring-1 ring-white/20">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-white tracking-tight">Admin Console</span>
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    En Ligne
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
+                  Superviseur Plateforme & Revente
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Validez les tickets de paiement, fixez vos prix de vente et gérez les clés API fournisseurs.
-              </p>
             </div>
+
+            {/* Quick Link to Storefront */}
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold transition-all group"
+              title="Prévisualiser la boutique publique dans un nouvel onglet"
+            >
+              <Store className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Boutique</span>
+              <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform group-hover:-translate-y-0.5" />
+            </a>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Quick Pilotage & Visites Shortcut Button */}
+          {/* Center: Live Quick Metrics Pill (Desktop) */}
+          <div className="hidden xl:flex items-center gap-2.5 px-3 py-1 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs">
+            {/* Tickets badge */}
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl transition-all ${
+                pendingTicketsCount > 0
+                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold animate-pulse'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Ticket className="w-3.5 h-3.5 text-amber-400" />
+              <span>{pendingTicketsCount} ticket{pendingTicketsCount > 1 ? 's' : ''} attente</span>
+            </button>
+
+            <span className="w-px h-3.5 bg-slate-800" />
+
+            {/* OnlineSIM balance badge */}
+            <button
+              onClick={() => setActiveTab('onlinesim')}
+              className="flex items-center gap-1.5 px-2 py-1 text-slate-400 hover:text-sky-300 transition-colors"
+              title="Solde API OnlineSIM"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-sky-400" />
+              <span>SIM: <strong className="text-white">{onlineSimBalance !== null ? `$${onlineSimBalance.toFixed(2)}` : 'Connecté'}</strong></span>
+            </button>
+
+            <span className="w-px h-3.5 bg-slate-800" />
+
+            {/* Canboso supplier status badge */}
+            <button
+              onClick={() => setActiveTab('suppliers')}
+              className="flex items-center gap-1.5 px-2 py-1 text-slate-400 hover:text-purple-300 transition-colors"
+              title="Accéder aux Fournisseurs & API Canboso"
+            >
+              <Activity className="w-3.5 h-3.5 text-purple-400" />
+              <span>Canboso: <strong className="text-white">API Active</strong></span>
+            </button>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Quick Pilotage Button */}
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`px-3.5 py-2.5 rounded-2xl border text-xs font-black flex items-center space-x-2 transition-all ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                 activeTab === 'analytics'
-                  ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white border-sky-400/40 shadow-lg shadow-sky-500/20'
-                  : 'bg-slate-900/90 border-sky-500/30 text-sky-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                  : 'bg-slate-900/90 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
-              title="Accéder directement aux Statistiques de Visites & Pilotage"
+              title="Statistiques & Pilotage du trafic"
             >
-              <BarChart3 className="w-4 h-4 text-sky-400" />
-              <span>Pilotage & Visites</span>
+              <BarChart3 className="w-3.5 h-3.5 text-sky-400" />
+              <span className="hidden md:inline">Pilotage</span>
             </button>
 
-            {/* Global Sensitive Secrets Mask / Reveal Toggle Button */}
+            {/* Sensitive Data Toggle */}
             <button
               onClick={() => setShowSensitiveData(!showSensitiveData)}
-              className={`px-3.5 py-2.5 rounded-2xl border text-xs font-extrabold flex items-center space-x-2 transition-all ${
+              className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 showSensitiveData
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-md shadow-amber-500/10'
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
                   : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
               }`}
-              title={showSensitiveData ? 'Masquer toutes les clés API et secrets' : 'Afficher les clés API et secrets'}
+              title={showSensitiveData ? 'Masquer les clés API et mots de passe' : 'Afficher les clés secrètes'}
             >
-              {showSensitiveData ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
-              <span className="hidden sm:inline">{showSensitiveData ? 'Masquer Secrets' : 'Afficher Secrets'}</span>
+              {showSensitiveData ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+              <span className="hidden sm:inline">{showSensitiveData ? 'Masquer' : 'Secrets'}</span>
             </button>
 
+            {/* Sync Catalog Button */}
             <button
               onClick={handleSyncCatalog}
               disabled={syncing}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black text-xs flex items-center space-x-2 shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-sky-500/20 transition-all disabled:opacity-50"
+              title="Synchroniser le catalogue complet"
             >
-              <RefreshCcw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? 'Synchronisation...' : 'Synchroniser Catalogue'}</span>
+              <RefreshCcw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{syncing ? 'Synchro...' : 'Synchro'}</span>
             </button>
 
+            {/* Logout */}
             <button
               onClick={handleLogout}
-              className="px-3.5 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 font-bold text-xs flex items-center space-x-1.5 transition-colors"
-              title="Se déconnecter"
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/50 text-rose-400 hover:text-rose-300 font-bold text-xs flex items-center gap-1.5 transition-colors"
+              title="Se déconnecter de la session"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Déconnexion</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Déconnexion</span>
             </button>
           </div>
         </div>
 
-        {/* Sync Notification Banner */}
+        {/* Sync banner */}
         {syncMessage && (
-          <div className="max-w-7xl mx-auto mt-4 px-4 py-2.5 rounded-2xl bg-slate-900 border border-sky-500/30 text-sky-300 text-xs flex items-center justify-between shadow-lg">
-            <div className="flex items-center space-x-2">
-              <Zap className="w-4 h-4 text-sky-400" />
-              <span>{syncMessage}</span>
+          <div className="max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 py-2">
+            <div className="px-4 py-2 rounded-xl bg-slate-900/95 border border-sky-500/40 text-sky-300 text-xs flex items-center justify-between shadow-lg">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-sky-400 shrink-0" />
+                <span>{syncMessage}</span>
+              </div>
+              <button onClick={() => setSyncMessage(null)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button onClick={() => setSyncMessage(null)} className="text-slate-400 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
-      </section>
+      </header>
 
-      {/* Main Admin Body with Categorized Sidebar */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT SIDEBAR NAVIGATION (3 cols) */}
-          <aside className="lg:col-span-3 space-y-6">
-            
-            {/* Mobile Category Select */}
-            <div className="lg:hidden glass-panel p-3.5 rounded-2xl border border-slate-800">
-              <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">
-                Module de Gestion:
-              </label>
-              <select
-                value={activeTab}
-                onChange={(e) => setActiveTab(e.target.value as any)}
-                className="w-full bg-slate-900 border border-slate-700 text-xs font-bold text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500"
+      {/* Mobile Drawer (Slide-Over) */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative w-80 max-w-[85vw] bg-slate-950 border-r border-slate-800 h-full flex flex-col p-4 shadow-2xl z-10 overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-850">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-white">Menu Navigation</h3>
+                  <p className="text-[10px] text-slate-400">18 modules de gestion</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white"
               >
-                {menuGroups.flatMap((group) =>
-                  group.items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {group.title} → {item.label}
-                    </option>
-                  ))
-                )}
-              </select>
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Desktop Navigation Sidebar */}
-            <div className="hidden lg:block glass-panel rounded-3xl border border-slate-800/80 p-4 space-y-6 shadow-xl sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain custom-scrollbar">
-              {menuGroups.map((group, idx) => (
-                <div key={group.title} className={idx > 0 ? 'pt-4 border-t border-slate-850' : ''}>
-                  <h3 className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
+            <div className="py-4 space-y-5">
+              {menuGroups.map((group) => (
+                <div key={group.title} className="space-y-1">
+                  <span className="px-2 text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
                     {group.title}
-                  </h3>
-                  <div className="space-y-1">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setActiveTab(item.id as any)}
-                          className={`w-full px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all group ${
-                            isActive
-                              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 border border-indigo-400/30'
-                              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3 truncate">
-                            <div
-                              className={`w-7 h-7 rounded-xl flex items-center justify-center transition-colors ${
-                                isActive
-                                  ? 'bg-white/15 text-white'
-                                  : 'bg-slate-900 text-slate-400 group-hover:text-white group-hover:bg-slate-800'
-                              }`}
-                            >
-                              <Icon className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="flex flex-col text-left truncate">
-                              <span className="font-extrabold truncate leading-tight">
-                                {item.label}
-                              </span>
-                              <span
-                                className={`text-[10px] font-normal truncate ${
-                                  isActive ? 'text-indigo-100 opacity-90' : 'text-slate-500'
-                                }`}
-                              >
-                                {item.description}
-                              </span>
-                            </div>
-                          </div>
-
-                          {item.badge && (
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shrink-0 ${
-                                item.badgeColor === 'amber'
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                  : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                              }`}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  </span>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveTab(item.id as any);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+                          isActive
+                            ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        {item.badge && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${
+                              item.badgeColor === 'amber'
+                                ? 'bg-amber-500/20 text-amber-300'
+                                : 'bg-sky-500/20 text-sky-300'
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               ))}
             </div>
-          </aside>
 
-          {/* RIGHT CONTENT AREA (9 cols) */}
-          <div className="lg:col-span-9 space-y-6">
+            <div className="pt-4 mt-auto border-t border-slate-850">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white flex items-center justify-center gap-2"
+              >
+                <Store className="w-4 h-4 text-indigo-400" />
+                <span>Ouvrir la Boutique Publique</span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Mobile Horizontal Pill Navigation */}
+      <div className="lg:hidden w-full border-b border-slate-850 bg-slate-950/60 backdrop-blur-md px-4 py-2.5 overflow-x-auto flex items-center gap-2 custom-scrollbar">
+        {[
+          { id: 'tickets', label: 'Commandes', icon: Ticket, badge: pendingTicketsCount > 0 ? pendingTicketsCount : null },
+          { id: 'manual_products', label: 'Produits', icon: Sparkles },
+          { id: 'products', label: 'Catalogue', icon: Package },
+          { id: 'saas', label: 'SaaS Revendeurs', icon: Crown },
+          { id: 'suppliers', label: 'Fournisseurs', icon: Activity },
+          { id: 'analytics', label: 'Pilotage', icon: BarChart3 },
+          { id: 'support', label: 'Support', icon: MessageSquare },
+        ].map((quick) => {
+          const QuickIcon = quick.icon;
+          const isActive = activeTab === quick.id;
+          return (
+            <button
+              key={quick.id}
+              onClick={() => setActiveTab(quick.id as any)}
+              className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
+              }`}
+            >
+              <QuickIcon className="w-3.5 h-3.5" />
+              <span>{quick.label}</span>
+              {quick.badge && (
+                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center ml-0.5">
+                  {quick.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main Container: Wide Executive Layout */}
+      <div className="flex-1 flex w-full max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6 xl:gap-8 items-start relative z-10">
         
+        {/* Desktop Fixed Left Sidebar */}
+        <aside className="hidden lg:flex flex-col w-64 xl:w-72 shrink-0 space-y-4 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain custom-scrollbar pr-1">
+          <div className="glass-panel rounded-2xl border border-slate-800/80 p-3 space-y-4 shadow-xl">
+            {menuGroups.map((group, gIdx) => (
+              <div key={group.title} className={gIdx > 0 ? 'pt-3 border-t border-slate-850/80' : ''}>
+                <span className="px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1.5">
+                  {group.title}
+                </span>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id as any)}
+                        title={item.description}
+                        className={`w-full px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all group ${
+                          isActive
+                            ? 'bg-gradient-to-r from-indigo-600/25 to-purple-600/25 text-white font-bold border border-indigo-500/40 shadow-sm shadow-indigo-500/10'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <div
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              isActive
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-slate-900 text-slate-400 group-hover:text-slate-200 group-hover:bg-slate-800'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="truncate">{item.label}</span>
+                        </div>
+
+                        {item.badge && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shrink-0 ${
+                              item.badgeColor === 'amber'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : item.badgeColor === 'purple'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                : item.badgeColor === 'emerald'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Help / Storefront Card in Sidebar Footer */}
+          <div className="p-3 rounded-2xl bg-slate-900/50 border border-slate-800/60 text-xs text-slate-400 space-y-2">
+            <div className="flex items-center justify-between font-semibold text-white">
+              <span>Boutique Publique</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              Catalogue, prix et paiements synchronisés en direct.
+            </p>
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 text-[11px] font-bold"
+            >
+              <span>Accéder au site client</span>
+              <ChevronRight className="w-3 h-3" />
+            </a>
+          </div>
+        </aside>
+
+        {/* Spacious Main Content Workbench */}
+        <main className="flex-1 min-w-0 space-y-6 pb-12">
+          {/* Active Tab Breadcrumb & Executive Context Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-850">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Console</span>
+              <span className="text-slate-600">/</span>
+              <span className="text-xs font-extrabold text-indigo-400">
+                {menuGroups.flatMap(g => g.items).find(i => i.id === activeTab)?.label || activeTab}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400 font-medium">
+                Vue Élargie • {products.length} produit{products.length > 1 ? 's' : ''} • {recentOrders.length} commande{recentOrders.length > 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
         {/* TAB 1: TICKETS VALIDATION & ORDERS */}
         {activeTab === 'tickets' && (
           <div className="space-y-6">
@@ -5607,9 +5813,8 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* ADD MANUAL PRODUCT MODAL */}
       {showAddProductModal && (
