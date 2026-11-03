@@ -160,7 +160,7 @@ export async function getOnlineSimTariffs(countryCode: string = '1') {
   }));
 }
 
-export async function buyOnlineSimNumber(service: string, country: string = '1') {
+export async function buyOnlineSimNumber(service: string, country: string = '1', knownCostPrice?: number) {
   const { apiKey, marginPercent } = await getOnlineSimConfig();
 
   if (!apiKey) {
@@ -170,7 +170,7 @@ export async function buyOnlineSimNumber(service: string, country: string = '1')
     const demoPhone = `${countryObj.prefix}${randomDigits}`;
     const demoTzid = Math.floor(1000000 + Math.random() * 9000000);
     const serviceObj = FALLBACK_SERVICES.find((s) => s.code === service) || FALLBACK_SERVICES[0];
-    const costPrice = serviceObj.priceUSD;
+    const costPrice = knownCostPrice ?? serviceObj.priceUSD;
     const sellingPrice = parseFloat((costPrice * (1 + marginPercent / 100)).toFixed(2));
 
     return {
@@ -191,7 +191,7 @@ export async function buyOnlineSimNumber(service: string, country: string = '1')
     if (data.response === 1 || data.response === '1' || data.tzid) {
       const tzid = data.tzid;
       let phone = data.number || data.phone || '';
-      const costPrice = parseFloat(data.price || '0.30');
+      const costPrice = parseFloat(data.price || '') || knownCostPrice || 0.30;
       const sellingPrice = parseFloat((costPrice * (1 + marginPercent / 100)).toFixed(2));
 
       // Fetch state immediately to get the assigned phone number from OnlineSIM!

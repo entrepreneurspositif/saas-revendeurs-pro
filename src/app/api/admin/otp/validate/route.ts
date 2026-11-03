@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Launch OnlineSIM number reservation
-    const result = await buyOnlineSimNumber(otpOrder.service, otpOrder.country);
+    const result = await buyOnlineSimNumber(otpOrder.service, otpOrder.country, otpOrder.costPrice);
 
     if (!result.success) {
       return NextResponse.json(

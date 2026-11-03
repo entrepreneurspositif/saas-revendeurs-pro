@@ -315,6 +315,7 @@ export default function ResellerDashboardPage() {
   const [otpSaveMsg, setOtpSaveMsg] = useState<{ code: string; success: boolean; text: string } | null>(null);
   const [savingAllOtp, setSavingAllOtp] = useState<boolean>(false);
   const [otpBulkMsg, setOtpBulkMsg] = useState<string | null>(null);
+  const [resellerOtpMarginInput, setResellerOtpMarginInput] = useState<number>(30);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   // Storefront Tab State
@@ -1354,6 +1355,20 @@ export default function ResellerDashboardPage() {
     } finally {
       setSavingAllOtp(false);
     }
+  };
+
+  // Bulk Apply Reseller Margin to all OTP services of current country
+  const handleApplyBulkMarginToCountry = () => {
+    if (resellerOtpMarginInput < 0 || isNaN(resellerOtpMarginInput)) return;
+    const newPrices: Record<string, number> = {};
+    otpServices.forEach((s) => {
+      const key = `${selectedOtpCountry}_${s.code.toLowerCase()}`;
+      const newPrice = parseFloat((s.resellerBuyPrice * (1 + resellerOtpMarginInput / 100)).toFixed(2));
+      newPrices[key] = newPrice;
+    });
+    setEditedOtpPrices((prev) => ({ ...prev, ...newPrices }));
+    setOtpBulkMsg(`Marge de +${resellerOtpMarginInput}% appliquée aux ${otpServices.length} services ! Cliquez sur "Enregistrer tout" pour sauvegarder.`);
+    setTimeout(() => setOtpBulkMsg(null), 5000);
   };
 
   // Save Store Settings
@@ -3108,6 +3123,44 @@ export default function ResellerDashboardPage() {
                         <Check className="w-3.5 h-3.5" />
                       )}
                       Enregistrer tout
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bulk Reseller OTP Margin Toolbar */}
+                <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-white block">Marge Revendeur Dédiée OTP</span>
+                      <span className="text-[11px] text-slate-400">
+                        Appliquez un pourcentage de profit sur votre prix grossiste pour tous les services de ce pays
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                      <span className="text-slate-400 text-xs font-bold">+</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="500"
+                        value={resellerOtpMarginInput}
+                        onChange={(e) => setResellerOtpMarginInput(Number(e.target.value))}
+                        className="w-12 bg-transparent text-amber-400 font-bold font-mono text-xs focus:outline-none"
+                      />
+                      <span className="text-slate-400 text-xs font-bold">%</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyBulkMarginToCountry}
+                      disabled={loadingOtp || otpServices.length === 0}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all disabled:opacity-50"
+                    >
+                      Appliquer aux {otpServices.length} services
                     </button>
                   </div>
                 </div>

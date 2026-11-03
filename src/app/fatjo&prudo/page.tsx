@@ -3169,6 +3169,34 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
+            {/* Dedicated OTP Margin Banner Notice */}
+            <div className="p-4 rounded-2xl bg-sky-950/40 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center space-x-3">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Marge des Numéros Virtuels OTP gérée à part</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      +{onlineSimMargin}% actif
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Les tranches de marges ci-dessous s'appliquent aux produits et abonnements. Les numéros virtuels OTP disposent de leur propre marge dédiée dans l'onglet OnlineSIM.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('onlinesim')}
+                className="px-3.5 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-bold whitespace-nowrap self-start sm:self-auto flex items-center space-x-1.5 transition-colors"
+              >
+                <span>Ajuster la Marge OTP (+{onlineSimMargin}%)</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {pricingMsg && (
               <div className={`p-4 rounded-2xl border text-xs flex items-center space-x-3 ${
                 pricingMsg.success
@@ -4392,19 +4420,85 @@ export default function AdminDashboardPage() {
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
                       Marge Bénéficiaire sur les Prix OTP (%) *
                     </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      max="500"
-                      required
-                      value={onlineSimMargin}
-                      onChange={(e) => setOnlineSimMargin(Number(e.target.value))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm font-black text-emerald-400 focus:outline-none focus:border-emerald-500"
-                    />
-                    <span className="text-[10px] text-slate-500 block mt-1">
-                      Ex: 30% ajoute 30% au prix d'achat grossiste d'OnlineSIM.
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        max="500"
+                        required
+                        value={onlineSimMargin}
+                        onChange={(e) => setOnlineSimMargin(Number(e.target.value))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm font-black text-emerald-400 focus:outline-none focus:border-emerald-500"
+                      />
+                      <span className="text-sm font-black text-slate-400 font-mono">%</span>
+                    </div>
+
+                    {/* Quick Preset Margin Buttons */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-500 mr-1">Raccourcis :</span>
+                      {[20, 30, 50, 75, 100, 150].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setOnlineSimMargin(preset)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                            onlineSimMargin === preset
+                              ? 'bg-emerald-500 text-slate-950 font-black'
+                              : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                          }`}
+                        >
+                          +{preset}%
+                        </button>
+                      ))}
+                    </div>
+
+                    <span className="text-[10px] text-slate-500 block mt-1.5">
+                      Cette marge est gérée <strong>à part</strong> des abonnements : elle s'ajoute directement sur le coût d'achat fournisseur OnlineSIM de chaque numéro.
                     </span>
+                  </div>
+                </div>
+
+                {/* Live Real-time Simulation Preview Card */}
+                <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Simulation des Prix Publics avec votre marge (+{onlineSimMargin}%)</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500">Taux : 1 USD = {fcfaRate || 650} FCFA</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { name: 'WhatsApp', cost: 0.35 },
+                      { name: 'Telegram', cost: 0.45 },
+                      { name: 'ChatGPT / AI', cost: 0.50 },
+                      { name: 'Google / Gmail', cost: 0.30 },
+                    ].map((sample) => {
+                      const sellingUSD = parseFloat((sample.cost * (1 + (onlineSimMargin || 0) / 100)).toFixed(2));
+                      const profitUSD = parseFloat((sellingUSD - sample.cost).toFixed(2));
+                      const sellingFCFA = Math.round(sellingUSD * (fcfaRate || 650));
+                      return (
+                        <div key={sample.name} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/60 space-y-1">
+                          <span className="text-[11px] font-extrabold text-white block truncate">{sample.name}</span>
+                          <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                            <span>Achat :</span>
+                            <span className="font-mono">${sample.cost.toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs font-black text-emerald-400 font-mono flex items-center justify-between pt-0.5 border-t border-slate-850">
+                            <span>Vente :</span>
+                            <span>${sellingUSD.toFixed(2)}</span>
+                          </div>
+                          <div className="text-[10px] font-bold text-sky-400 font-mono text-right">
+                            {sellingFCFA.toLocaleString()} FCFA
+                          </div>
+                          <div className="text-[9px] text-emerald-400/80 text-right font-medium">
+                            Bénéfice : +${profitUSD.toFixed(2)}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
