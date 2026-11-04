@@ -1,6 +1,6 @@
 {
-  "appId": "com.entrepreneurspositif.app",
-  "appName": "Entrepreneurs Positifs",
+  "appId": "com.abonnementspro.app",
+  "appName": "Abonnements Pro",
   "webDir": "out",
   "bundledWebRuntime": false,
   "server": {

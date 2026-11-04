@@ -397,7 +397,7 @@ export default function StorefrontPage() {
       rating: 5,
       product: 'ChatGPT Plus & Canva Pro',
       comment:
-        'Tous mes graphistes et rédacteurs utilisent les comptes fournis par Entrepreneurs Positifs. Zéro coupure en 4 mois. Service client hyper réactif sur Telegram. Rien à voir avec les revendeurs douteux sur Facebook.',
+        'Tous mes graphistes et rédacteurs utilisent les comptes fournis par Abonnements Pro. Zéro coupure en 4 mois. Service client hyper réactif sur Telegram. Rien à voir avec les revendeurs douteux sur Facebook.',
     },
     {
       name: 'Aminata Sow',

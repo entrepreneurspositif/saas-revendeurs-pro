@@ -77,13 +77,13 @@ export default function Footer() {
               <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-sky-500/30 bg-slate-100 dark:bg-slate-900 shadow-md flex items-center justify-center shrink-0">
                 <img
                   src="/logo.jpg"
-                  alt="Entrepreneurs Positifs"
+                  alt="Abonnements Pro"
                   className="w-full h-full object-cover"
                 />
               </div>
               <div>
                 <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">
-                  ENTREPRENEURS <span className="text-sky-500 dark:text-sky-400">POSITIFS</span>
+                  ABONNEMENTS <span className="text-sky-500 dark:text-sky-400">PRO</span>
                 </span>
                 <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                   Grossiste & Fournisseur Digital Officiel
@@ -214,7 +214,7 @@ export default function Footer() {
           </div>
 
           <div className="flex items-center space-x-4 text-[11px] text-slate-500 dark:text-slate-400">
-            <span>&copy; {new Date().getFullYear()} Entrepreneurs Positifs. Tous droits réservés.</span>
+            <span>&copy; {new Date().getFullYear()} Abonnements Pro. Tous droits réservés.</span>
           </div>
         </div>
       </div>

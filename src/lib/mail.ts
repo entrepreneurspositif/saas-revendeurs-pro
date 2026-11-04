@@ -122,7 +122,7 @@ export async function sendPasswordResetEmail({
     </p>
 
     <div class="footer">
-      Entrepreneurs Positifs SaaS &bull; Plateforme Revendeurs &bull; Assistance 24/7
+      Abonnements Pro SaaS &bull; Plateforme Revendeurs &bull; Assistance 24/7
     </div>
   </div>
 </body>

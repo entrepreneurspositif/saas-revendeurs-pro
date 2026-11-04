@@ -48,7 +48,7 @@ export default function Navbar() {
             <div className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.12] bg-slate-100 dark:bg-[#0c1222] shadow-sm group-hover:border-sky-500/50 transition-all duration-200">
               <img
                 src="/logo.jpg"
-                alt="Entrepreneurs Positifs"
+                alt="Abonnements Pro"
                 className="w-full h-full object-cover"
               />
               <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-[#070b14]" />
@@ -56,10 +56,10 @@ export default function Navbar() {
             <div className="hidden sm:flex flex-col">
               <div className="flex items-center space-x-1.5">
                 <span className="text-xs sm:text-sm font-black tracking-tight text-slate-900 dark:text-white group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors">
-                  ENTREPRENEURS <span className="text-sky-500 dark:text-sky-400">POSITIFS</span>
+                  ABONNEMENTS <span className="text-sky-500 dark:text-sky-400">PRO</span>
                 </span>
                 <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                  PRO
+                  GROSSISTE
                 </span>
               </div>
               <span className="hidden sm:block text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">
@@ -174,7 +174,7 @@ export default function Navbar() {
                 Navigation Rapide
               </span>
               <span className="text-[10px] font-black tracking-tight text-slate-700 dark:text-slate-300">
-                ENTREPRENEURS <span className="text-sky-500">POSITIFS</span>
+                ABONNEMENTS <span className="text-sky-500">PRO</span>
               </span>
             </div>
             {navItems.map((item) => {

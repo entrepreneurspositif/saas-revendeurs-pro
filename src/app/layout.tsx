@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     'Mobile Money',
     'FCFA',
     'Abonnements Pro',
-    'Entrepreneurs Positifs',
+    'Abonnements Pro Grossiste',
   ],
   authors: [{ name: 'Abonnements Pro', url: 'https://abonnementspro.com' }],
   publisher: 'Abonnements Pro',
