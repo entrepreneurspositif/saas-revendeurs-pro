@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
+import { sendResellerOrderNotificationEmail } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,8 @@ export async function POST(req: NextRequest) {
     const order = await prisma.order.findUnique({
       where: whereClause,
       include: {
+        tenant: true,
+        user: true,
         product: {
           include: {
             activeSupplierProduct: {
@@ -148,6 +151,20 @@ export async function POST(req: NextRequest) {
           sold: { increment: order.quantity },
         },
       });
+    }
+
+    // Send email order confirmation to reseller if email notification enabled
+    if (order.tenant?.email && order.tenant.notifyEmailOnOrder !== false) {
+      sendResellerOrderNotificationEmail({
+        to: order.tenant.email,
+        name: order.tenant.name,
+        storeName: order.tenant.storeName,
+        productName: order.productTitle || order.product?.title || 'Abonnement',
+        amount: `$${(order.totalAmount || order.unitSellingPrice || 0).toFixed(2)} USD`,
+        customerName: order.user?.name,
+        customerEmail: order.user?.email,
+        ticketCode: order.ticketCode,
+      }).catch((err) => console.error('Reseller Email notification error:', err));
     }
 
     return NextResponse.json({

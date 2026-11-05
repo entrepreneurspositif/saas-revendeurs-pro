@@ -59,6 +59,7 @@ import {
   Image as ImageIcon,
   Globe,
   Store,
+  Mail,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -82,7 +83,7 @@ export default function AdminDashboardPage() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState<{ message: string; success: boolean } | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules' | 'analytics' | 'saas'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'support' | 'products' | 'manual_products' | 'payment_config' | 'settings' | 'themes' | 'suppliers' | 'overview' | 'comparison' | 'onlinesim' | 'product_requests' | 'marketing' | 'promos' | 'telegram' | 'pricing_rules' | 'analytics' | 'saas' | 'smtp'>('tickets');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [productRequests, setProductRequests] = useState<any[]>([]);
 
@@ -105,6 +106,31 @@ export default function AdminDashboardPage() {
 
   const [savingMarketing, setSavingMarketing] = useState<boolean>(false);
   const [marketingSavedMsg, setMarketingSavedMsg] = useState<string | null>(null);
+
+  // SMTP Brevo / Mailer State
+  const [smtpConfig, setSmtpConfig] = useState<{
+    host: string;
+    port: string;
+    user: string;
+    pass: string;
+    from: string;
+    secure: boolean;
+    isConfigured: boolean;
+  }>({
+    host: 'smtp-relay.brevo.com',
+    port: '587',
+    user: '',
+    pass: '',
+    from: '',
+    secure: false,
+    isConfigured: false,
+  });
+  const [loadingSmtp, setLoadingSmtp] = useState<boolean>(false);
+  const [savingSmtp, setSavingSmtp] = useState<boolean>(false);
+  const [smtpMsg, setSmtpMsg] = useState<{ message: string; success: boolean } | null>(null);
+  const [testEmailInput, setTestEmailInput] = useState<string>('');
+  const [testingSmtp, setTestingSmtp] = useState<boolean>(false);
+  const [smtpTestMsg, setSmtpTestMsg] = useState<{ message: string; success: boolean } | null>(null);
 
   // Sensitive Data Mask/Reveal State
   const [showSensitiveData, setShowSensitiveData] = useState<boolean>(false);
@@ -505,6 +531,101 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const fetchSmtpConfig = async () => {
+    try {
+      setLoadingSmtp(true);
+      const res = await fetch('/api/admin/smtp');
+      const data = await res.json();
+      if (data.success && data.config) {
+        setSmtpConfig({
+          host: data.config.host || 'smtp-relay.brevo.com',
+          port: data.config.port || '587',
+          user: data.config.user || '',
+          pass: data.config.pass || '',
+          from: data.config.from || '',
+          secure: Boolean(data.config.secure),
+          isConfigured: Boolean(data.config.isConfigured),
+        });
+        if (!testEmailInput && data.config.user) {
+          setTestEmailInput(data.config.user);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching SMTP config:', e);
+    } finally {
+      setLoadingSmtp(false);
+    }
+  };
+
+  const handleSaveSmtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSmtp(true);
+    setSmtpMsg(null);
+    try {
+      const res = await fetch('/api/admin/smtp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save',
+          host: smtpConfig.host,
+          port: smtpConfig.port,
+          user: smtpConfig.user,
+          pass: smtpConfig.pass,
+          from: smtpConfig.from,
+          secure: smtpConfig.secure,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur lors de la sauvegarde');
+      setSmtpMsg({ success: true, message: 'Configuration SMTP enregistrée avec succès !' });
+      fetchSmtpConfig();
+    } catch (err: any) {
+      setSmtpMsg({ success: false, message: err.message });
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    setSmtpTestMsg(null);
+    try {
+      const res = await fetch('/api/admin/smtp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'test',
+          testEmail: testEmailInput || smtpConfig.user,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Erreur lors du test SMTP');
+      setSmtpTestMsg({ success: true, message: data.message });
+    } catch (err: any) {
+      setSmtpTestMsg({ success: false, message: err.message });
+    } finally {
+      setTestingSmtp(false);
+    }
+  };
+
+  const applyBrevoPreset = () => {
+    setSmtpConfig((prev) => ({
+      ...prev,
+      host: 'smtp-relay.brevo.com',
+      port: '587',
+      secure: false,
+    }));
+  };
+
+  const applyGmailPreset = () => {
+    setSmtpConfig((prev) => ({
+      ...prev,
+      host: 'smtp.gmail.com',
+      port: '465',
+      secure: true,
+    }));
+  };
+
   const fetchOnlineSimConfig = async () => {
     try {
       const res = await fetch('/api/admin/onlinesim');
@@ -901,6 +1022,7 @@ export default function AdminDashboardPage() {
       fetchMarketingSettings();
       fetchPromoCodes();
       fetchTelegramConfig();
+      fetchSmtpConfig();
       fetchPricingRules();
     } catch (e) {
       console.error(e);
@@ -1769,6 +1891,14 @@ export default function AdminDashboardPage() {
           badgeColor: telegramEnabled ? 'emerald' : 'slate',
         },
         {
+          id: 'smtp',
+          label: 'E-mails & SMTP (Brevo)',
+          icon: Mail,
+          description: 'Brevo, alertes ventes & codes',
+          badge: smtpConfig?.isConfigured ? 'Actif' : 'Brevo',
+          badgeColor: smtpConfig?.isConfigured ? 'emerald' : 'sky',
+        },
+        {
           id: 'settings',
           label: 'Sécurité & Devises',
           icon: KeyRound,
@@ -2039,6 +2169,7 @@ export default function AdminDashboardPage() {
           { id: 'products', label: 'Catalogue', icon: Package },
           { id: 'saas', label: 'SaaS Revendeurs', icon: Crown },
           { id: 'suppliers', label: 'Fournisseurs', icon: Activity },
+          { id: 'smtp', label: 'E-mails Brevo', icon: Mail },
           { id: 'analytics', label: 'Pilotage', icon: BarChart3 },
           { id: 'support', label: 'Support', icon: MessageSquare },
         ].map((quick) => {
@@ -5279,6 +5410,322 @@ export default function AdminDashboardPage() {
                   </span>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     Collez le Token et l'ID Chat ci-dessus, enregistrez puis cliquez sur <b>"Envoyer une Notification de Test"</b>. Vous recevrez l'alerte sur Telegram avec le bouton de validation 1-Clic !
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: SMTP & BREVO CONFIGURATION */}
+        {activeTab === 'smtp' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-white flex items-center space-x-2">
+                  <Mail className="w-6 h-6 text-sky-400" />
+                  <span>Configuration Serveur E-mails SMTP (Brevo & Alertes)</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                  Connectez votre compte Brevo (ex-Sendinblue) pour envoyer automatiquement les codes de vérification aux revendeurs, les alertes de commandes en direct et les e-mails de récupération.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {smtpConfig.isConfigured ? (
+                  <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    SMTP Connecté
+                  </span>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Non configuré
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="glass-panel p-5 rounded-3xl border border-slate-800 space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Fournisseur Recommandé</span>
+                <div className="text-xl font-black text-sky-400 pt-1 flex items-center gap-2">
+                  <span>Brevo (Sendinblue)</span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-bold block">300 e-mails/jour gratuits offerts</span>
+              </div>
+
+              <div className="glass-panel p-5 rounded-3xl border border-slate-800 space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Hôte & Port Actuels</span>
+                <div className="text-lg font-black text-emerald-400 font-mono pt-1 truncate">
+                  {smtpConfig.host || 'Non défini'}:{smtpConfig.port || '587'}
+                </div>
+                <span className="text-[10px] text-slate-500 font-bold block">
+                  {smtpConfig.secure ? 'SSL/TLS sécurisé (Port 465)' : 'STARTTLS standard (Port 587)'}
+                </span>
+              </div>
+
+              <div className="glass-panel p-5 rounded-3xl border border-slate-800 space-y-1">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">E-mail Expéditeur (From)</span>
+                <div className="text-sm font-extrabold text-white font-mono pt-1 truncate">
+                  {smtpConfig.from || smtpConfig.user || 'contact@abonnementspro.com'}
+                </div>
+                <span className="text-[10px] text-slate-500 font-bold block">Nom d'expéditeur affiché aux revendeurs</span>
+              </div>
+            </div>
+
+            {/* Main SMTP Config Form */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                  <Settings className="w-4 h-4 text-sky-400" />
+                  <span>Paramètres du Relais SMTP</span>
+                </h3>
+
+                {/* 1-Click Preset Buttons */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold text-slate-400">Raccourcis :</span>
+                  <button
+                    type="button"
+                    onClick={applyBrevoPreset}
+                    className="px-2.5 py-1 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 text-xs font-bold transition-all flex items-center gap-1.5"
+                    title="Pré-remplir les paramètres officiels Brevo"
+                  >
+                    <Zap className="w-3 h-3 text-sky-400" />
+                    <span>Brevo (smtp-relay.brevo.com:587)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyGmailPreset}
+                    className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-xs font-bold transition-all"
+                    title="Pré-remplir pour Gmail avec mot de passe d'application"
+                  >
+                    <span>Gmail (465)</span>
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveSmtp} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                      Serveur / Hôte SMTP *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: smtp-relay.brevo.com ou smtp.gmail.com"
+                      value={smtpConfig.host}
+                      onChange={(e) => setSmtpConfig({ ...smtpConfig, host: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Pour Brevo, utilisez impérativement : <b>smtp-relay.brevo.com</b>
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                      Port SMTP *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="587 ou 465"
+                      value={smtpConfig.port}
+                      onChange={(e) => setSmtpConfig({ ...smtpConfig, port: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Généralement <b>587</b> (STARTTLS) ou <b>465</b> (SSL/TLS).
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                      Utilisateur / Login SMTP (Brevo) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: votre-email@domaine.com ou 7a8b9c@smtp-brevo.com"
+                      value={smtpConfig.user}
+                      onChange={(e) => setSmtpConfig({ ...smtpConfig, user: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Votre identifiant / login SMTP affiché dans Brevo &gt; SMTP &amp; API.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                      Clé / Mot de Passe SMTP (Brevo Master Key) *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={isSecretVisible('smtpPass') ? 'text' : 'password'}
+                        required
+                        placeholder="Ex: xsmtpsib-xxxxxxxxxxxxxxxxxxxx"
+                        value={smtpConfig.pass}
+                        onChange={(e) => setSmtpConfig({ ...smtpConfig, pass: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-4 pr-10 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleFieldSecret('smtpPass')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        title={isSecretVisible('smtpPass') ? 'Masquer' : 'Afficher'}
+                      >
+                        {isSecretVisible('smtpPass') ? <EyeOff className="w-4 h-4 text-sky-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      La clé secrète générée depuis l'onglet SMTP de votre compte Brevo.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                      Adresse Expéditeur (From / Sender) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Abonnements Pro <contact@abonnementspro.com>"
+                      value={smtpConfig.from}
+                      onChange={(e) => setSmtpConfig({ ...smtpConfig, from: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 font-mono text-white focus:outline-none focus:border-sky-500"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Cette adresse doit être validée dans vos <b>Expéditeurs autorisés</b> sur Brevo.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center pt-6">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={smtpConfig.secure}
+                        onChange={(e) => setSmtpConfig({ ...smtpConfig, secure: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-0"
+                      />
+                      <span className="text-xs text-slate-300 font-semibold">
+                        Activer SSL/TLS direct (Cocher uniquement pour le Port 465)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {smtpMsg && (
+                  <div className={`p-4 rounded-2xl border text-xs flex items-center space-x-3 ${
+                    smtpMsg.success
+                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                      : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                  }`}>
+                    {smtpMsg.success ? <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />}
+                    <span className="font-semibold">{smtpMsg.message}</span>
+                  </div>
+                )}
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingSmtp}
+                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-slate-950 font-black text-xs flex items-center space-x-2 shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+                  >
+                    {savingSmtp ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    <span>{savingSmtp ? 'Enregistrement...' : 'Enregistrer la Configuration SMTP'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* LIVE TEST SENDING CARD */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                    <Send className="w-4 h-4 text-emerald-400" />
+                    <span>Tester l'Envoi d'un E-mail en Direct</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Envoyez un e-mail de test immédiat pour valider que Brevo accepte bien vos identifiants et livre les e-mails sans problème.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="email"
+                  placeholder="Entrez votre adresse e-mail personnelle (ex: vous@gmail.com)"
+                  value={testEmailInput}
+                  onChange={(e) => setTestEmailInput(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleTestSmtp}
+                  disabled={testingSmtp || !testEmailInput}
+                  className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center space-x-2 transition-all disabled:opacity-50 shadow-lg shadow-emerald-500/20 shrink-0"
+                >
+                  {testingSmtp ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <span>{testingSmtp ? 'Envoi du test...' : 'Envoyer un E-mail de Test'}</span>
+                </button>
+              </div>
+
+              {smtpTestMsg && (
+                <div className={`p-4 rounded-2xl border text-xs flex items-center space-x-3 ${
+                  smtpTestMsg.success
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                    : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                }`}>
+                  {smtpTestMsg.success ? <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" /> : <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />}
+                  <span className="font-semibold">{smtpTestMsg.message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* STEP BY STEP GUIDE FOR BREVO */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-sky-400" />
+                <span>Guide : Comment obtenir vos identifiants Brevo en 3 étapes (300 e-mails/jour gratuits)</span>
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-2">
+                  <span className="font-extrabold text-sky-400 flex items-center space-x-1.5">
+                    <span className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-[10px] font-black">1</span>
+                    <span>Créer un compte sur Brevo</span>
+                  </span>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Rendez-vous sur <a href="https://app.brevo.com" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold">brevo.com</a> et créez un compte gratuit si vous n'en avez pas encore.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-2">
+                  <span className="font-extrabold text-indigo-400 flex items-center space-x-1.5">
+                    <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-black">2</span>
+                    <span>Générer la Clé SMTP</span>
+                  </span>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Cliquez sur votre nom de profil en haut à droite &gt; <b>SMTP &amp; API</b> &gt; Onglet <b>SMTP</b> &gt; Cliquez sur <b>Générer une nouvelle clé SMTP</b>. Donnez-lui un nom (ex: "Plateforme").
+                  </p>
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-2">
+                  <span className="font-extrabold text-emerald-400 flex items-center space-x-1.5">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-black">3</span>
+                    <span>Copier &amp; Valider</span>
+                  </span>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Copiez le <b>Login</b> et la <b>Clé</b> affichés, collez-les dans le formulaire ci-dessus et cliquez sur <b>Enregistrer</b>. Faites un test d'envoi pour confirmer !
                   </p>
                 </div>
               </div>

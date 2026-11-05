@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
 import { sendResellerTelegramNotification } from '@/lib/telegram';
+import { sendResellerOrderNotificationEmail } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
           },
         },
         tenant: true,
+        user: true,
       },
     });
 
@@ -70,6 +72,19 @@ export async function POST(req: NextRequest) {
           resellerProfit: `$${(order.resellerProfit || 0).toFixed(2)} USD`,
           details: `Produit Exclusif : ${order.productTitle || order.product?.title || 'Article VIP'}\nStatut : Validé avec succès par le Super Admin !`,
         }).catch((err) => console.error('Reseller Telegram notification error:', err));
+
+        if (order.tenant?.email && order.tenant.notifyEmailOnOrder !== false) {
+          sendResellerOrderNotificationEmail({
+            to: order.tenant.email,
+            name: order.tenant.name,
+            storeName: order.tenant.storeName,
+            productName: order.productTitle || order.product?.title || 'Article Exclusif',
+            amount: `$${(order.totalAmount || order.unitSellingPrice || 0).toFixed(2)} USD`,
+            customerName: order.user?.name,
+            customerEmail: order.user?.email,
+            ticketCode: order.ticketCode,
+          }).catch((err) => console.error('Reseller Email notification error:', err));
+        }
       }
 
       return NextResponse.json({
@@ -152,6 +167,19 @@ export async function POST(req: NextRequest) {
         resellerProfit: `$${(order.resellerProfit || 0).toFixed(2)} USD`,
         details: `Produit : ${order.productTitle || order.product?.title || 'Abonnement'}\nStatut : Validé et livré avec succès par le Super Admin !`,
       }).catch((err) => console.error('Reseller Telegram notification error:', err));
+
+      if (order.tenant?.email && order.tenant.notifyEmailOnOrder !== false) {
+        sendResellerOrderNotificationEmail({
+          to: order.tenant.email,
+          name: order.tenant.name,
+          storeName: order.tenant.storeName,
+          productName: order.productTitle || order.product?.title || 'Abonnement',
+          amount: `$${(order.totalAmount || order.unitSellingPrice || 0).toFixed(2)} USD`,
+          customerName: order.user?.name,
+          customerEmail: order.user?.email,
+          ticketCode: order.ticketCode,
+        }).catch((err) => console.error('Reseller Email notification error:', err));
+      }
     }
 
     return NextResponse.json({

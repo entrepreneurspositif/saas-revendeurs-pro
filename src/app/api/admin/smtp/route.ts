@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
             <p>Félicitations ! Votre configuration SMTP sur la plateforme est validée avec succès.</p>
             <p>Désormais, tous les revendeurs recevront instantanément leurs codes de récupération et leurs alertes directement par e-mail.</p>
             <hr style="border: 0; border-top: 1px solid #1e293b; margin: 20px 0;" />
-            <small style="color: #94a3b8;">Entrepreneurs Positifs SaaS</small>
+            <small style="color: #94a3b8;">Abonnements Pro SaaS</small>
           </div>
         `,
       });
