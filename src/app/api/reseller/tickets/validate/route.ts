@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 
     // Send email order confirmation to reseller if email notification enabled
     if (order.tenant?.email && order.tenant.notifyEmailOnOrder !== false) {
-      sendResellerOrderNotificationEmail({
+      await sendResellerOrderNotificationEmail({
         to: order.tenant.email,
         name: order.tenant.name,
         storeName: order.tenant.storeName,

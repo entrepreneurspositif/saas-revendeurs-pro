@@ -243,7 +243,7 @@ async function processCallback(req: NextRequest) {
       if (order.tenantId && (order as any).tenant) {
         const t = (order as any).tenant;
         if (t.email && t.notifyEmailOnOrder !== false) {
-          sendResellerOrderNotificationEmail({
+          await sendResellerOrderNotificationEmail({
             to: t.email,
             name: t.name,
             storeName: t.storeName || t.name,
@@ -338,7 +338,7 @@ async function processCallback(req: NextRequest) {
       if (otpOrder.tenantId && (otpOrder as any).tenant) {
         const t = (otpOrder as any).tenant;
         if (t.email && t.notifyEmailOnOtp !== false) {
-          sendResellerOrderNotificationEmail({
+          await sendResellerOrderNotificationEmail({
             to: t.email,
             name: t.name,
             storeName: t.storeName || t.name,

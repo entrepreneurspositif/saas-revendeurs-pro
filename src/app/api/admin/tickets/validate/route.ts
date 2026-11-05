@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         }).catch((err) => console.error('Reseller Telegram notification error:', err));
 
         if (order.tenant?.email && order.tenant.notifyEmailOnOrder !== false) {
-          sendResellerOrderNotificationEmail({
+          await sendResellerOrderNotificationEmail({
             to: order.tenant.email,
             name: order.tenant.name,
             storeName: order.tenant.storeName,
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       }).catch((err) => console.error('Reseller Telegram notification error:', err));
 
       if (order.tenant?.email && order.tenant.notifyEmailOnOrder !== false) {
-        sendResellerOrderNotificationEmail({
+        await sendResellerOrderNotificationEmail({
           to: order.tenant.email,
           name: order.tenant.name,
           storeName: order.tenant.storeName,

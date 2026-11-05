@@ -240,12 +240,16 @@ export async function POST(req: NextRequest) {
       const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
       const verifyUrl = `${baseUrl}/api/reseller/verify-email?token=${verificationCode}`;
 
-      sendEmailVerificationEmail({
-        to: newTenant.email,
-        name: newTenant.name,
-        code: verificationCode,
-        verifyUrl,
-      }).catch((e) => console.error('Verification email error on register:', e));
+      try {
+        await sendEmailVerificationEmail({
+          to: newTenant.email,
+          name: newTenant.name,
+          code: verificationCode,
+          verifyUrl,
+        });
+      } catch (e) {
+        console.error('Verification email error on register:', e);
+      }
 
       // If a paid plan was chosen (starter or pro), trigger the payment gateway checkout
       if (targetPlan && targetPlan.id !== 'free') {

@@ -1005,6 +1005,30 @@ export default function ResellerDashboardPage() {
         setActiveTab('support');
       } else if (tabParam === 'wallet') {
         setActiveTab('wallet');
+      } else if (tabParam === 'profile') {
+        setActiveTab('profile');
+      }
+
+      const emailVerifiedParam = urlParams.get('emailVerified');
+      const emailErrorParam = urlParams.get('emailError');
+      if (emailVerifiedParam === 'true') {
+        setActiveTab('profile');
+        setVerifyMsg({
+          success: true,
+          text: '🎉 Félicitations ! Votre adresse e-mail a été vérifiée avec succès. Vos alertes de commandes sont actives.',
+        });
+        fetchSession();
+      } else if (emailErrorParam) {
+        setActiveTab('profile');
+        const errorMessages: Record<string, string> = {
+          missing_token: 'Lien de vérification invalide (aucun jeton fourni).',
+          invalid_token: 'Ce lien de vérification est invalide ou a déjà été utilisé.',
+          expired_token: 'Ce lien de vérification a expiré. Veuillez demander un nouveau code.',
+        };
+        setVerifyMsg({
+          success: false,
+          text: errorMessages[emailErrorParam] || "Erreur lors de la vérification de l'e-mail.",
+        });
       }
       if (activated === 'true') {
         setActiveTab('subscription');
@@ -2078,29 +2102,79 @@ export default function ResellerDashboardPage() {
 
         {/* Unverified Email Global Notification Banner */}
         {!reseller?.emailVerified && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-slate-900 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-in fade-in">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
-                <Mail className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs font-black text-amber-300 flex items-center gap-2">
-                  <span>Adresse e-mail non vérifiée</span>
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-slate-900 border border-amber-500/30 flex flex-col gap-3 shadow-xl animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+                  <Mail className="w-5 h-5" />
                 </div>
-                <p className="text-[11px] text-slate-300">
-                  Confirmez votre e-mail ({reseller?.email}) pour activer les alertes en direct dès qu'une commande est passée sur votre boutique.
-                </p>
+                <div>
+                  <div className="text-xs font-black text-amber-300 flex items-center gap-2">
+                    <span>Adresse e-mail non vérifiée</span>
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Confirmez votre e-mail (<strong className="text-white">{reseller?.email}</strong>) pour recevoir automatiquement les alertes de commandes clients et de retraits.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  disabled={sendingVerification}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  {sendingVerification ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 stroke-[2.5]" />
+                  )}
+                  <span>{sendingVerification ? 'Envoi en cours...' : 'Envoyer mon code par e-mail'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchTab('profile')}
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-all"
+                >
+                  <span>Gérer dans le Profil</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => switchTab('profile')}
-              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 shrink-0 transition-all hover:scale-105 active:scale-95"
-            >
-              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-              <span>Vérifier mon e-mail maintenant</span>
-            </button>
+
+            {/* Quick Inline Code Input if code was requested or message exists */}
+            {(verifyMsg || verificationCodeInput) && (
+              <div className="pt-3 border-t border-amber-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in">
+                {verifyMsg && (
+                  <div className={`text-xs font-medium flex items-center gap-2 ${
+                    verifyMsg.success ? 'text-emerald-300' : 'text-rose-300'
+                  }`}>
+                    {verifyMsg.success ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />}
+                    <span>{verifyMsg.text}</span>
+                  </div>
+                )}
+                <form onSubmit={handleVerifyEmailCode} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={verificationCodeInput}
+                    onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Code à 6 chiffres"
+                    className="w-36 px-3 py-2 bg-slate-950 border border-amber-500/40 rounded-xl text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 text-center tracking-widest"
+                  />
+                  <button
+                    type="submit"
+                    disabled={verifyingEmail || verificationCodeInput.length < 6}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 shadow-md shadow-emerald-600/30 shrink-0"
+                  >
+                    {verifyingEmail ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                    <span>Valider</span>
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         )}
 
@@ -7114,14 +7188,14 @@ export default function ResellerDashboardPage() {
                       type="button"
                       onClick={handleSendVerificationEmail}
                       disabled={sendingVerification}
-                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0"
+                      className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0 shadow-lg shadow-sky-600/25 active:scale-95"
                     >
                       {sendingVerification ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : (
                         <Send className="w-3.5 h-3.5" />
                       )}
-                      <span>{sendingVerification ? 'Envoi en cours...' : 'Envoyer un code de vérification'}</span>
+                      <span>{sendingVerification ? 'Envoi en cours...' : 'Envoyer mon code par e-mail'}</span>
                     </button>
 
                     <form onSubmit={handleVerifyEmailCode} className="flex-1 flex gap-2">
