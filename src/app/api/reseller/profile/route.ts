@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { validateEmail } from '@/lib/emailValidator';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
     if (action === 'update_profile') {
       const {
         name,
+        contactEmail,
         contactPhone,
         contactWhatsApp,
         contactTelegram,
@@ -84,10 +86,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Le nom complet est obligatoire' }, { status: 400 });
       }
 
+      let cleanContactEmail: string | null = undefined as any;
+      if (contactEmail !== undefined) {
+        if (contactEmail && String(contactEmail).trim()) {
+          const valEmail = await validateEmail(String(contactEmail).trim(), false);
+          if (!valEmail.isValid) {
+            return NextResponse.json(
+              { success: false, message: `Email de contact invalide : ${valEmail.error}` },
+              { status: 400 }
+            );
+          }
+          cleanContactEmail = valEmail.cleanEmail;
+        } else {
+          cleanContactEmail = null;
+        }
+      }
+
       const updated = await prisma.tenant.update({
         where: { id: tenant.id },
         data: {
           name: name.trim(),
+          contactEmail: cleanContactEmail,
           contactPhone: contactPhone !== undefined ? contactPhone?.trim() || null : undefined,
           contactWhatsApp: contactWhatsApp !== undefined ? contactWhatsApp?.trim() || null : undefined,
           contactTelegram: contactTelegram !== undefined ? contactTelegram?.trim() || null : undefined,
@@ -104,6 +123,7 @@ export async function POST(req: NextRequest) {
           id: updated.id,
           name: updated.name,
           email: updated.email,
+          contactEmail: updated.contactEmail,
           contactPhone: updated.contactPhone,
           contactWhatsApp: updated.contactWhatsApp,
           contactTelegram: updated.contactTelegram,

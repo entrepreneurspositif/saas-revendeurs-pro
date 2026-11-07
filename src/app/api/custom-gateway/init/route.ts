@@ -52,6 +52,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const targetTenantId = order?.tenantId || null;
+    if (targetTenantId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: targetTenantId },
+        select: { id: true, isActive: true, emailVerified: true },
+      });
+      if (tenant && (!tenant.isActive || !tenant.emailVerified)) {
+        return NextResponse.json(
+          { success: false, message: 'Cette boutique est en attente de vérification par son propriétaire. Le paiement est temporairement désactivé.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const amountXof = convertUsdToXof(amountUsd);
 
     const host = req.headers.get('host') || 'abonnementspro.com';

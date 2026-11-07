@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getOnlineSimTariffs } from '@/lib/onlinesim';
 import { calculateSaasPrices } from '@/lib/saasPricingHelper';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
+import { validateEmail } from '@/lib/emailValidator';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,34 @@ export async function POST(req: NextRequest) {
         { success: false, message: 'Boutique introuvable ou inactive' },
         { status: 404 }
       );
+    }
+
+    // STRICT SECURITY: Reseller must verify email before their store can take OTP orders
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Cette boutique est en attente de vérification par son propriétaire. La prise de commandes OTP y est temporairement suspendue.',
+          code: 'STORE_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Validate customer email if provided
+    let cleanCustomerEmail = customerEmail ? String(customerEmail).slice(0, 150).trim() : null;
+    if (cleanCustomerEmail) {
+      const emailVal = await validateEmail(cleanCustomerEmail, false);
+      if (!emailVal.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: emailVal.error || 'Adresse e-mail client invalide ou temporaire.',
+          },
+          { status: 400 }
+        );
+      }
+      cleanCustomerEmail = emailVal.cleanEmail;
     }
 
     const tariffs = await getOnlineSimTariffs(country);
@@ -122,7 +151,7 @@ export async function POST(req: NextRequest) {
         status: 'PENDING_PAYMENT',
         paymentInstructions,
         tenantId: tenant.id,
-        customerEmail: customerEmail || null,
+        customerEmail: cleanCustomerEmail || null,
         customerName: customerName || null,
         customerPhone: customerPhone || null,
         resellerProfit: pricing.resellerProfit,

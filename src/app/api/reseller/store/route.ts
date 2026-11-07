@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { validateEmail } from '@/lib/emailValidator';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,18 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Revendeur introuvable' }, { status: 404 });
     }
 
+    // STRICT SECURITY: Email verification required before store configuration
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Veuillez valider votre adresse e-mail avant de configurer votre boutique. Consultez votre boîte de réception ou validez votre code dans le tableau de bord.',
+          code: 'EMAIL_NOT_VERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     let parsedFeatures: string[] = [];
     try {
       parsedFeatures = JSON.parse(tenant.plan?.features || '[]');
@@ -129,7 +142,20 @@ export async function PUT(req: NextRequest) {
     if (buttonColor !== undefined) updateData.buttonColor = buttonColor.trim();
     if (buttonTextColor !== undefined) updateData.buttonTextColor = buttonTextColor.trim();
     if (buttonRadius !== undefined) updateData.buttonRadius = buttonRadius.trim();
-    if (contactEmail !== undefined) updateData.contactEmail = contactEmail?.trim() || null;
+    if (contactEmail !== undefined) {
+      if (contactEmail && contactEmail.trim()) {
+        const valEmail = await validateEmail(contactEmail.trim(), false);
+        if (!valEmail.isValid) {
+          return NextResponse.json(
+            { success: false, message: `Email de contact invalide : ${valEmail.error}` },
+            { status: 400 }
+          );
+        }
+        updateData.contactEmail = valEmail.cleanEmail;
+      } else {
+        updateData.contactEmail = null;
+      }
+    }
     if (contactPhone !== undefined) updateData.contactPhone = contactPhone?.trim() || null;
     if (contactWhatsApp !== undefined) updateData.contactWhatsApp = contactWhatsApp?.trim() || null;
     if (contactTelegram !== undefined) updateData.contactTelegram = contactTelegram?.trim() || null;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getPaymentInstructions } from '@/lib/payment-instructions';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { validateEmail } from '@/lib/emailValidator';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'ID du produit requis' }, { status: 400 });
     }
 
-    const userEmail = userId || 'client@example.com';
+    let userEmail = 'client@abonnementspro.com';
+    if (userId && typeof userId === 'string') {
+      const cleanUserId = userId.trim();
+      if (cleanUserId.includes('@')) {
+        const valRes = await validateEmail(cleanUserId, false);
+        if (!valRes.isValid) {
+          return NextResponse.json(
+            { success: false, message: valRes.error || 'Adresse e-mail client invalide ou temporaire.' },
+            { status: 400 }
+          );
+        }
+        userEmail = valRes.cleanEmail;
+      } else {
+        userEmail = cleanUserId;
+      }
+    }
+
     let user = await prisma.user.findFirst({
       where: { OR: [{ id: userEmail }, { email: userEmail }] },
     });
@@ -34,8 +51,8 @@ export async function POST(req: NextRequest) {
     if (!user) {
       user = await prisma.user.create({
         data: {
-          email: 'client@example.com',
-          name: 'Jean Dupont',
+          email: userEmail.includes('@') ? userEmail : 'client@abonnementspro.com',
+          name: 'Client Abonnements Pro',
           role: 'CUSTOMER',
           walletBalance: 250.0,
         },

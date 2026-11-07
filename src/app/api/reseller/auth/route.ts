@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
 import { initializeMonerooPayment } from '@/lib/moneroo';
 import { sendEmailVerificationEmail } from '@/lib/mail';
+import { validateEmail } from '@/lib/emailValidator';
 
 export const dynamic = 'force-dynamic';
 
@@ -173,7 +174,16 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const cleanEmail = email.toLowerCase().trim();
+      // Strict validation: Reject temporary/disposable emails and non-existent domains (DNS MX check)
+      const emailValidation = await validateEmail(email, true);
+      if (!emailValidation.isValid) {
+        return NextResponse.json(
+          { success: false, message: emailValidation.error || 'Adresse e-mail invalide ou temporaire non autorisée.' },
+          { status: 400 }
+        );
+      }
+
+      const cleanEmail = emailValidation.cleanEmail;
       const existingEmail = await prisma.tenant.findUnique({
         where: { email: cleanEmail },
       });

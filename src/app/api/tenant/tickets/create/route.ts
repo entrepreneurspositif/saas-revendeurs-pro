@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateSaasPrices } from '@/lib/saasPricingHelper';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
+import { validateEmail } from '@/lib/emailValidator';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,8 +57,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // STRICT SECURITY: Reseller must verify email before their store can take orders
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Cette boutique est en attente de vérification par son propriétaire. La prise de commandes y est temporairement suspendue.',
+          code: 'STORE_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Validate customer email if provided (block disposable/temporary and invalid emails)
+    let emailToUse = 'client-anonyme@abonnementspro.com';
+    if (cleanCustomerEmail) {
+      const emailVal = await validateEmail(cleanCustomerEmail, false);
+      if (!emailVal.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: emailVal.error || 'Adresse e-mail client invalide ou temporaire.',
+          },
+          { status: 400 }
+        );
+      }
+      emailToUse = emailVal.cleanEmail;
+    }
+
     // Find customer user or create
-    const emailToUse = customerEmail?.trim() || 'client@example.com';
     let user = await prisma.user.findFirst({
       where: { email: emailToUse },
     });

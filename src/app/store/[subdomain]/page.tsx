@@ -393,6 +393,10 @@ export default function TenantStorefrontPage() {
   const handleCreateProductTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
+    if (storeData?.emailVerified === false) {
+      setTicketError("Cette boutique est en attente de vérification d'e-mail par son propriétaire. Les commandes ne sont pas encore ouvertes.");
+      return;
+    }
     if (selectedProduct.requiresCustomerInfo && !customerAccounts.trim()) {
       setTicketError(`Veuillez renseigner : ${selectedProduct.customerInfoPrompt || 'les informations requises pour le fournisseur'}`);
       return;
@@ -440,6 +444,10 @@ export default function TenantStorefrontPage() {
   const handleCreateOtpTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOtpService) return;
+    if (storeData?.emailVerified === false) {
+      setOtpTicketError("Cette boutique est en attente de vérification d'e-mail par son propriétaire. Les commandes OTP ne sont pas encore ouvertes.");
+      return;
+    }
     setCreatingOtpTicket(true);
     setOtpTicketError(null);
     setCreatedOtpTicketResult(null);
@@ -777,6 +785,16 @@ export default function TenantStorefrontPage() {
       {storeData.bannerAnnouncement && (
         <div className={`py-2 px-4 bg-gradient-to-r ${currentTheme.accentGradient} text-white text-xs font-bold text-center shadow-md`}>
           {storeData.bannerAnnouncement}
+        </div>
+      )}
+
+      {/* Unverified Store Owner Security Warning Banner */}
+      {storeData.emailVerified === false && (
+        <div className="py-2.5 px-4 bg-amber-500/20 border-b border-amber-500/30 text-amber-300 text-xs font-semibold text-center flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+          <span>
+            Cette boutique est en attente de vérification d&apos;e-mail par son propriétaire. La prise de commandes sera débloquée dès sa validation.
+          </span>
         </div>
       )}
 

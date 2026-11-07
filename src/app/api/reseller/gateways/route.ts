@@ -57,6 +57,26 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Non authentifié' }, { status: 401 });
     }
 
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: sessionToken },
+      select: { id: true, emailVerified: true },
+    });
+
+    if (!tenant) {
+      return NextResponse.json({ success: false, message: 'Revendeur introuvable' }, { status: 404 });
+    }
+
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Veuillez valider votre adresse e-mail avant de configurer vos passerelles de paiement.',
+          code: 'EMAIL_NOT_VERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       customGatewayEnabled,

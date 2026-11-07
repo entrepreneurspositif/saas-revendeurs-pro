@@ -163,6 +163,7 @@ export async function GET(req: NextRequest) {
         googleAnalyticsId: tenant.googleAnalyticsId,
         welcomeMessage: tenant.welcomeMessage,
         floatingChatEnabled: tenant.floatingChatEnabled ?? true,
+        emailVerified: Boolean(tenant.emailVerified),
         paymentMethods: {
           feexpay: true,
           moneroo: true,

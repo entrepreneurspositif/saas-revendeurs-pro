@@ -2110,11 +2110,11 @@ export default function ResellerDashboardPage() {
                 </div>
                 <div>
                   <div className="text-xs font-black text-amber-300 flex items-center gap-2">
-                    <span>Adresse e-mail non vérifiée</span>
+                    <span>Validation e-mail obligatoire</span>
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    Confirmez votre e-mail (<strong className="text-white">{reseller?.email}</strong>) pour recevoir automatiquement les alertes de commandes clients et de retraits.
+                    Votre boutique et la prise de commandes sont verrouillées. Confirmez votre adresse e-mail (<strong className="text-white">{reseller?.email}</strong>) pour débloquer la personnalisation de votre vitrine et activer les paiements clients.
                   </p>
                 </div>
               </div>
@@ -2637,6 +2637,30 @@ export default function ResellerDashboardPage() {
                 </button>
               </div>
             </div>
+
+            {!reseller?.emailVerified && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-amber-300 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-amber-200 block">Configuration des prix verrouillée</span>
+                    <span className="text-[11px] text-slate-300">
+                      Vous devez valider votre adresse e-mail ({reseller?.email}) avant de pouvoir modifier vos prix de vente ou activer/désactiver des produits.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  disabled={sendingVerification}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-all shadow-md self-start sm:self-auto"
+                >
+                  {sendingVerification ? 'Envoi...' : 'Valider mon e-mail'}
+                </button>
+              </div>
+            )}
 
             {(resellerCatalogMode === 'PRODUCTS' || resellerCatalogMode === 'EXCLUSIVE') && (
               <div className="space-y-4">
@@ -3431,6 +3455,30 @@ export default function ResellerDashboardPage() {
               >
                 {storeMsg.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
                 <span>{storeMsg.text}</span>
+              </div>
+            )}
+
+            {!reseller?.emailVerified && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-amber-300 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-amber-200 block">Configuration de la boutique verrouillée</span>
+                    <span className="text-[11px] text-slate-300">
+                      Vous devez valider votre adresse e-mail ({reseller?.email}) avant de pouvoir enregistrer vos modifications et recevoir des commandes clients.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  disabled={sendingVerification}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-all shadow-md self-start sm:self-auto"
+                >
+                  {sendingVerification ? 'Envoi...' : 'Valider mon e-mail'}
+                </button>
               </div>
             )}
 
@@ -4337,10 +4385,11 @@ export default function ResellerDashboardPage() {
               <div className="pt-4 border-t border-slate-800 flex justify-end">
                 <button
                   type="submit"
-                  disabled={savingStore}
+                  disabled={savingStore || !reseller?.emailVerified}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+                  title={!reseller?.emailVerified ? 'Validez votre adresse e-mail pour enregistrer' : undefined}
                 >
-                  {savingStore ? 'Enregistrement...' : 'Enregistrer les paramètres'}
+                  {savingStore ? 'Enregistrement...' : (!reseller?.emailVerified ? '🔒 Validation e-mail requise' : 'Enregistrer les paramètres')}
                 </button>
               </div>
             </form>
@@ -5445,6 +5494,30 @@ export default function ResellerDashboardPage() {
                 </div>
               </div>
 
+              {!reseller?.emailVerified && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-amber-300">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-amber-200 block">Passerelles de paiement verrouillées</span>
+                      <span className="text-[11px] text-slate-300">
+                        Vous devez valider votre adresse e-mail ({reseller?.email}) avant de pouvoir configurer vos propres clés API marchandes.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSendVerificationEmail}
+                    disabled={sendingVerification}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-all shadow-md self-start sm:self-auto"
+                  >
+                    {sendingVerification ? 'Envoi...' : 'Valider mon e-mail'}
+                  </button>
+                </div>
+              )}
+
               {/* Explanatory Banner */}
               <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-xs text-slate-300 space-y-2 leading-relaxed">
                 <div className="flex items-center gap-2 font-bold text-sky-300">
@@ -5628,15 +5701,16 @@ export default function ResellerDashboardPage() {
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  disabled={savingGateways}
+                  disabled={savingGateways || !reseller?.emailVerified}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+                  title={!reseller?.emailVerified ? 'Validez votre adresse e-mail pour enregistrer vos clés' : undefined}
                 >
                   {savingGateways ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <Check className="w-4 h-4" />
                   )}
-                  <span>Enregistrer mes Clés de Paiement</span>
+                  <span>{!reseller?.emailVerified ? '🔒 Validation e-mail requise' : 'Enregistrer mes Clés de Paiement'}</span>
                 </button>
               </div>
             </form>

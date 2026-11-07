@@ -134,6 +134,17 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Revendeur introuvable' }, { status: 404 });
     }
 
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Veuillez valider votre adresse e-mail avant de configurer vos prix et produits.',
+          code: 'EMAIL_NOT_VERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { productId, customSellingPrice, isEnabled, bulkUpdates } = body;
 

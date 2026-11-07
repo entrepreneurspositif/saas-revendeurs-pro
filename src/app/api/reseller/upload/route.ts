@@ -18,6 +18,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Revendeur introuvable' }, { status: 404 });
     }
 
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Veuillez valider votre adresse e-mail avant de téléverser des visuels.',
+          code: 'EMAIL_NOT_VERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const contentType = req.headers.get('content-type') || '';
     let dataUrl = '';
 

@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
         select: {
           id: true,
           subdomain: true,
+          isActive: true,
+          emailVerified: true,
           customGatewayEnabled: true,
           monerooSecretKey: true,
           monerooEnabled: true,
@@ -72,6 +74,12 @@ export async function POST(req: NextRequest) {
       });
 
       if (tenant) {
+        if (!tenant.isActive || !tenant.emailVerified) {
+          return NextResponse.json(
+            { success: false, message: 'Cette boutique est en attente de vérification par son propriétaire. Le paiement est temporairement désactivé.' },
+            { status: 403 }
+          );
+        }
         tenantSubdomain = tenant.subdomain;
         if (
           tenant.customGatewayEnabled &&
