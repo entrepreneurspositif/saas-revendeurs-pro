@@ -9,6 +9,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { productId, quantity = 1, customerAccounts, userId } = body;
 
+    // Strict numerical quantity validation
+    const parsedQty = parseInt(String(quantity), 10);
+    if (isNaN(parsedQty) || parsedQty < 1 || parsedQty > 100) {
+      return NextResponse.json(
+        { success: false, message: 'Quantité invalide. Doit être comprise entre 1 et 100.' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize customer inputs
+    const cleanCustomerAccounts = customerAccounts ? String(customerAccounts).slice(0, 500).replace(/[<>]/g, '').trim() : null;
+
     if (!productId) {
       return NextResponse.json({ success: false, message: 'ID du produit requis' }, { status: 400 });
     }
@@ -65,7 +77,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (suppProd.stock < quantity) {
+    if (suppProd.stock < parsedQty) {
       return NextResponse.json(
         { success: false, message: `Stock insuffisant chez le fournisseur (Disponible: ${suppProd.stock})` },
         { status: 400 }
@@ -73,10 +85,17 @@ export async function POST(req: NextRequest) {
     }
 
     const unitSellingPrice = product.sellingPrice;
-    const totalSellingPrice = unitSellingPrice * quantity;
+    const totalSellingPrice = unitSellingPrice * parsedQty;
     const unitCostPrice = suppProd.costPrice;
-    const totalCostPrice = unitCostPrice * quantity;
+    const totalCostPrice = unitCostPrice * parsedQty;
     const totalProfitMargin = parseFloat((totalSellingPrice - totalCostPrice).toFixed(2));
+
+    if (totalSellingPrice <= 0 || unitSellingPrice <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Montant de commande invalide.' },
+        { status: 400 }
+      );
+    }
 
     if (user.walletBalance < totalSellingPrice) {
       return NextResponse.json(
@@ -93,9 +112,9 @@ export async function POST(req: NextRequest) {
     const driver = createSupplierDriver(supplier);
     const purchaseRes = await driver.purchase({
       productId: suppProd.externalId,
-      quantity,
+      quantity: parsedQty,
       idempotencyKey,
-      customerAccounts,
+      customerAccounts: cleanCustomerAccounts || undefined,
     });
 
     if (!purchaseRes.success) {
@@ -114,7 +133,7 @@ export async function POST(req: NextRequest) {
           productTitle: product.title,
           supplierId: supplier.id,
           supplierProductId: suppProd.id,
-          quantity,
+          quantity: parsedQty,
           unitCostPrice,
           unitSellingPrice,
           totalAmount: totalSellingPrice,
@@ -148,8 +167,8 @@ export async function POST(req: NextRequest) {
     await prisma.supplierProduct.update({
       where: { id: suppProd.id },
       data: {
-        stock: { decrement: quantity },
-        sold: { increment: quantity },
+        stock: { decrement: parsedQty },
+        sold: { increment: parsedQty },
       },
     });
 
@@ -160,15 +179,15 @@ export async function POST(req: NextRequest) {
         productTitle: product.title,
         supplierId: supplier.id,
         supplierProductId: suppProd.id,
-        quantity,
+        quantity: parsedQty,
         unitCostPrice,
         unitSellingPrice,
         totalAmount: totalSellingPrice,
         profitMargin: totalProfitMargin,
         status: 'COMPLETED',
         deliveredCredentials: credentialsStr,
-        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
         idempotencyKey,
+        customerAccounts: cleanCustomerAccounts || undefined,
         supplierOrderRef: purchaseRes.orderRef,
       },
     });

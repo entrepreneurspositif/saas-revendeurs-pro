@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
 import { getPricingRules, calculateSellingPriceFromCost } from '@/lib/pricingHelper';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -143,6 +144,9 @@ async function executeSupplierSync(supplierId?: string | null) {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorized = requireAdmin(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const { supplierId } = await req.json().catch(() => ({ supplierId: null }));
     const result = await executeSupplierSync(supplierId);
@@ -153,6 +157,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const unauthorized = requireAdmin(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const supplierId = req.nextUrl.searchParams.get('supplierId');
     const result = await executeSupplierSync(supplierId);

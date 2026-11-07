@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export async function POST(req: NextRequest) {
+  const unauthorized = requireAdmin(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const { supplierId } = await req.json();
 

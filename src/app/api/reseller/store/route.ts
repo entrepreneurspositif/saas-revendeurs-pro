@@ -170,8 +170,22 @@ export async function PUT(req: NextRequest) {
 
     // Custom Domain change check
     if (customDomain !== undefined) {
-      const cleanDomain = customDomain ? customDomain.trim().toLowerCase() : null;
+      let cleanDomain = customDomain ? customDomain.trim().toLowerCase() : null;
       if (cleanDomain && cleanDomain !== tenant.customDomain) {
+        // Sanitize and strip protocol/slashes/ports
+        cleanDomain = cleanDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').split(':')[0].trim();
+
+        // Strict validation: must be a real public domain name, no loopback, no private IPs
+        const isValidDomain = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(cleanDomain);
+        const isForbidden = /^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|169\.254\.)/.test(cleanDomain);
+
+        if (!isValidDomain || isForbidden) {
+          return NextResponse.json(
+            { success: false, message: 'Format de domaine invalide. Exemple valide : boutique.mondomaine.com (sans http, ni adresse IP locale)' },
+            { status: 400 }
+          );
+        }
+
         // Check if plan allows custom_domain
         if (!parsedFeatures.includes('custom_domain')) {
           return NextResponse.json(

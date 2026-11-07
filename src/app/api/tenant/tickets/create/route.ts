@@ -10,6 +10,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { subdomain, tenantId, productId, quantity = 1, customerAccounts, customerEmail, customerName } = body;
 
+    // Strict numerical quantity validation
+    const parsedQty = parseInt(String(quantity), 10);
+    if (isNaN(parsedQty) || parsedQty < 1 || parsedQty > 100) {
+      return NextResponse.json(
+        { success: false, message: 'Quantité invalide. Doit être comprise entre 1 et 100.' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize customer inputs
+    const cleanCustomerAccounts = customerAccounts ? String(customerAccounts).slice(0, 500).replace(/[<>]/g, '').trim() : null;
+    const cleanCustomerEmail = customerEmail ? String(customerEmail).slice(0, 150).trim() : null;
+    const cleanCustomerName = customerName ? String(customerName).slice(0, 100).replace(/[<>]/g, '').trim() : null;
+
     if (!productId) {
       return NextResponse.json({ success: false, message: 'ID du produit requis' }, { status: 400 });
     }
@@ -104,7 +118,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (suppProd.stock < quantity) {
+      if (suppProd.stock < parsedQty) {
         return NextResponse.json(
           { success: false, message: `Stock insuffisant (Disponible: ${suppProd.stock})` },
           { status: 400 }
@@ -123,12 +137,19 @@ export async function POST(req: NextRequest) {
     });
 
     const unitSellingPrice = calc.resellerSellingPrice;
-    const totalSellingPrice = parseFloat((unitSellingPrice * quantity).toFixed(2));
+    const totalSellingPrice = parseFloat((unitSellingPrice * parsedQty).toFixed(2));
     const unitCostPrice = calc.supplierCost;
-    const totalCostPrice = parseFloat((unitCostPrice * quantity).toFixed(2));
-    const totalResellerProfit = parseFloat((calc.resellerProfit * quantity).toFixed(2));
-    const totalPlatformProfit = parseFloat((calc.platformProfit * quantity).toFixed(2));
+    const totalCostPrice = parseFloat((unitCostPrice * parsedQty).toFixed(2));
+    const totalResellerProfit = parseFloat((calc.resellerProfit * parsedQty).toFixed(2));
+    const totalPlatformProfit = parseFloat((calc.platformProfit * parsedQty).toFixed(2));
     const totalProfitMargin = parseFloat((totalSellingPrice - totalCostPrice).toFixed(2));
+
+    if (totalSellingPrice <= 0 || unitSellingPrice <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Montant de commande invalide.' },
+        { status: 400 }
+      );
+    }
 
     // Generate unique Ticket Code (e.g., TK-582914)
     const randomNum = Math.floor(100000 + Math.random() * 900000);
@@ -158,7 +179,7 @@ export async function POST(req: NextRequest) {
         supplierId: suppProd?.supplier?.id || null,
         supplierProductId: suppProd?.id || null,
         ticketCode: ticketCode,
-        quantity,
+        quantity: parsedQty,
         unitCostPrice,
         unitSellingPrice,
         totalAmount: totalSellingPrice,
@@ -168,7 +189,7 @@ export async function POST(req: NextRequest) {
         platformProfit: totalPlatformProfit,
         status: 'PENDING_PAYMENT',
         paymentInstructions,
-        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
+        customerAccounts: cleanCustomerAccounts,
         idempotencyKey,
       },
     });

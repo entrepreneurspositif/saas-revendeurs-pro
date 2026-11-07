@@ -10,6 +10,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { productId, quantity = 1, customerAccounts, userId, promoCode } = body;
 
+    // Strict numerical quantity validation
+    const parsedQty = parseInt(String(quantity), 10);
+    if (isNaN(parsedQty) || parsedQty < 1 || parsedQty > 100) {
+      return NextResponse.json(
+        { success: false, message: 'Quantité invalide. Doit être comprise entre 1 et 100.' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize customer inputs
+    const cleanCustomerAccounts = customerAccounts ? String(customerAccounts).slice(0, 500).replace(/[<>]/g, '').trim() : null;
+
     if (!productId) {
       return NextResponse.json({ success: false, message: 'ID du produit requis' }, { status: 400 });
     }
@@ -69,7 +81,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (suppProd.stock < quantity) {
+      if (suppProd.stock < parsedQty) {
         return NextResponse.json(
           { success: false, message: `Stock insuffisant (Disponible: ${suppProd.stock})` },
           { status: 400 }
@@ -82,9 +94,9 @@ export async function POST(req: NextRequest) {
     const ticketCode = `TK-${randomNum}`;
 
     const unitSellingPrice = product.sellingPrice;
-    let totalSellingPrice = unitSellingPrice * quantity;
+    let totalSellingPrice = unitSellingPrice * parsedQty;
     const unitCostPrice = suppProd ? suppProd.costPrice : 0;
-    const totalCostPrice = unitCostPrice * quantity;
+    const totalCostPrice = unitCostPrice * parsedQty;
 
     // Apply Promo Code discount if provided & valid
     if (promoCode && typeof promoCode === 'string' && promoCode.trim()) {
@@ -113,6 +125,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (totalSellingPrice <= 0 || unitSellingPrice <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Montant de commande invalide.' },
+        { status: 400 }
+      );
+    }
+
     const totalProfitMargin = parseFloat((totalSellingPrice - totalCostPrice).toFixed(2));
 
     // Fetch Shared Admin Payment Instructions
@@ -129,14 +148,14 @@ export async function POST(req: NextRequest) {
         supplierId: suppProd?.supplier?.id || null,
         supplierProductId: suppProd?.id || null,
         ticketCode: ticketCode,
-        quantity,
+        quantity: parsedQty,
         unitCostPrice,
         unitSellingPrice,
         totalAmount: totalSellingPrice,
         profitMargin: totalProfitMargin,
         status: 'PENDING_PAYMENT',
         paymentInstructions,
-        customerAccounts: customerAccounts ? String(customerAccounts).trim() : null,
+        customerAccounts: cleanCustomerAccounts,
         idempotencyKey,
       },
     });

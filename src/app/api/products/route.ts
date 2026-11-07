@@ -8,7 +8,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
     const search = searchParams.get('search');
-    const adminMode = searchParams.get('admin') === 'true';
+    const adminParam = searchParams.get('admin') === 'true';
+    const authCookie = req.cookies.get('admin_session')?.value;
+    const adminMode = adminParam && authCookie === 'authenticated_admin_session_token_2026';
 
     const manualOnly = searchParams.get('manualOnly') === 'true';
 
@@ -122,6 +124,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authCookie = req.cookies.get('admin_session')?.value;
+    if (authCookie !== 'authenticated_admin_session_token_2026') {
+      return NextResponse.json({ success: false, message: 'Non autorisé : Session administrateur requise' }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       title,
@@ -200,6 +207,11 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const authCookie = req.cookies.get('admin_session')?.value;
+    if (authCookie !== 'authenticated_admin_session_token_2026') {
+      return NextResponse.json({ success: false, message: 'Non autorisé : Session administrateur requise' }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       id,
@@ -266,6 +278,11 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const authCookie = req.cookies.get('admin_session')?.value;
+    if (authCookie !== 'authenticated_admin_session_token_2026') {
+      return NextResponse.json({ success: false, message: 'Non autorisé : Session administrateur requise' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 

@@ -4,20 +4,54 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for:
-     * 1. /api routes (leave untouched for direct API access)
-     * 2. /_next (Next.js internal chunks, static files, and image optimization)
-     * 3. Static files with extensions (.png, .jpg, .ico, .svg, .css, .js, .txt, .xml)
+     * 1. /_next (Next.js internal chunks, static files, and image optimization)
+     * 2. Static files with extensions (.png, .jpg, .ico, .svg, .css, .js, .txt, .xml)
      */
-    '/((?!api/|_next/|_static/|[\\w-]+\\.\\w+).*)',
+    '/((?!_next/|_static/|[\\w-]+\\.\\w+).*)',
   ],
 };
+
+const ADMIN_SESSION_TOKEN = 'authenticated_admin_session_token_2026';
 
 export default function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
   const pathname = url.pathname;
 
-  // Extract hostname without port (e.g. 'techstore.abonnementspro.com' or 'techstore.localhost' or 'shop.maboutique.com')
+  // --- 1. CRITICAL SECURITY GUARDS FOR API ROUTES ---
+  if (pathname.startsWith('/api/admin/')) {
+    // Allow /api/admin/auth for login and session checks
+    if (pathname === '/api/admin/auth') {
+      return NextResponse.next();
+    }
+    const token = req.cookies.get('admin_session')?.value;
+    if (token !== ADMIN_SESSION_TOKEN) {
+      return NextResponse.json(
+        { success: false, message: 'Accès non autorisé : Session Super Admin requise.' },
+        { status: 401 }
+      );
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith('/api/suppliers')) {
+    const token = req.cookies.get('admin_session')?.value;
+    if (token !== ADMIN_SESSION_TOKEN) {
+      return NextResponse.json(
+        { success: false, message: 'Accès non autorisé : Session Super Admin requise.' },
+        { status: 401 }
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // Pass through all other APIs directly without domain rewrites
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
+  // --- 2. MULTI-TENANT DOMAIN ROUTING ---
+  // Extract hostname without port (e.g. 'techstore.abonnementspro.com' or 'shop.maboutique.com')
   const hostname = host.split(':')[0].toLowerCase();
 
   // Root platform domains and technical hosts
@@ -26,7 +60,8 @@ export default function middleware(req: NextRequest) {
     hostname === 'www.abonnementspro.com' ||
     hostname === 'localhost' ||
     hostname === '127.0.0.1' ||
-    hostname.endsWith('.up.railway.app');
+    hostname.endsWith('.up.railway.app') ||
+    hostname.endsWith('.vercel.app');
 
   let tenantKey: string | null = null;
 
@@ -42,7 +77,12 @@ export default function middleware(req: NextRequest) {
     }
   } else if (!isPlatformHost) {
     // Custom domain scenario (e.g. 'shop.maboutique.com' or 'digitaldeals.net')
-    tenantKey = hostname;
+    // Prevent SSRF / internal IP loopbacks (e.g., 127.0.0.1, 10.x, 192.168.x)
+    const isValidDomainFormat = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(hostname);
+    const isPrivateIp = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|169\.254\.)/.test(hostname);
+    if (isValidDomainFormat && !isPrivateIp) {
+      tenantKey = hostname;
+    }
   }
 
   // If a valid reseller subdomain OR custom domain is visited:
