@@ -1734,9 +1734,6 @@ export default function ResellerDashboardPage() {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || "Erreur lors de l'envoi");
       setVerifyMsg({ success: true, text: data.message });
-      if (data.mockCode) {
-        setVerificationCodeInput(data.mockCode);
-      }
     } catch (err: any) {
       setVerifyMsg({ success: false, text: err.message });
     } finally {

@@ -14,6 +14,24 @@ function sanitizeSubdomain(input: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+function sanitizeField(input: any, maxLen: number = 500): string | null {
+  if (input === undefined || input === null) return null;
+  const str = String(input).trim();
+  if (!str) return null;
+  return str.replace(/[<>]/g, '').slice(0, maxLen);
+}
+
+function isSafeImageUrl(url: string | null | undefined): boolean {
+  if (!url) return true;
+  const clean = url.trim().toLowerCase();
+  if (clean.startsWith('data:image/')) return true;
+  if (clean.startsWith('/')) return true;
+  if (clean.includes('webhook.site') || clean.includes('burpcollaborator') || clean.includes('oastify') || clean.includes('interact.sh')) {
+    return false;
+  }
+  return clean.startsWith('https://');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const sessionToken = req.cookies.get('reseller_session')?.value;
@@ -131,17 +149,27 @@ export async function PUT(req: NextRequest) {
 
     const updateData: any = {};
 
-    if (storeName !== undefined) updateData.storeName = storeName.trim();
-    if (tagline !== undefined) updateData.tagline = tagline.trim();
-    if (logoUrl !== undefined) updateData.logoUrl = logoUrl?.trim() || null;
-    if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl?.trim() || null;
-    if (themeColor !== undefined) updateData.themeColor = themeColor.trim();
-    if (themePreset !== undefined) updateData.themePreset = themePreset.trim();
-    if (productTemplate !== undefined) updateData.productTemplate = productTemplate.trim();
-    if (fontFamily !== undefined) updateData.fontFamily = fontFamily.trim();
-    if (buttonColor !== undefined) updateData.buttonColor = buttonColor.trim();
-    if (buttonTextColor !== undefined) updateData.buttonTextColor = buttonTextColor.trim();
-    if (buttonRadius !== undefined) updateData.buttonRadius = buttonRadius.trim();
+    if (storeName !== undefined) updateData.storeName = sanitizeField(storeName, 100) || tenant.storeName;
+    if (tagline !== undefined) updateData.tagline = sanitizeField(tagline, 200) || '';
+    if (logoUrl !== undefined) {
+      if (!isSafeImageUrl(logoUrl)) {
+        return NextResponse.json({ success: false, message: 'URL de logo non autorisée.' }, { status: 400 });
+      }
+      updateData.logoUrl = logoUrl?.trim() || null;
+    }
+    if (bannerUrl !== undefined) {
+      if (!isSafeImageUrl(bannerUrl)) {
+        return NextResponse.json({ success: false, message: 'URL de bannière non autorisée.' }, { status: 400 });
+      }
+      updateData.bannerUrl = bannerUrl?.trim() || null;
+    }
+    if (themeColor !== undefined) updateData.themeColor = sanitizeField(themeColor, 30) || 'sky';
+    if (themePreset !== undefined) updateData.themePreset = sanitizeField(themePreset, 50) || 'cyber-dark';
+    if (productTemplate !== undefined) updateData.productTemplate = sanitizeField(productTemplate, 50) || 'grid-modern';
+    if (fontFamily !== undefined) updateData.fontFamily = sanitizeField(fontFamily, 50) || 'Inter';
+    if (buttonColor !== undefined) updateData.buttonColor = sanitizeField(buttonColor, 30) || '#0284c7';
+    if (buttonTextColor !== undefined) updateData.buttonTextColor = sanitizeField(buttonTextColor, 30) || '#ffffff';
+    if (buttonRadius !== undefined) updateData.buttonRadius = sanitizeField(buttonRadius, 30) || 'rounded-xl';
     if (contactEmail !== undefined) {
       if (contactEmail && contactEmail.trim()) {
         const valEmail = await validateEmail(contactEmail.trim(), false);
@@ -156,15 +184,15 @@ export async function PUT(req: NextRequest) {
         updateData.contactEmail = null;
       }
     }
-    if (contactPhone !== undefined) updateData.contactPhone = contactPhone?.trim() || null;
-    if (contactWhatsApp !== undefined) updateData.contactWhatsApp = contactWhatsApp?.trim() || null;
-    if (contactTelegram !== undefined) updateData.contactTelegram = contactTelegram?.trim() || null;
-    if (bannerAnnouncement !== undefined) updateData.bannerAnnouncement = bannerAnnouncement?.trim() || null;
-    if (paymentInstructions !== undefined) updateData.paymentInstructions = paymentInstructions?.trim() || null;
-    if (facebookPixelId !== undefined) updateData.facebookPixelId = facebookPixelId ? String(facebookPixelId).trim() : null;
-    if (tiktokPixelId !== undefined) updateData.tiktokPixelId = tiktokPixelId ? String(tiktokPixelId).trim() : null;
-    if (googleAnalyticsId !== undefined) updateData.googleAnalyticsId = googleAnalyticsId ? String(googleAnalyticsId).trim() : null;
-    if (welcomeMessage !== undefined) updateData.welcomeMessage = welcomeMessage ? String(welcomeMessage).trim() : null;
+    if (contactPhone !== undefined) updateData.contactPhone = sanitizeField(contactPhone, 30);
+    if (contactWhatsApp !== undefined) updateData.contactWhatsApp = sanitizeField(contactWhatsApp, 30);
+    if (contactTelegram !== undefined) updateData.contactTelegram = sanitizeField(contactTelegram, 50);
+    if (bannerAnnouncement !== undefined) updateData.bannerAnnouncement = sanitizeField(bannerAnnouncement, 300);
+    if (paymentInstructions !== undefined) updateData.paymentInstructions = sanitizeField(paymentInstructions, 1000);
+    if (facebookPixelId !== undefined) updateData.facebookPixelId = sanitizeField(facebookPixelId, 50);
+    if (tiktokPixelId !== undefined) updateData.tiktokPixelId = sanitizeField(tiktokPixelId, 50);
+    if (googleAnalyticsId !== undefined) updateData.googleAnalyticsId = sanitizeField(googleAnalyticsId, 50);
+    if (welcomeMessage !== undefined) updateData.welcomeMessage = sanitizeField(welcomeMessage, 500);
     if (floatingChatEnabled !== undefined) updateData.floatingChatEnabled = Boolean(floatingChatEnabled);
 
     // Subdomain change check

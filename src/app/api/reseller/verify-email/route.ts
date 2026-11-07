@@ -111,11 +111,13 @@ export async function POST(req: NextRequest) {
       });
 
       if (mailResult.notConfigured) {
-        return NextResponse.json({
-          success: true,
-          mockCode: verificationCode,
-          message: `Code de vérification généré : ${verificationCode} (Serveur SMTP en cours de configuration)`,
-        });
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Le service d'envoi d'e-mails est temporairement indisponible. Veuillez contacter le support.",
+          },
+          { status: 503 }
+        );
       }
 
       if (!mailResult.success) {
