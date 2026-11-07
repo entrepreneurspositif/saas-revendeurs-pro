@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
+import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
 import {
   getFeexPayConfig,
   isFeexPaySupportedMethod,
@@ -80,14 +81,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!paymentMethod || !String(paymentMethod).trim()) {
+    const cleanMethod = sanitizeText(paymentMethod, 50);
+    const cleanDetails = sanitizeText(paymentDetails, 200);
+
+    if (isMaliciousPayload(paymentMethod) || isMaliciousPayload(paymentDetails)) {
+      return NextResponse.json(
+        { success: false, message: 'Requête rejetée : contenu suspect ou script non autorisé.' },
+        { status: 400 }
+      );
+    }
+
+    if (!cleanMethod) {
       return NextResponse.json(
         { success: false, message: 'Veuillez choisir un moyen de paiement pour votre retrait.' },
         { status: 400 }
       );
     }
 
-    if (!paymentDetails || !String(paymentDetails).trim()) {
+    if (!cleanDetails) {
       return NextResponse.json(
         { success: false, message: 'Veuillez renseigner vos coordonnées de réception (Numéro Mobile Money ou Adresse Wallet).' },
         { status: 400 }
@@ -152,8 +163,8 @@ export async function POST(req: NextRequest) {
         reference,
         tenantId: tenant.id,
         amount: requestedAmount,
-        paymentMethod: String(paymentMethod).trim(),
-        paymentDetails: String(paymentDetails).trim(),
+        paymentMethod: cleanMethod,
+        paymentDetails: cleanDetails,
         status: 'PENDING',
       },
     });
@@ -218,8 +229,8 @@ export async function POST(req: NextRequest) {
     // =========================================================================
     if (autoPayEligible) {
       const feexResult = await executeFeexPayPayout({
-        paymentMethod: String(paymentMethod).trim(),
-        paymentDetails: String(paymentDetails).trim(),
+        paymentMethod: cleanMethod,
+        paymentDetails: cleanDetails,
         amountUsd: requestedAmount,
         reference,
         email: tenant.email,

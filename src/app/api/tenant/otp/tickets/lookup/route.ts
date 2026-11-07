@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getOnlineSimState } from '@/lib/onlinesim';
+import { getClientIp, checkRateLimit, recordFailure } from '@/lib/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const limitCheck = checkRateLimit(`otp_lookup:${ip}`, 30, 60000);
+
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Trop de requêtes de recherche de ticket. Veuillez patienter une minute avant de réessayer.',
+        },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code')?.trim() || searchParams.get('ticketCode')?.trim();
     const subdomain = searchParams.get('subdomain')?.trim();
@@ -37,6 +51,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!otpOrder) {
+      recordFailure(`otp_lookup:${ip}`, 10, 5 * 60 * 1000);
       return NextResponse.json(
         { success: false, message: 'Ticket OTP introuvable' },
         { status: 404 }

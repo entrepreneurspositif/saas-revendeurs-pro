@@ -104,9 +104,12 @@ export async function POST(req: NextRequest) {
       assignedTzid = result.tzid || 0;
     }
 
-    // Update OTP order
-    const updatedOrder = await prisma.otpOrder.update({
-      where: { id: otpOrder.id },
+    // Atomic status transition lock: only credit profit if transitioning from PENDING_PAYMENT
+    const atomicLock = await prisma.otpOrder.updateMany({
+      where: {
+        id: otpOrder.id,
+        status: 'PENDING_PAYMENT',
+      },
       data: {
         phone: assignedPhone,
         tzid: assignedTzid,
@@ -116,7 +119,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Credit reseller profit to their wallet
+    if (atomicLock.count === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Ce ticket OTP a déjà été activé ou validé par une autre requête.',
+        },
+        { status: 409 }
+      );
+    }
+
+    const updatedOrder = await prisma.otpOrder.findUnique({
+      where: { id: otpOrder.id },
+    });
+
+    // Credit reseller profit to their wallet (exactly once)
     if (otpOrder.resellerProfit > 0) {
       await prisma.tenant.update({
         where: { id: sessionToken },
@@ -129,7 +146,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      order: updatedOrder,
+      order: updatedOrder || otpOrder,
       profitCredited: otpOrder.resellerProfit,
       message: `Ticket OTP validé avec succès ! Numéro attribué : ${assignedPhone}. Bénéfice (+${otpOrder.resellerProfit.toFixed(2)}$) crédité.`,
     });

@@ -37,7 +37,18 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith('/api/suppliers')) {
+  if (pathname.startsWith('/api/suppliers') || pathname.startsWith('/api/saas/resellers') || pathname.startsWith('/api/user')) {
+    const token = req.cookies.get('admin_session')?.value;
+    if (token !== ADMIN_SESSION_TOKEN) {
+      return NextResponse.json(
+        { success: false, message: 'Accès non autorisé : Session Super Admin requise.' },
+        { status: 401 }
+      );
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname === '/api/saas/plans' && req.method === 'PUT') {
     const token = req.cookies.get('admin_session')?.value;
     if (token !== ADMIN_SESSION_TOKEN) {
       return NextResponse.json(

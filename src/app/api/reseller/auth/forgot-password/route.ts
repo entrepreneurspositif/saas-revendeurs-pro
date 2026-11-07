@@ -5,6 +5,9 @@ import { sendPasswordResetEmail, getSmtpConfig } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
+// In-memory brute force attempt tracking for password reset (Max 5 attempts per 15 min)
+const resetAttemptsMap = new Map<string, { count: number; lockedUntil: number }>();
+
 async function getTelegramBotInfo(): Promise<{ botToken?: string; username?: string }> {
   try {
     const setting = await prisma.setting.findUnique({
@@ -191,6 +194,20 @@ Vous avez demandé la réinitialisation de votre mot de passe pour la boutique <
         );
       }
 
+      // Brute-force protection: check if account is locked
+      const now = Date.now();
+      const attemptData = resetAttemptsMap.get(cleanEmail) || { count: 0, lockedUntil: 0 };
+      if (attemptData.lockedUntil > now) {
+        const remainingMin = Math.ceil((attemptData.lockedUntil - now) / 60000);
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Trop de tentatives erronées. Votre compte est temporairement verrouillé pour ${remainingMin} minute(s).`,
+          },
+          { status: 429 }
+        );
+      }
+
       const tenant = await prisma.tenant.findUnique({
         where: { email: cleanEmail },
       });
@@ -208,14 +225,36 @@ Vous avez demandé la réinitialisation de votre mot de passe pour la boutique <
         !tenant.resetTokenExpiresAt ||
         new Date(tenant.resetTokenExpiresAt) < new Date()
       ) {
+        attemptData.count += 1;
+        if (attemptData.count >= 5) {
+          attemptData.lockedUntil = now + 15 * 60 * 1000; // 15 minutes lockout
+          resetAttemptsMap.set(cleanEmail, attemptData);
+          // Invalidate the compromised token immediately
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: { resetToken: null, resetTokenExpiresAt: null },
+          });
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'Nombre maximal de tentatives dépassé (5/5). Le code a été invalidé par sécurité. Veuillez refaire une demande dans 15 minutes.',
+            },
+            { status: 429 }
+          );
+        }
+
+        resetAttemptsMap.set(cleanEmail, attemptData);
         return NextResponse.json(
           {
             success: false,
-            message: 'Le code de vérification est invalide ou a expiré. Veuillez demander un nouveau code.',
+            message: `Le code de vérification est invalide ou a expiré (${5 - attemptData.count} tentative(s) restante(s)).`,
           },
           { status: 400 }
         );
       }
+
+      // Successful reset: clear attempt tracker
+      resetAttemptsMap.delete(cleanEmail);
 
       // Reset password and invalidate token
       const updatedTenant = await prisma.tenant.update({

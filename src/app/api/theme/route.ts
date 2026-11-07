@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authError = requireAdmin(req);
+    if (authError) return authError;
+
     const { theme } = await req.json();
     const validThemes = ['cyberpunk', 'emerald', 'violet', 'light'];
 

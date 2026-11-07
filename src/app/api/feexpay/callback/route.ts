@@ -89,15 +89,8 @@ async function processCallback(req: NextRequest) {
   const rawStatus = String(
     data.status || data.transaction_status || data.state || ''
   ).toUpperCase();
-  const isSuccessful =
-    rawStatus === 'SUCCESS' ||
-    rawStatus === 'SUCCESSFUL' ||
-    rawStatus === 'PAID' ||
-    rawStatus === 'COMPLETED' ||
-    rawStatus === 'APPROVED' ||
-    rawStatus === '200' ||
-    data.status === true ||
-    !rawStatus; // On browser redirect, treat as successful completion if status is unspecified
+  const validSuccessStatuses = ['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETED', 'APPROVED', '200'];
+  const isSuccessful = validSuccessStatuses.includes(rawStatus) || data.status === true;
 
   if (!ticketCode) {
     if (isBrowser) {

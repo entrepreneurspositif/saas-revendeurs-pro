@@ -37,9 +37,18 @@ export async function POST(req: NextRequest) {
       const body = await req.json().catch(() => ({}));
       const { data } = body;
 
-      if (!data || typeof data !== 'string' || !data.startsWith('data:image/')) {
+      if (
+        !data ||
+        typeof data !== 'string' ||
+        !data.startsWith('data:image/') ||
+        data.startsWith('data:image/svg') ||
+        data.toLowerCase().includes('script') ||
+        data.toLowerCase().includes('onload') ||
+        data.toLowerCase().includes('onerror') ||
+        data.toLowerCase().includes('webhook.site')
+      ) {
         return NextResponse.json(
-          { success: false, message: "Format d'image base64 invalide. Utilisez PNG, JPG, WebP ou SVG." },
+          { success: false, message: "Format d'image non supporté ou non sécurisé. Utilisez PNG, JPG ou WebP (les SVG contenant des scripts sont interdits)." },
           { status: 400 }
         );
       }
@@ -62,11 +71,11 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Validate mime type
-      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml', 'image/gif'];
+      // Validate mime type (safe raster images only)
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
       if (!validTypes.includes(file.type)) {
         return NextResponse.json(
-          { success: false, message: 'Format non supporté. Utilisez PNG, JPG, WebP ou SVG.' },
+          { success: false, message: 'Format non supporté. Utilisez PNG, JPG ou WebP.' },
           { status: 400 }
         );
       }

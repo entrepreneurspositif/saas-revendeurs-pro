@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createSupplierDriver } from '@/lib/suppliers/factory';
 import { validateEmail } from '@/lib/emailValidator';
+import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +20,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Reject malicious injection payloads in customer inputs
+    if (isMaliciousPayload(customerAccounts) || isMaliciousPayload(userId)) {
+      return NextResponse.json(
+        { success: false, message: 'Requête rejetée : contenu suspect ou script non autorisé.' },
+        { status: 400 }
+      );
+    }
+
     // Sanitize customer inputs
-    const cleanCustomerAccounts = customerAccounts ? String(customerAccounts).slice(0, 500).replace(/[<>]/g, '').trim() : null;
+    const cleanCustomerAccounts = customerAccounts ? sanitizeText(customerAccounts, 500) : null;
 
     if (!productId) {
       return NextResponse.json({ success: false, message: 'ID du produit requis' }, { status: 400 });

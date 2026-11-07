@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/adminAuth';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: NextRequest) {
   try {
+    const authError = requireAdmin(req);
+    if (authError) return authError;
+
     let user = await prisma.user.findFirst({
       where: { role: 'CUSTOMER' },
       include: {
@@ -33,6 +39,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const authError = requireAdmin(req);
+    if (authError) return authError;
+
     const { amount = 50 } = await req.json();
 
     let user = await prisma.user.findFirst({ where: { role: 'CUSTOMER' } });

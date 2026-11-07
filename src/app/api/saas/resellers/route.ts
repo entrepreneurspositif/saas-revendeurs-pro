@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authError = requireAdmin(req);
+    if (authError) return authError;
+
     const tenants = await prisma.tenant.findMany({
       include: {
         plan: true,
@@ -61,6 +65,9 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   try {
+    const authError = requireAdmin(req);
+    if (authError) return authError;
+
     const body = await req.json();
     const { id, planId, planStatus, isActive, walletBalanceAdjustment, password } = body;
 

@@ -89,8 +89,7 @@ async function processCallback(req: NextRequest) {
     statusFromData === 'completed' ||
     statusFromData === 'approved' ||
     statusFromData === 'paid' ||
-    verifiedPayment?.is_processed === true ||
-    (!statusFromData && isBrowser);
+    verifiedPayment?.is_processed === true;
 
   if (!ticketCode) {
     if (isBrowser) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_SAAS_PLANS } from '@/lib/saasPricingHelper';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,9 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   try {
+    const authError = requireAdmin(req);
+    if (authError) return authError;
+
     const body = await req.json();
     const { plans } = body;
 

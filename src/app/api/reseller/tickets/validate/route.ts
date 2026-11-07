@@ -121,9 +121,12 @@ export async function POST(req: NextRequest) {
       supplierRef = purchaseRes.orderRef || null;
     }
 
-    // Update order status to COMPLETED
-    const updatedOrder = await prisma.order.update({
-      where: { id: order.id },
+    // Atomic status transition lock: only one execution can transition from non-COMPLETED to COMPLETED
+    const atomicLock = await prisma.order.updateMany({
+      where: {
+        id: order.id,
+        status: { not: 'COMPLETED' },
+      },
       data: {
         status: 'COMPLETED',
         deliveredCredentials: credentialsStr,
@@ -131,7 +134,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Credit reseller profit to their wallet
+    if (atomicLock.count === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Ce ticket a déjà été validé par une autre requête.',
+        },
+        { status: 409 }
+      );
+    }
+
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+    });
+
+    // Credit reseller profit to their wallet (exactly once)
     if (order.resellerProfit > 0) {
       await prisma.tenant.update({
         where: { id: sessionToken },
@@ -169,8 +186,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      orderId: updatedOrder.id,
-      ticketCode: updatedOrder.ticketCode,
+      orderId: updatedOrder?.id || order.id,
+      ticketCode: updatedOrder?.ticketCode || order.ticketCode,
       deliveredCredentials: credentialsStr,
       profitCredited: order.resellerProfit,
       message: `Ticket validé avec succès ! Les identifiants ont été assignés (${supplierName}) et votre bénéfice (+${order.resellerProfit.toFixed(2)}$) a été crédité.`,
