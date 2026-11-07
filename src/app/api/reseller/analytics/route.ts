@@ -12,18 +12,30 @@ export async function GET(req: NextRequest) {
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: sessionToken },
-      select: { id: true, subdomain: true, storeName: true, createdAt: true },
+      select: { id: true, subdomain: true, customDomain: true, storeName: true, createdAt: true },
     });
 
     if (!tenant) {
       return NextResponse.json({ success: false, message: 'Revendeur introuvable' }, { status: 404 });
     }
 
-    // 1. Fetch visits for this tenant
+    // 1. Fetch visits for this tenant (by tenantId or matched store path)
     const visits = await prisma.visitLog.findMany({
-      where: { tenantId: tenant.id },
+      where: {
+        OR: [
+          { tenantId: tenant.id },
+          { path: `/store/${tenant.subdomain}` },
+          { path: { startsWith: `/store/${tenant.subdomain}/` } },
+          ...(tenant.customDomain
+            ? [
+                { path: `/store/${tenant.customDomain}` },
+                { path: { startsWith: `/store/${tenant.customDomain}/` } },
+              ]
+            : []),
+        ],
+      },
       orderBy: { createdAt: 'desc' },
-      take: 1000,
+      take: 2000,
     });
 
     const totalVisits = visits.length;

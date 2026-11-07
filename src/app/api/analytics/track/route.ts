@@ -44,17 +44,59 @@ export async function POST(req: NextRequest) {
 
     // Resolve tenantId if visiting a reseller store
     let tenantId = body.tenantId || null;
+    const hostHeader = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '').toLowerCase().split(':')[0];
+
     if (!tenantId && subdomain) {
-      const tenant = await prisma.tenant.findUnique({
-        where: { subdomain: subdomain.toLowerCase().trim() },
+      const cleanSub = subdomain.toLowerCase().trim().replace(/^www\./, '');
+      const tenant = await prisma.tenant.findFirst({
+        where: {
+          OR: [
+            { subdomain: cleanSub },
+            { customDomain: cleanSub },
+            { customDomain: `www.${cleanSub}` },
+          ],
+        },
         select: { id: true },
       });
       if (tenant) tenantId = tenant.id;
-    } else if (!tenantId && path.startsWith('/store/')) {
+    }
+
+    if (!tenantId && hostHeader && !hostHeader.includes('localhost') && !hostHeader.endsWith('abonnementspro.com') && !hostHeader.endsWith('.up.railway.app') && !hostHeader.endsWith('.vercel.app')) {
+      const tenant = await prisma.tenant.findFirst({
+        where: {
+          OR: [
+            { customDomain: hostHeader },
+            { customDomain: hostHeader.replace(/^www\./, '') },
+          ],
+        },
+        select: { id: true },
+      });
+      if (tenant) tenantId = tenant.id;
+    }
+
+    if (!tenantId && hostHeader.endsWith('.abonnementspro.com')) {
+      const subCandidate = hostHeader.replace('.abonnementspro.com', '').trim();
+      if (subCandidate && subCandidate !== 'www' && subCandidate !== 'app' && subCandidate !== 'admin') {
+        const tenant = await prisma.tenant.findUnique({
+          where: { subdomain: subCandidate },
+          select: { id: true },
+        });
+        if (tenant) tenantId = tenant.id;
+      }
+    }
+
+    if (!tenantId && path.startsWith('/store/')) {
       const parts = path.split('/').filter(Boolean);
       if (parts[1]) {
-        const tenant = await prisma.tenant.findUnique({
-          where: { subdomain: parts[1].toLowerCase().trim() },
+        const cand = parts[1].toLowerCase().trim().replace(/^www\./, '');
+        const tenant = await prisma.tenant.findFirst({
+          where: {
+            OR: [
+              { subdomain: cand },
+              { customDomain: cand },
+              { customDomain: `www.${cand}` },
+            ],
+          },
           select: { id: true },
         });
         if (tenant) tenantId = tenant.id;

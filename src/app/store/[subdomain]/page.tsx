@@ -223,13 +223,14 @@ export default function TenantStorefrontPage() {
         body: JSON.stringify({
           path: typeof window !== 'undefined' ? window.location.pathname : '',
           subdomain,
+          tenantId: storeData?.id || undefined,
           referrer: typeof document !== 'undefined' ? document.referrer || '' : '',
         }),
       }).catch(() => {});
     } catch (e) {
       // ignore
     }
-  }, [subdomain]);
+  }, [subdomain, storeData?.id]);
 
   // 2. Marketing Pixels Injection (Meta FB, TikTok, Google Analytics)
   useEffect(() => {

@@ -20,8 +20,11 @@ export default function middleware(req: NextRequest) {
 
   // --- 1. CRITICAL SECURITY GUARDS FOR API ROUTES ---
   if (pathname.startsWith('/api/admin/')) {
-    // Allow /api/admin/auth for login and session checks
-    if (pathname === '/api/admin/auth') {
+    // Allow /api/admin/auth and public GET /api/admin/marketing (for pixel & banner configs)
+    if (
+      pathname === '/api/admin/auth' ||
+      (pathname === '/api/admin/marketing' && req.method === 'GET')
+    ) {
       return NextResponse.next();
     }
     const token = req.cookies.get('admin_session')?.value;

@@ -142,6 +142,14 @@ export default function AdminAnalyticsSection() {
               <option value="/">Boutique Principale ( / )</option>
               <option value="/otp">Numéros OTP ( /otp )</option>
               <option value="/exclusifs">Produits Exclusifs ( /exclusifs )</option>
+              {data?.topPages
+                ?.filter((p) => !['/', '/otp', '/exclusifs'].includes(p.path))
+                .slice(0, 15)
+                .map((p) => (
+                  <option key={p.path} value={p.path}>
+                    {p.path} ({p.count} visites)
+                  </option>
+                ))}
             </select>
           </div>
 
