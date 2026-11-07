@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (otpOrder.status === 'COMPLETED') {
+      return NextResponse.json(
+        { success: false, message: 'Impossible d\'annuler une commande OTP déjà terminée et livrée.' },
+        { status: 400 }
+      );
+    }
+
     const updated = await prisma.otpOrder.update({
       where: { id: otpOrder.id },
       data: { status: 'CANCELLED' },

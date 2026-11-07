@@ -3,11 +3,22 @@ import { prisma } from '@/lib/prisma';
 import { getOnlineSimTariffs } from '@/lib/onlinesim';
 import { getPaymentInstructions } from '@/lib/payment-instructions';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
+import { getClientIp, checkRateLimit } from '@/lib/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const limit = checkRateLimit(`otp_buy:${ip}`, 20, 60000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Trop de requêtes de commande. Veuillez patienter.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { service, country, promoCode } = body;
 
@@ -18,11 +29,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const countryCode = country || '1';
+    if (isMaliciousPayload(service) || isMaliciousPayload(country) || isMaliciousPayload(promoCode)) {
+      return NextResponse.json(
+        { success: false, message: 'Requête rejetée : caractères non autorisés.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanService = sanitizeText(service, 50).toLowerCase();
+    const cleanCountry = sanitizeText(country || '1', 10).replace(/[^0-9]/g, '') || '1';
 
     // Get live tariff details for sellingPrice & costPrice
-    const tariffs = await getOnlineSimTariffs(countryCode);
-    const serviceObj = tariffs.find((s) => s.code === service) || {
+    const tariffs = await getOnlineSimTariffs(cleanCountry);
+    const serviceObj = tariffs.find((s) => s.code.toLowerCase() === cleanService) || {
+      name: cleanService,
       priceUSD: 0.30,
       sellingPriceUSD: 0.45,
     };
@@ -32,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // Apply Promo Code discount if provided & valid
     if (promoCode && typeof promoCode === 'string' && promoCode.trim()) {
-      const cleanPromo = promoCode.trim().toUpperCase();
+      const cleanPromo = sanitizeText(promoCode, 30).toUpperCase();
       const promo = await prisma.promoCode.findUnique({ where: { code: cleanPromo } });
       if (
         promo &&
@@ -69,8 +89,8 @@ export async function POST(req: NextRequest) {
         ticketCode,
         tzid: 0,
         phone: '',
-        service,
-        country: countryCode,
+        service: cleanService,
+        country: cleanCountry,
         costPrice,
         sellingPrice,
         status: 'PENDING_PAYMENT',
@@ -80,11 +100,11 @@ export async function POST(req: NextRequest) {
 
     // Send background Telegram Notification to Admin
     sendTelegramNotification({
-      title: `OTP ${service.toUpperCase()}`,
+      title: `OTP ${cleanService.toUpperCase()}`,
       ticketCode: otpOrder.ticketCode,
       type: 'OTP',
       amount: `$${sellingPrice.toFixed(2)} USD`,
-      details: `Service : ${service.toUpperCase()}\nPays Code : ${countryCode}`,
+      details: `Service : ${cleanService.toUpperCase()}\nPays Code : +${cleanCountry}`,
     }).catch((err) => console.error('Telegram OTP notification error:', err));
 
     return NextResponse.json({
@@ -98,6 +118,7 @@ export async function POST(req: NextRequest) {
       createdAt: otpOrder.createdAt,
     });
   } catch (error: any) {
+    console.error('Error buying OTP number:', error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

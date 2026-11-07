@@ -167,10 +167,13 @@ export async function PUT(req: NextRequest) {
       for (const item of bulkUpdates) {
         if (!item.serviceCode) continue;
         const targetCountry = item.applyAllCountries ? 'all' : (item.country || country || '1');
-        const parsedPrice =
-          item.customSellingPrice !== undefined && item.customSellingPrice !== null && item.customSellingPrice !== ''
-            ? parseFloat(Number(item.customSellingPrice).toFixed(2))
-            : null;
+        let parsedPrice: number | null = null;
+        if (item.customSellingPrice !== undefined && item.customSellingPrice !== null && item.customSellingPrice !== '') {
+          const num = parseFloat(Number(item.customSellingPrice).toFixed(2));
+          if (!isNaN(num) && num > 0) {
+            parsedPrice = num;
+          }
+        }
 
         await prisma.tenantOtpService.upsert({
           where: {
@@ -206,10 +209,17 @@ export async function PUT(req: NextRequest) {
     }
 
     const targetCountry = applyAllCountries ? 'all' : (country || '1');
-    const parsedPrice =
-      customSellingPrice !== undefined && customSellingPrice !== null && customSellingPrice !== ''
-        ? parseFloat(Number(customSellingPrice).toFixed(2))
-        : null;
+    let parsedPrice: number | null = null;
+    if (customSellingPrice !== undefined && customSellingPrice !== null && customSellingPrice !== '') {
+      const num = parseFloat(Number(customSellingPrice).toFixed(2));
+      if (isNaN(num) || num <= 0) {
+        return NextResponse.json(
+          { success: false, message: 'Le prix de vente personnalisé doit être un nombre strictement positif.' },
+          { status: 400 }
+        );
+      }
+      parsedPrice = num;
+    }
 
     const upserted = await prisma.tenantOtpService.upsert({
       where: {

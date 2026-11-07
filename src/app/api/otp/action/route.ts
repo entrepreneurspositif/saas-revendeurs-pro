@@ -29,6 +29,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (action !== 'finish' && action !== 'revise') {
+      return NextResponse.json(
+        { success: false, message: 'Action invalide. Utilisez "finish" ou "revise".' },
+        { status: 400 }
+      );
+    }
+
+    if (otpOrder.status === 'PENDING_PAYMENT' || otpOrder.tzid <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Cette commande OTP n\'a pas encore été payée ou validée.' },
+        { status: 400 }
+      );
+    }
+
     const { apiKey } = await getOnlineSimConfig();
 
     if (apiKey) {

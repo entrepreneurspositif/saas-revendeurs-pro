@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getOnlineSimState } from '@/lib/onlinesim';
+import { getClientIp, checkRateLimit, recordFailure } from '@/lib/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const limitCheck = checkRateLimit(`otp_state:${ip}`, 45, 60000);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Trop de requêtes de vérification OTP. Veuillez patienter une minute.',
+        },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('ticketCode')?.trim();
     const tzidParam = searchParams.get('tzid')?.trim();
@@ -26,6 +39,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!otpOrder) {
+      recordFailure(`otp_state:${ip}`, 10, 5 * 60 * 1000);
       return NextResponse.json(
         { success: false, message: 'Commande OTP non trouvée' },
         { status: 404 }
@@ -62,15 +76,15 @@ export async function GET(req: NextRequest) {
       order: {
         id: otpOrder.id,
         ticketCode: otpOrder.ticketCode,
-        tzid: otpOrder.tzid,
-        phone: otpOrder.phone || stateResult.phone || '',
         service: otpOrder.service,
         country: otpOrder.country,
+        phone: otpOrder.phone || stateResult.phone || '',
+        tzid: otpOrder.tzid,
         sellingPrice: otpOrder.sellingPrice,
         status: otpOrder.status,
-        paymentInstructions: otpOrder.paymentInstructions,
         smsCode: otpOrder.smsCode || stateResult.smsCode || null,
         fullSms: otpOrder.fullSms || stateResult.fullSms || null,
+        paymentInstructions: otpOrder.paymentInstructions,
         timeRemaining: stateResult.timeRemaining || 900,
         createdAt: otpOrder.createdAt,
       },
