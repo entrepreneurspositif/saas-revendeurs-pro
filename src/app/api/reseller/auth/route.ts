@@ -4,6 +4,7 @@ import { getFeexPayConfig, convertUsdToXof } from '@/lib/feexpay';
 import { initializeMonerooPayment } from '@/lib/moneroo';
 import { sendEmailVerificationEmail } from '@/lib/mail';
 import { validateEmail } from '@/lib/emailValidator';
+import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -174,6 +175,29 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Check malicious injection payloads
+      if (
+        isMaliciousPayload(name) ||
+        isMaliciousPayload(storeName) ||
+        isMaliciousPayload(subdomain) ||
+        isMaliciousPayload(email)
+      ) {
+        return NextResponse.json(
+          { success: false, message: 'Inscription refusée : caractères ou scripts non autorisés.' },
+          { status: 400 }
+        );
+      }
+
+      const cleanName = sanitizeText(name, 80);
+      const cleanStoreName = storeName ? sanitizeText(storeName, 80) : `${cleanName}'s Store`;
+
+      if (!cleanName) {
+        return NextResponse.json(
+          { success: false, message: 'Nom invalide' },
+          { status: 400 }
+        );
+      }
+
       // Strict validation: Reject temporary/disposable emails and non-existent domains (DNS MX check)
       const emailValidation = await validateEmail(email, true);
       if (!emailValidation.isValid) {
@@ -224,10 +248,10 @@ export async function POST(req: NextRequest) {
       // Paid plans (starter, pro) are ONLY activated once payment is confirmed via payment gateway callback.
       const newTenant = await prisma.tenant.create({
         data: {
-          name: name.trim(),
+          name: cleanName,
           email: cleanEmail,
           password: password,
-          storeName: storeName?.trim() || `${name.trim()}'s Store`,
+          storeName: cleanStoreName,
           subdomain: cleanSubdomain,
           planId: 'free',
           planStatus: targetPlan && targetPlan.id !== 'free' ? 'PENDING_PAYMENT' : 'ACTIVE',

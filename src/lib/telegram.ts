@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { escapeHtml } from '@/lib/sanitizer';
 
 export interface TelegramNotificationParams {
   title: string;
@@ -62,8 +63,8 @@ export async function sendTelegramNotification(params: TelegramNotificationParam
     // Determine store/boutique information
     let storeInfo = '👑 <b>Boutique :</b> Boutique Officielle Plateforme (<code>abonnementspro.com</code>)';
     if (params.storeName) {
-      storeInfo = `🏬 <b>Boutique :</b> <b>${params.storeName}</b>${
-        params.storeSubdomain ? ` (<code>https://${params.storeSubdomain}.abonnementspro.com</code>)` : ''
+      storeInfo = `🏬 <b>Boutique :</b> <b>${escapeHtml(params.storeName)}</b>${
+        params.storeSubdomain ? ` (<code>https://${escapeHtml(params.storeSubdomain)}.abonnementspro.com</code>)` : ''
       }`;
     } else if (params.tenantId) {
       const tenant = await prisma.tenant.findUnique({
@@ -71,7 +72,7 @@ export async function sendTelegramNotification(params: TelegramNotificationParam
         select: { storeName: true, name: true, subdomain: true },
       });
       if (tenant) {
-        storeInfo = `🏬 <b>Boutique :</b> <b>${tenant.storeName || tenant.name}</b> (<code>https://${tenant.subdomain}.abonnementspro.com</code>)`;
+        storeInfo = `🏬 <b>Boutique :</b> <b>${escapeHtml(tenant.storeName || tenant.name)}</b> (<code>https://${escapeHtml(tenant.subdomain)}.abonnementspro.com</code>)`;
       }
     }
 
@@ -83,14 +84,19 @@ export async function sendTelegramNotification(params: TelegramNotificationParam
       profitLines.push(`💎 <b>Com. Revendeur :</b> +$${Number(params.resellerProfit).toFixed(2)} USD`);
     }
 
+    const safeTitle = escapeHtml(params.title);
+    const safeTicketCode = params.ticketCode ? escapeHtml(params.ticketCode) : '';
+    const safeAmount = params.amount ? escapeHtml(params.amount) : '';
+    const safeDetails = escapeHtml(params.details);
+
     const messageText = `
 <b>${emoji} ${typeLabel}</b>
 ${storeInfo}
 
-<b>Titre :</b> ${params.title}
-${params.ticketCode ? `<b>Code Ticket :</b> <code>${params.ticketCode}</code>\n` : ''}${params.amount ? `<b>Montant Vente :</b> ${params.amount}\n` : ''}${profitLines.length > 0 ? `${profitLines.join('\n')}\n` : ''}
+<b>Titre :</b> ${safeTitle}
+${safeTicketCode ? `<b>Code Ticket :</b> <code>${safeTicketCode}</code>\n` : ''}${safeAmount ? `<b>Montant Vente :</b> ${safeAmount}\n` : ''}${profitLines.length > 0 ? `${profitLines.join('\n')}\n` : ''}
 <b>Détails :</b>
-${params.details}
+${safeDetails}
 
 📅 <i>${new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</i>
 `.trim();
@@ -221,14 +227,22 @@ export async function sendResellerTelegramNotification(params: ResellerTelegramN
         break;
     }
 
+    const safeTitle = escapeHtml(params.title);
+    const safeTicketCode = params.ticketCode ? escapeHtml(params.ticketCode) : '';
+    const safeAmount = params.amount ? escapeHtml(params.amount) : '';
+    const safeResellerProfit = params.resellerProfit ? escapeHtml(params.resellerProfit) : '';
+    const safeDetails = escapeHtml(params.details);
+    const safeStoreName = escapeHtml(tenant.storeName || tenant.name);
+    const safeSubdomain = escapeHtml(tenant.subdomain);
+
     const messageText = `
 <b>${emoji} ${typeLabel}</b>
-🏬 <b>Boutique :</b> ${tenant.storeName || tenant.name} (<code>https://${tenant.subdomain}.abonnementspro.com</code>)
+🏬 <b>Boutique :</b> ${safeStoreName} (<code>https://${safeSubdomain}.abonnementspro.com</code>)
 
-<b>Titre :</b> ${params.title}
-${params.ticketCode ? `<b>Code Ticket :</b> <code>${params.ticketCode}</code>\n` : ''}${params.amount ? `<b>Prix Vente Client :</b> ${params.amount}\n` : ''}${params.resellerProfit ? `<b>💎 Votre Bénéfice Net :</b> <code>${params.resellerProfit}</code>\n` : ''}
+<b>Titre :</b> ${safeTitle}
+${safeTicketCode ? `<b>Code Ticket :</b> <code>${safeTicketCode}</code>\n` : ''}${safeAmount ? `<b>Prix Vente Client :</b> ${safeAmount}\n` : ''}${safeResellerProfit ? `<b>💎 Votre Bénéfice Net :</b> <code>${safeResellerProfit}</code>\n` : ''}
 <b>Détails :</b>
-${params.details}
+${safeDetails}
 
 📅 <i>${new Date().toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</i>
 `.trim();

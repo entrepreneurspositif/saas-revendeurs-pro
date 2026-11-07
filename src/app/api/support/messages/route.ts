@@ -1,19 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { findOrderByCodeOrId } from '@/lib/orderHelper';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { isAuthorizedAdmin } from '@/lib/adminAuth';
+import { isMaliciousPayload, sanitizeMultilineText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const rawTicketCode = searchParams.get('ticketCode')?.trim();
-    const isAdmin = searchParams.get('admin') === 'true';
+    const isAdminParam = searchParams.get('admin') === 'true';
 
     // Admin requesting list of active support chat conversations
-    // Only return orders that actually have at least 1 message sent
-    if (isAdmin && !rawTicketCode) {
+    if (isAdminParam && !rawTicketCode) {
+      if (!isAuthorizedAdmin(request)) {
+        return NextResponse.json(
+          { success: false, error: 'Accès non autorisé : Session Super Admin requise.' },
+          { status: 401 }
+        );
+      }
+
       const activeConversations = await prisma.order.findMany({
         where: {
           messages: {
@@ -87,7 +95,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { ticketCode: rawTicketCode, text, sender, action } = body;
@@ -109,18 +117,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle Closing / Reopening Ticket Action
+    // Check if requester is authenticated Super Admin
+    const userIsAdmin = isAuthorizedAdmin(request);
+
+    // Handle Closing / Reopening Ticket Action (Admin only)
     if (action === 'close' || action === 'reopen' || action === 'toggleStatus') {
-      const newSupportStatus = action === 'close' ? 'RESOLVED' : action === 'reopen' ? 'OPEN' : order.supportStatus === 'RESOLVED' ? 'OPEN' : 'RESOLVED';
+      if (!userIsAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Accès refusé : Action réservée à l\'administrateur.' },
+          { status: 403 }
+        );
+      }
+
+      const newSupportStatus =
+        action === 'close'
+          ? 'RESOLVED'
+          : action === 'reopen'
+          ? 'OPEN'
+          : order.supportStatus === 'RESOLVED'
+          ? 'OPEN'
+          : 'RESOLVED';
 
       const updatedOrder = await prisma.order.update({
         where: { id: order.id },
         data: { supportStatus: newSupportStatus },
       });
 
-      const systemText = newSupportStatus === 'RESOLVED'
-        ? '✅ Ticket marqué comme résolu par l\'administrateur.'
-        : '🔓 Ticket réouvert.';
+      const systemText =
+        newSupportStatus === 'RESOLVED'
+          ? "✅ Ticket marqué comme résolu par l'administrateur."
+          : '🔓 Ticket réouvert.';
 
       const systemMessage = await prisma.chatMessage.create({
         data: {
@@ -137,14 +163,26 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!text || !text.trim()) {
+    // Check for malicious payload / exfiltration in message text
+    if (isMaliciousPayload(text)) {
+      console.warn('[SECURITY] Malicious chat message blocked for ticket:', order.ticketCode);
+      return NextResponse.json(
+        { success: false, error: 'Contenu non autorisé ou script détecté.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanText = sanitizeMultilineText(text, 2000);
+
+    if (!cleanText) {
       return NextResponse.json(
         { success: false, error: 'Message requis' },
         { status: 400 }
       );
     }
 
-    const cleanSender = sender === 'ADMIN' ? 'ADMIN' : 'CUSTOMER';
+    // Sender role enforcement: only actual admins can post as ADMIN
+    const cleanSender = userIsAdmin && sender === 'ADMIN' ? 'ADMIN' : 'CUSTOMER';
 
     // If customer sends a message to a resolved ticket, automatically reopen it
     if (cleanSender === 'CUSTOMER' && order.supportStatus === 'RESOLVED') {
@@ -158,7 +196,7 @@ export async function POST(request: Request) {
       data: {
         ticketCode: order.ticketCode, // Canonical ticket code
         sender: cleanSender,
-        text: text.trim(),
+        text: cleanText,
       },
     });
 
@@ -167,14 +205,17 @@ export async function POST(request: Request) {
         title: `Message Support : ${order.productTitle}`,
         ticketCode: order.ticketCode,
         type: 'SUPPORT',
-        details: text.trim(),
+        details: cleanText,
       }).catch((err) => console.error('Telegram Support notification error:', err));
     }
 
     return NextResponse.json({
       success: true,
       message: newMessage,
-      supportStatus: cleanSender === 'CUSTOMER' && order.supportStatus === 'RESOLVED' ? 'OPEN' : order.supportStatus,
+      supportStatus:
+        cleanSender === 'CUSTOMER' && order.supportStatus === 'RESOLVED'
+          ? 'OPEN'
+          : order.supportStatus,
     });
   } catch (error: any) {
     console.error('Error sending support message or updating ticket status:', error);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateEmail } from '@/lib/emailValidator';
+import { isMaliciousPayload, sanitizeText, sanitizeMultilineText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +121,17 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
+
+    // Check for malicious payload across all text fields
+    for (const [key, val] of Object.entries(body)) {
+      if (typeof val === 'string' && isMaliciousPayload(val)) {
+        return NextResponse.json(
+          { success: false, message: `Champ '${key}' invalide : contenu non autorisé ou script détecté.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const {
       storeName,
       tagline,

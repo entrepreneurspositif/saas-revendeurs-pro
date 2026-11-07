@@ -4,6 +4,7 @@ import { getOnlineSimTariffs } from '@/lib/onlinesim';
 import { calculateSaasPrices } from '@/lib/saasPricingHelper';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
 import { validateEmail } from '@/lib/emailValidator';
+import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,21 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Reject malicious injection payloads in customer inputs
+    if (
+      isMaliciousPayload(customerName) ||
+      isMaliciousPayload(customerEmail) ||
+      isMaliciousPayload(customerPhone)
+    ) {
+      return NextResponse.json(
+        { success: false, message: 'Requête rejetée : contenu suspect ou script non autorisé.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanCustomerName = customerName ? sanitizeText(customerName, 100) : null;
+    const cleanCustomerPhone = customerPhone ? sanitizeText(customerPhone, 50) : null;
 
     // Validate customer email if provided
     let cleanCustomerEmail = customerEmail ? String(customerEmail).slice(0, 150).trim() : null;
@@ -152,8 +168,8 @@ export async function POST(req: NextRequest) {
         paymentInstructions,
         tenantId: tenant.id,
         customerEmail: cleanCustomerEmail || null,
-        customerName: customerName || null,
-        customerPhone: customerPhone || null,
+        customerName: cleanCustomerName || null,
+        customerPhone: cleanCustomerPhone || null,
         resellerProfit: pricing.resellerProfit,
         platformProfit: pricing.platformProfit,
       },
@@ -164,7 +180,7 @@ export async function POST(req: NextRequest) {
       ticketCode: otpOrder.ticketCode,
       type: 'OTP',
       amount: `$${pricing.resellerSellingPrice.toFixed(2)} USD`,
-      details: `Boutique : ${tenant.storeName} (${tenant.subdomain}.abonnementspro.com)\nService : ${serviceObj.name}\nPays : +${country}\nClient : ${customerName || 'Anonyme'} (${customerEmail || 'Sans email'})`,
+      details: `Boutique : ${tenant.storeName} (${tenant.subdomain}.abonnementspro.com)\nService : ${serviceObj.name}\nPays : +${country}\nClient : ${cleanCustomerName || 'Anonyme'} (${cleanCustomerEmail || 'Sans email'})`,
     }).catch((err) => console.error('Telegram notification error:', err));
 
     sendResellerTelegramNotification({
@@ -174,7 +190,7 @@ export async function POST(req: NextRequest) {
       ticketCode: otpOrder.ticketCode,
       amount: `$${pricing.resellerSellingPrice.toFixed(2)} USD`,
       resellerProfit: `$${pricing.resellerProfit.toFixed(2)} USD`,
-      details: `Service : ${serviceObj.name}\nPays : +${country}\nClient : ${customerName || 'Client'} (${customerEmail || customerPhone || 'Sans contact'})`,
+      details: `Service : ${serviceObj.name}\nPays : +${country}\nClient : ${cleanCustomerName || 'Client'} (${cleanCustomerEmail || cleanCustomerPhone || 'Sans contact'})`,
     }).catch((err) => console.error('Reseller Telegram OTP notification error:', err));
 
     return NextResponse.json({

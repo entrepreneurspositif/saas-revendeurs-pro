@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { isMaliciousPayload, sanitizeMultilineText, sanitizeText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,16 @@ export async function POST(
     const body = await req.json();
     const { message } = body;
 
-    if (!message || !message.trim()) {
+    if (isMaliciousPayload(message)) {
+      return NextResponse.json(
+        { success: false, message: 'Message rejeté : contenu suspect ou script détecté.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanMessage = sanitizeMultilineText(message, 3000);
+
+    if (!cleanMessage) {
       return NextResponse.json({ success: false, message: 'Le message est requis' }, { status: 400 });
     }
 
@@ -47,8 +57,8 @@ export async function POST(
       data: {
         ticketId: ticket.id,
         senderRole: 'RESELLER',
-        senderName: tenant.storeName || tenant.name || 'Revendeur',
-        message: message.trim(),
+        senderName: sanitizeText(tenant.storeName || tenant.name || 'Revendeur', 80),
+        message: cleanMessage,
       },
     });
 
@@ -67,7 +77,7 @@ export async function POST(
       title: `Réponse Ticket Revendeur (${ticket.ticketCode})`,
       ticketCode: ticket.ticketCode,
       type: 'SUPPORT',
-      details: `Revendeur : ${tenant.name} (${tenant.storeName || tenant.subdomain})\nMessage :\n${message.trim().substring(0, 300)}`,
+      details: `Revendeur : ${tenant.name} (${tenant.storeName || tenant.subdomain})\nMessage :\n${cleanMessage.substring(0, 300)}`,
     }).catch(console.error);
 
     return NextResponse.json({

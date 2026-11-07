@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { calculateSaasPrices } from '@/lib/saasPricingHelper';
 import { sendTelegramNotification, sendResellerTelegramNotification } from '@/lib/telegram';
 import { validateEmail } from '@/lib/emailValidator';
+import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +21,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Reject malicious injection payloads in customer inputs
+    if (
+      isMaliciousPayload(customerAccounts) ||
+      isMaliciousPayload(customerEmail) ||
+      isMaliciousPayload(customerName)
+    ) {
+      return NextResponse.json(
+        { success: false, message: 'Requête rejetée : contenu suspect ou script non autorisé.' },
+        { status: 400 }
+      );
+    }
+
     // Sanitize customer inputs
-    const cleanCustomerAccounts = customerAccounts ? String(customerAccounts).slice(0, 500).replace(/[<>]/g, '').trim() : null;
+    const cleanCustomerAccounts = customerAccounts ? sanitizeText(customerAccounts, 500) : null;
     const cleanCustomerEmail = customerEmail ? String(customerEmail).slice(0, 150).trim() : null;
-    const cleanCustomerName = customerName ? String(customerName).slice(0, 100).replace(/[<>]/g, '').trim() : null;
+    const cleanCustomerName = customerName ? sanitizeText(customerName, 100) : null;
 
     if (!productId) {
       return NextResponse.json({ success: false, message: 'ID du produit requis' }, { status: 400 });
@@ -94,7 +107,7 @@ export async function POST(req: NextRequest) {
       user = await prisma.user.create({
         data: {
           email: emailToUse,
-          name: customerName?.trim() || 'Client Boutique',
+          name: cleanCustomerName || 'Client Boutique',
           role: 'CUSTOMER',
           walletBalance: 0.0,
         },
@@ -233,7 +246,7 @@ export async function POST(req: NextRequest) {
       tenantId: tenant.id,
       platformProfit: totalPlatformProfit,
       resellerProfit: totalResellerProfit,
-      details: `Quantité : ${quantity}\nClient : ${user.email}${customerAccounts ? `\nInfos Fournisseur : ${customerAccounts}` : ''}`,
+      details: `Quantité : ${quantity}\nClient : ${user.email}${cleanCustomerAccounts ? `\nInfos Fournisseur : ${cleanCustomerAccounts}` : ''}`,
     }).catch(console.error);
 
     // Notify Reseller on Telegram

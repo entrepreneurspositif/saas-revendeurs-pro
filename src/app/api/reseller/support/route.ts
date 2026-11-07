@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendTelegramNotification } from '@/lib/telegram';
+import { isMaliciousPayload, sanitizeText, sanitizeMultilineText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,13 +67,29 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { subject, category = 'GENERAL', priority = 'MEDIUM', message } = body;
 
-    if (!subject || !subject.trim()) {
+    if (isMaliciousPayload(subject) || isMaliciousPayload(message)) {
+      return NextResponse.json(
+        { success: false, message: 'Requête rejetée : contenu non autorisé ou script détecté.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanSubject = sanitizeText(subject, 150);
+    const cleanMessage = sanitizeMultilineText(message, 3000);
+
+    if (!cleanSubject) {
       return NextResponse.json({ success: false, message: 'Le sujet est requis' }, { status: 400 });
     }
 
-    if (!message || !message.trim()) {
+    if (!cleanMessage) {
       return NextResponse.json({ success: false, message: 'Le message initial est requis' }, { status: 400 });
     }
+
+    const allowedCategories = ['GENERAL', 'TECHNICAL', 'BILLING', 'SUPPLIER', 'OTHER'];
+    const cleanCategory = allowedCategories.includes(String(category).toUpperCase()) ? String(category).toUpperCase() : 'GENERAL';
+
+    const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+    const cleanPriority = allowedPriorities.includes(String(priority).toUpperCase()) ? String(priority).toUpperCase() : 'MEDIUM';
 
     // Generate unique human-readable ticket code: TKT-RES-XXXXX
     const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -82,15 +99,15 @@ export async function POST(req: NextRequest) {
       data: {
         ticketCode,
         tenantId: tenant.id,
-        subject: subject.trim(),
-        category: category.toUpperCase(),
-        priority: priority.toUpperCase(),
+        subject: cleanSubject,
+        category: cleanCategory,
+        priority: cleanPriority,
         status: 'OPEN',
         messages: {
           create: {
             senderRole: 'RESELLER',
-            senderName: tenant.storeName || tenant.name || 'Revendeur',
-            message: message.trim(),
+            senderName: sanitizeText(tenant.storeName || tenant.name || 'Revendeur', 80),
+            message: cleanMessage,
           },
         },
       },
@@ -104,7 +121,7 @@ export async function POST(req: NextRequest) {
       title: `Nouveau Ticket Support Revendeur (${ticketCode})`,
       ticketCode: ticketCode,
       type: 'SUPPORT',
-      details: `Revendeur : ${tenant.name} (${tenant.storeName || tenant.subdomain})\nSujet : ${subject.trim()}\nPriorité : ${priority.toUpperCase()}\nMessage :\n${message.trim().substring(0, 300)}`,
+      details: `Revendeur : ${tenant.name} (${tenant.storeName || tenant.subdomain})\nSujet : ${cleanSubject}\nPriorité : ${cleanPriority}\nMessage :\n${cleanMessage.substring(0, 300)}`,
     }).catch(console.error);
 
     return NextResponse.json({
