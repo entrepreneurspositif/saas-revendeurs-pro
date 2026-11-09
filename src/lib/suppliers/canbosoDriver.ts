@@ -101,7 +101,31 @@ export class CanbosoDriver implements ISupplierDriver {
       };
 
       if (params.customerAccounts) {
-        payload.customer_accounts = params.customerAccounts;
+        if (Array.isArray(params.customerAccounts)) {
+          payload.customer_accounts = params.customerAccounts;
+        } else if (typeof params.customerAccounts === 'string') {
+          // Canboso requires customer_accounts to be an array of strings matching the purchase quantity
+          // Standard format per account line is email|password
+          const lines = params.customerAccounts
+            .split(/[\r\n]+/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+
+          const formattedLines = lines.map((line) => {
+            if (line.includes(' / ')) {
+              return line.split(' / ').map((p) => p.trim()).join('|');
+            } else if (line.includes(' : ')) {
+              return line.split(' : ').map((p) => p.trim()).join('|');
+            } else if (line.includes(' | ')) {
+              return line.split(' | ').map((p) => p.trim()).join('|');
+            }
+            return line;
+          });
+
+          payload.customer_accounts = formattedLines.length > 0 ? formattedLines : [params.customerAccounts.trim()];
+        } else {
+          payload.customer_accounts = [String(params.customerAccounts)];
+        }
       }
 
       const res = await fetch(`${this.apiUrl}/api/v2/telegram-buyer/purchase`, {
@@ -147,8 +171,8 @@ export class CanbosoDriver implements ISupplierDriver {
 
       return {
         success: true,
-        orderRef: resJson.orderId || resJson.purchaseId || resJson.transaction_id || `canboso-${Date.now()}`,
-        deliveredCredentials: resJson.data || resJson.credentials || resJson.items || resJson,
+        orderRef: resJson.order?.orderCode || resJson.orderId || resJson.purchaseId || resJson.transaction_id || `canboso-${Date.now()}`,
+        deliveredCredentials: resJson.data || resJson.credentials || resJson.items || resJson.order || resJson,
         message: resJson.message || 'Produit acheté avec succès auprès du fournisseur Canboso',
       };
     } catch (error: any) {
