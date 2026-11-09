@@ -100,10 +100,14 @@ export async function POST(req: NextRequest) {
 
     // Trigger supplier purchase via driver
     const driver = createSupplierDriver(supplier);
+    const attemptKey = order.idempotencyKey
+      ? `${order.idempotencyKey}-adm-${Date.now()}`
+      : `ord-adm-${Date.now()}`;
+
     const purchaseRes = await driver.purchase({
       productId: suppProd.externalId,
       quantity: order.quantity,
-      idempotencyKey: order.idempotencyKey || `ord-${Date.now()}`,
+      idempotencyKey: attemptKey,
       customerAccounts: order.customerAccounts || undefined,
     });
 

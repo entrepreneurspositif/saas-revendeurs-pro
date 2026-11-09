@@ -126,10 +126,14 @@ async function processCallback(req: NextRequest) {
         const supplier = suppProd.supplier;
         const driver = createSupplierDriver(supplier);
 
+        const attemptKey = order.idempotencyKey
+          ? `${order.idempotencyKey}-feexpay-${Date.now()}`
+          : `ord-feexpay-${Date.now()}`;
+
         const purchaseRes = await driver.purchase({
           productId: suppProd.externalId,
           quantity: order.quantity,
-          idempotencyKey: order.idempotencyKey || `ord-feexpay-${Date.now()}`,
+          idempotencyKey: attemptKey,
           customerAccounts: order.customerAccounts || undefined,
         });
 

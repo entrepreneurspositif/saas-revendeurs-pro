@@ -120,6 +120,20 @@ export class CanbosoDriver implements ISupplierDriver {
 
       if (!res.ok || resJson.success === false) {
         const rawMsg = resJson.message || resJson.error || `Échec d'achat fournisseur (HTTP ${res.status})`;
+
+        // Auto-recover from IDEMPOTENCY_CONFLICT by retrying once with a fresh attempt key
+        if (
+          (resJson.code === 'IDEMPOTENCY_CONFLICT' || /Idempotency-Key was already used/i.test(rawMsg)) &&
+          !params.idempotencyKey?.includes('-retry-')
+        ) {
+          console.warn('[CanbosoDriver] Idempotency conflict detected, retrying purchase with fresh key...');
+          const retryKey = `${params.idempotencyKey || `ord-${Date.now()}`}-retry-${Date.now()}`;
+          return this.purchase({
+            ...params,
+            idempotencyKey: retryKey,
+          });
+        }
+
         const isOutOfStock = /stock|exceeds available stock|out of stock|quantité demandée/i.test(rawMsg);
         return {
           success: false,

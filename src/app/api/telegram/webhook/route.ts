@@ -236,10 +236,15 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
               const supplier = suppProd.supplier;
               const driver = createSupplierDriver(supplier);
 
+              const attemptKey = order.idempotencyKey
+                ? `${order.idempotencyKey}-tg-${Date.now()}`
+                : `ord-tg-${Date.now()}`;
+
               const purchaseRes = await driver.purchase({
                 productId: suppProd.externalId,
                 quantity: order.quantity,
-                idempotencyKey: order.idempotencyKey || `ord-${Date.now()}`,
+                idempotencyKey: attemptKey,
+                customerAccounts: order.customerAccounts || undefined,
               });
 
               if (!purchaseRes.success) {
