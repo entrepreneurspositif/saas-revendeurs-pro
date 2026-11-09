@@ -275,6 +275,17 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
                   },
                 });
 
+                // Credit reseller profit to their wallet
+                if (order.tenantId && order.resellerProfit > 0) {
+                  await prisma.tenant.update({
+                    where: { id: order.tenantId },
+                    data: {
+                      walletBalance: { increment: order.resellerProfit },
+                      totalEarnings: { increment: order.resellerProfit },
+                    },
+                  });
+                }
+
                 deliveredCredentialsText = creds;
                 statusResultText = `✅ Commande <code>${order.ticketCode}</code> (${order.productTitle}) exécutée avec succès auprès de ${supplier.name} !`;
               }
@@ -283,6 +294,18 @@ Bienvenue sur votre assistant automatique de revente d'abonnements & numéros vi
                 where: { id: order.id },
                 data: { status: 'COMPLETED' },
               });
+
+              // Credit reseller profit to their wallet
+              if (order.tenantId && order.resellerProfit > 0) {
+                await prisma.tenant.update({
+                  where: { id: order.tenantId },
+                  data: {
+                    walletBalance: { increment: order.resellerProfit },
+                    totalEarnings: { increment: order.resellerProfit },
+                  },
+                });
+              }
+
               statusResultText = `✅ Commande manuelle <code>${order.ticketCode}</code> (${order.productTitle}) validée et marquée comme livrée !`;
             }
           }

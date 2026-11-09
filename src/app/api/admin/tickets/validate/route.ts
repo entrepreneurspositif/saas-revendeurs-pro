@@ -62,6 +62,17 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Credit reseller profit to their wallet
+      if (order.tenantId && order.resellerProfit > 0) {
+        await prisma.tenant.update({
+          where: { id: order.tenantId },
+          data: {
+            walletBalance: { increment: order.resellerProfit },
+            totalEarnings: { increment: order.resellerProfit },
+          },
+        });
+      }
+
       if (order.tenantId) {
         sendResellerTelegramNotification({
           tenantId: order.tenantId,
@@ -160,6 +171,17 @@ export async function POST(req: NextRequest) {
         sold: { increment: order.quantity },
       },
     });
+
+    // Credit reseller profit to their wallet
+    if (order.tenantId && order.resellerProfit > 0) {
+      await prisma.tenant.update({
+        where: { id: order.tenantId },
+        data: {
+          walletBalance: { increment: order.resellerProfit },
+          totalEarnings: { increment: order.resellerProfit },
+        },
+      });
+    }
 
     if (order.tenantId) {
       sendResellerTelegramNotification({

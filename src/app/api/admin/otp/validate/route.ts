@@ -62,6 +62,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Credit reseller profit to their wallet
+    if (otpOrder.tenantId && otpOrder.resellerProfit > 0) {
+      await prisma.tenant.update({
+        where: { id: otpOrder.tenantId },
+        data: {
+          walletBalance: { increment: otpOrder.resellerProfit },
+          totalEarnings: { increment: otpOrder.resellerProfit },
+        },
+      });
+    }
+
     if (otpOrder.tenantId) {
       sendResellerTelegramNotification({
         tenantId: otpOrder.tenantId,

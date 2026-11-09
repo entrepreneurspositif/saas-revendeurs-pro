@@ -154,6 +154,17 @@ async function processCallback(req: NextRequest) {
               sold: { increment: order.quantity },
             },
           });
+
+          // Credit reseller profit to their wallet
+          if (order.tenantId && order.resellerProfit > 0) {
+            await prisma.tenant.update({
+              where: { id: order.tenantId },
+              data: {
+                walletBalance: { increment: order.resellerProfit },
+                totalEarnings: { increment: order.resellerProfit },
+              },
+            });
+          }
         } else {
           const isOutOfStock = purchaseRes.isOutOfStock || /stock|exceeds available stock|rupture/i.test(purchaseRes.message || '');
           if (isOutOfStock && suppProd) {
@@ -194,6 +205,17 @@ async function processCallback(req: NextRequest) {
             deliveredCredentials: autoCreds,
           },
         });
+
+        // Credit reseller profit to their wallet
+        if (order.tenantId && order.resellerProfit > 0) {
+          await prisma.tenant.update({
+            where: { id: order.tenantId },
+            data: {
+              walletBalance: { increment: order.resellerProfit },
+              totalEarnings: { increment: order.resellerProfit },
+            },
+          });
+        }
       }
 
       sendTelegramNotification({
