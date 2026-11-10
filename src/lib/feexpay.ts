@@ -279,8 +279,7 @@ export async function executeFeexPayPayout(params: {
       lastData = data;
 
       const txStatus = String(data.status || '').toUpperCase();
-      if (response.ok && (txStatus === 'SUCCESSFUL' || txStatus === 'SUCCESS' || data.reference)) {
-        const isPending = txStatus === 'PENDING' || txStatus === 'IN_PROGRESS';
+      if (response.ok && (txStatus === 'SUCCESSFUL' || txStatus === 'SUCCESS' || txStatus === 'PENDING' || txStatus === 'IN_PROGRESS' || data.reference)) {
         if (txStatus === 'FAILED') {
           return {
             success: false,
@@ -293,15 +292,16 @@ export async function executeFeexPayPayout(params: {
           };
         }
 
+        const isCompleted = txStatus === 'SUCCESSFUL' || txStatus === 'SUCCESS';
         return {
-          success: !isPending,
-          status: isPending ? 'PENDING' : 'SUCCESSFUL',
+          success: true,
+          status: isCompleted ? 'SUCCESSFUL' : 'PENDING',
           feexReference: data.reference || params.reference,
           amountXof,
           phoneNumber,
-          message: isPending
-            ? `Transfert FeexPay initié et en cours de traitement (${amountXof} FCFA vers ${phoneNumber}).`
-            : `Transfert automatique FeexPay réussi (${amountXof} FCFA envoyés au ${phoneNumber}) !`,
+          message: isCompleted
+            ? `Transfert automatique FeexPay réussi (${amountXof} FCFA envoyés au ${phoneNumber}) !`
+            : `Transfert FeexPay initié avec succès (${amountXof} FCFA vers ${phoneNumber}, Réf: ${data.reference || params.reference}).`,
           raw: data,
         };
       }

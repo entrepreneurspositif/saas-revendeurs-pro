@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
         email: tenant.email,
       });
 
-      if (feexResult.success && feexResult.status === 'SUCCESSFUL') {
+      if (feexResult.success) {
         payout = await prisma.payoutRequest.update({
           where: { id: payout.id },
           data: {
