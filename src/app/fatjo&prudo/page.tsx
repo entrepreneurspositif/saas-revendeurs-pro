@@ -1342,19 +1342,60 @@ export default function AdminDashboardPage() {
 
   const handleSyncCatalog = async () => {
     setSyncing(true);
-    setSyncMessage(null);
+    setSyncMessage('Démarrage de la synchronisation...');
     try {
       const res = await fetch('/api/suppliers/sync', { method: 'POST' });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Réponse serveur (${res.status}): ${text.slice(0, 100)}`);
+      }
+
+      if (data.isSyncing || data.status === 'STARTED' || data.status === 'RUNNING') {
+        setSyncMessage(data.message || 'Synchronisation du catalogue en cours...');
+
+        const pollInterval = setInterval(async () => {
+          try {
+            const checkRes = await fetch('/api/suppliers/sync');
+            const checkText = await checkRes.text();
+            let checkData: any = {};
+            try {
+              checkData = JSON.parse(checkText);
+            } catch {
+              return;
+            }
+
+            if (!checkData.isSyncing) {
+              clearInterval(pollInterval);
+              setSyncing(false);
+              setSyncMessage(checkData.message || 'Synchronisation terminée avec succès !');
+              fetchAdminData();
+            } else if (checkData.message) {
+              setSyncMessage(checkData.message);
+            }
+          } catch {}
+        }, 2500);
+
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setSyncing(false);
+          fetchAdminData();
+        }, 120000);
+        return;
+      }
+
       if (data.success) {
         setSyncMessage(data.message);
         fetchAdminData();
+        setSyncing(false);
       } else {
-        setSyncMessage(`Erreur de synchronisation: ${data.message}`);
+        setSyncMessage(`Erreur de synchronisation: ${data.message || 'Erreur inconnue'}`);
+        setSyncing(false);
       }
     } catch (e: any) {
-      setSyncMessage(`Erreur réseau: ${e.message}`);
-    } finally {
+      setSyncMessage(`Erreur: ${e.message}`);
       setSyncing(false);
     }
   };
