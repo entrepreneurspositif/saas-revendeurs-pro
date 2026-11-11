@@ -34,6 +34,7 @@ scratch/
 mobile-release/
 *.keystore
 *.jks
+DEPLOYER_SUR_RAILWAY.bat
 
 # Operating system / IDE
 .DS_Store
