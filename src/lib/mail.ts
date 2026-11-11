@@ -130,7 +130,7 @@ export async function sendPasswordResetEmail({
     `.trim();
 
     await transporter.sendMail({
-      from: `"${config.from.includes('<') ? '' : 'Plateforme Revendeurs'} " <${config.from}>`,
+      from: config.from.includes('<') ? config.from : `"Plateforme Revendeurs" <${config.from}>`,
       to,
       subject: `🔐 Votre Code de Récupération : ${code} - Plateforme Revendeur`,
       html: htmlContent,
@@ -224,7 +224,7 @@ export async function sendEmailVerificationEmail({
     `.trim();
 
     await transporter.sendMail({
-      from: `"${config.from.includes('<') ? '' : 'Abonnements Pro'} " <${config.from}>`,
+      from: config.from.includes('<') ? config.from : `"Abonnements Pro" <${config.from}>`,
       to,
       subject: `✉️ Confirmez votre adresse e-mail : ${code} - Abonnements Pro`,
       html: htmlContent,
@@ -329,7 +329,7 @@ export async function sendResellerOrderNotificationEmail({
     `.trim();
 
     await transporter.sendMail({
-      from: `"${config.from.includes('<') ? '' : storeName} " <${config.from}>`,
+      from: config.from.includes('<') ? config.from : `"${storeName || 'Abonnements Pro'}" <${config.from}>`,
       to,
       subject: `🎉 Nouvelle Commande sur ${storeName} ! - ${productName} (${amount})`,
       html: htmlContent,

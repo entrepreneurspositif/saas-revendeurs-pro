@@ -8,6 +8,14 @@ import { isMaliciousPayload, sanitizeText } from '@/lib/sanitizer';
 
 export const dynamic = 'force-dynamic';
 
+function getPlatformBaseUrl(req: NextRequest): string {
+  const host = req.headers.get('host') || '';
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return `http://${host}`;
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
+}
+
 function sanitizeSubdomain(input: string): string {
   return input
     .toLowerCase()
@@ -269,9 +277,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Send verification email in background
-      const host = req.headers.get('host') || '';
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
-      const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+      const baseUrl = getPlatformBaseUrl(req);
       const verifyUrl = `${baseUrl}/api/reseller/verify-email?token=${verificationCode}`;
 
       try {
@@ -293,9 +299,7 @@ export async function POST(req: NextRequest) {
         const subNonce = Date.now().toString().slice(-6);
         const ticketCode = `SUB_${newTenant.id}_${targetPlan.id}_${interval}_${subNonce}`;
 
-        const host = req.headers.get('host') || '';
-        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
-        const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+        const baseUrl = getPlatformBaseUrl(req);
 
         // A. Moneroo Payment Gateway
         if (paymentMethod === 'MONEROO') {

@@ -2141,37 +2141,41 @@ export default function ResellerDashboardPage() {
               </div>
             </div>
 
-            {/* Quick Inline Code Input if code was requested or message exists */}
-            {(verifyMsg || verificationCodeInput) && (
-              <div className="pt-3 border-t border-amber-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in">
-                {verifyMsg && (
+            {/* Quick Inline Code Input - Always accessible for instant validation */}
+            <div className="pt-3 border-t border-amber-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex flex-col gap-1">
+                {verifyMsg ? (
                   <div className={`text-xs font-medium flex items-center gap-2 ${
                     verifyMsg.success ? 'text-emerald-300' : 'text-rose-300'
                   }`}>
                     {verifyMsg.success ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />}
                     <span>{verifyMsg.text}</span>
                   </div>
+                ) : (
+                  <div className="text-[11px] text-amber-200/80 flex items-center gap-1.5">
+                    <span>💡 Vous avez déjà un code reçu par mail ? Entrez-le ci-contre (vérifiez aussi vos Spams).</span>
+                  </div>
                 )}
-                <form onSubmit={handleVerifyEmailCode} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={verificationCodeInput}
-                    onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Code à 6 chiffres"
-                    className="w-36 px-3 py-2 bg-slate-950 border border-amber-500/40 rounded-xl text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 text-center tracking-widest"
-                  />
-                  <button
-                    type="submit"
-                    disabled={verifyingEmail || verificationCodeInput.length < 6}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 shadow-md shadow-emerald-600/30 shrink-0"
-                  >
-                    {verifyingEmail ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
-                    <span>Valider</span>
-                  </button>
-                </form>
               </div>
-            )}
+              <form onSubmit={handleVerifyEmailCode} className="flex items-center gap-2 shrink-0">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={verificationCodeInput}
+                  onChange={(e) => setVerificationCodeInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Code à 6 chiffres"
+                  className="w-36 px-3 py-2 bg-slate-950 border border-amber-500/40 rounded-xl text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 text-center tracking-widest shadow-inner"
+                />
+                <button
+                  type="submit"
+                  disabled={verifyingEmail || verificationCodeInput.length < 6}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 shadow-md shadow-emerald-600/30 shrink-0 hover:scale-105 active:scale-95"
+                >
+                  {verifyingEmail ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                  <span>Valider</span>
+                </button>
+              </form>
+            </div>
           </div>
         )}
 

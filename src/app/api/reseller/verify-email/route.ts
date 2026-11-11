@@ -4,14 +4,19 @@ import { sendEmailVerificationEmail } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
+function getPlatformBaseUrl(req: NextRequest): string {
+  const host = req.headers.get('host') || '';
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return `http://${host}`;
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get('token')?.trim();
-
-    const host = req.headers.get('host') || '';
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
-    const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+    const baseUrl = getPlatformBaseUrl(req);
 
     if (!token) {
       return NextResponse.redirect(`${baseUrl}/reseller/dashboard?tab=profile&emailError=missing_token`);
@@ -76,9 +81,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action } = body;
 
-    const host = req.headers.get('host') || '';
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://abonnementspro.com').replace(/\/$/, '');
-    const baseUrl = (host && !host.includes('localhost')) ? `https://${host}` : appUrl;
+    const baseUrl = getPlatformBaseUrl(req);
 
     // 1. SEND OR RESEND VERIFICATION EMAIL
     if (action === 'send') {

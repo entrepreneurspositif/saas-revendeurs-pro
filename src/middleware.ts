@@ -101,6 +101,11 @@ export default function middleware(req: NextRequest) {
 
   // If a valid reseller subdomain OR custom domain is visited:
   if (tenantKey) {
+    // Platform routes (reseller dashboard, login, admin, etc.) should never be rewritten to /store/...
+    if (pathname.startsWith('/reseller') || pathname.startsWith('/fatjo&prudo')) {
+      return NextResponse.next();
+    }
+
     // If accessing root '/' on tenant domain, rewrite internally to '/store/[subdomain]'
     if (pathname === '/') {
       return NextResponse.rewrite(new URL(`/store/${tenantKey}`, req.url));

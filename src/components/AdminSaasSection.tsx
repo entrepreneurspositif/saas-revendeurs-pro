@@ -506,7 +506,7 @@ export default function AdminSaasSection() {
                       <th className="py-3 px-3">Commandes</th>
                       <th className="py-3 px-3">Chiffre d'Affaires</th>
                       <th className="py-3 px-3 text-emerald-400">Solde Revendeur</th>
-                      <th className="py-3 px-3">Statut</th>
+                      <th className="py-3 px-3">Statut & E-mail</th>
                       <th className="py-3 px-4 text-right">Vitrine</th>
                     </tr>
                   </thead>
@@ -550,19 +550,44 @@ export default function AdminSaasSection() {
                         <td className="py-3 px-3 font-mono font-bold text-emerald-400">
                           ${r.walletBalance.toFixed(2)}
                         </td>
-                        <td className="py-3 px-3">
-                          <button
-                            onClick={() =>
-                              handleUpdateReseller(r.id, { isActive: !r.isActive })
-                            }
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              r.isActive
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-rose-500/20 text-rose-400'
-                            }`}
-                          >
-                            {r.isActive ? 'Actif' : 'Suspendu'}
-                          </button>
+                        <td className="py-3 px-3 space-y-1">
+                          <div>
+                            <button
+                              onClick={() =>
+                                handleUpdateReseller(r.id, { isActive: !r.isActive })
+                              }
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                r.isActive
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : 'bg-rose-500/20 text-rose-400'
+                              }`}
+                            >
+                              {r.isActive ? 'Actif' : 'Suspendu'}
+                            </button>
+                          </div>
+                          <div>
+                            {r.emailVerified ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <Check className="w-2.5 h-2.5" />
+                                <span>Vérifié</span>
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30" title={`Code de sécurité: ${r.emailVerificationCode || 'N/A'}`}>
+                                  <span>Non vérifié</span>
+                                  {r.emailVerificationCode && <span className="font-mono">({r.emailVerificationCode})</span>}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateReseller(r.id, { emailVerified: true })}
+                                  className="px-1.5 py-0.5 rounded bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-bold transition-all shadow-sm"
+                                  title="Valider manuellement l'e-mail de ce revendeur en 1 clic"
+                                >
+                                  Valider
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">

@@ -49,6 +49,9 @@ export async function GET(req: NextRequest) {
         ordersCount: t.orders.length,
         completedOrdersCount: completedOrders.length,
         isActive: t.isActive,
+        emailVerified: Boolean(t.emailVerified),
+        emailVerificationCode: t.emailVerificationCode,
+        emailVerifiedAt: t.emailVerifiedAt,
         createdAt: t.createdAt,
       };
     });
@@ -95,6 +98,15 @@ export async function PUT(req: NextRequest) {
 
     if (isActive !== undefined) {
       updateData.isActive = Boolean(isActive);
+    }
+
+    if (body.emailVerified !== undefined) {
+      updateData.emailVerified = Boolean(body.emailVerified);
+      if (body.emailVerified) {
+        updateData.emailVerifiedAt = new Date();
+        updateData.emailVerificationCode = null;
+        updateData.emailVerificationExpiresAt = null;
+      }
     }
 
     if (walletBalanceAdjustment !== undefined && !isNaN(Number(walletBalanceAdjustment))) {
