@@ -34,6 +34,7 @@ import {
   ArrowUpDown,
   Filter,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   Hash,
@@ -42,6 +43,8 @@ import {
   Flame,
   Bot,
   Share2,
+  FileText,
+  Info,
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyContext';
 
@@ -91,6 +94,12 @@ export default function TenantStorefrontPage() {
   useEffect(() => {
     setCurrentOtpPage(1);
   }, [selectedOtpCountry, selectedOtpCategory, otpSearchQuery]);
+
+  // Product Description Expand / Collapse State
+  const [expandedDescIds, setExpandedDescIds] = useState<Record<string, boolean>>({});
+  const toggleExpandDesc = (id: string) => {
+    setExpandedDescIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Product Ticket Creation Modal State
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -1157,7 +1166,11 @@ export default function TenantStorefrontPage() {
                     >
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         {/* Square Thumbnail */}
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shrink-0 flex items-center justify-center relative">
+                        <Link
+                          href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shrink-0 flex items-center justify-center relative hover:border-sky-500/50 transition-colors"
+                          title="Voir la fiche détaillée"
+                        >
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -1169,7 +1182,7 @@ export default function TenantStorefrontPage() {
                               {p.title.charAt(0)}
                             </div>
                           )}
-                        </div>
+                        </Link>
 
                         {/* Title & Metadata */}
                         <div className="min-w-0 flex-1">
@@ -1198,20 +1211,34 @@ export default function TenantStorefrontPage() {
                             </span>
                           </div>
 
-                          <h3 className="font-bold text-sm text-white truncate group-hover:text-sky-400 transition-colors" title={p.title}>
-                            {p.title}
-                          </h3>
+                          <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                            <h3 className="font-bold text-sm text-white hover:text-sky-400 transition-colors truncate" title={p.title}>
+                              {p.title}
+                            </h3>
+                          </Link>
 
                           {p.description && (
-                            <p className="text-[11px] text-slate-400 truncate max-w-xl mt-0.5">
-                              {p.description}
-                            </p>
+                            <div className="mt-0.5">
+                              <p className={`text-[11px] text-slate-400 leading-relaxed ${expandedDescIds[p.id] ? 'whitespace-pre-line text-slate-300' : 'truncate max-w-xl'}`}>
+                                {p.description}
+                              </p>
+                              {p.description.length > 70 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandDesc(p.id)}
+                                  className="text-[10px] text-sky-400 hover:text-sky-300 font-bold inline-flex items-center gap-0.5 hover:underline mt-0.5"
+                                >
+                                  <span>{expandedDescIds[p.id] ? 'Moins de détails' : 'Lire la description complète'}</span>
+                                  {expandedDescIds[p.id] ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
 
                       {/* Price & Action Button */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
+                      <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
                         <div className="sm:text-right">
                           <span className="text-[9px] text-slate-400 block font-medium">Prix unitaire</span>
                           <span className="text-base font-black text-white font-mono">
@@ -1219,32 +1246,42 @@ export default function TenantStorefrontPage() {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setQuantity(1);
-                            setCustomerEmail('');
-                            setCustomerName('');
-                            setCustomerAccounts('');
-                            setCreatedTicketResult(null);
-                            setTicketError(null);
-                            triggerPixelEvent('ViewContent', {
-                              content_name: p.title || p.name,
-                              content_type: 'product',
-                              value: p.sellingPrice,
-                              currency,
-                            });
-                          }}
-                          disabled={!inStock}
-                          style={{
-                            backgroundColor: activeBtnColor,
-                            color: activeBtnTextColor,
-                          }}
-                          className={`px-4 py-2 ${activeBtnRadius} font-bold text-xs flex items-center gap-1.5 transition-all shadow-md hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap`}
-                        >
-                          <Ticket className="w-3.5 h-3.5" />
-                          <span>Commander</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-all"
+                            title="Consulter la fiche détaillée"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setQuantity(1);
+                              setCustomerEmail('');
+                              setCustomerName('');
+                              setCustomerAccounts('');
+                              setCreatedTicketResult(null);
+                              setTicketError(null);
+                              triggerPixelEvent('ViewContent', {
+                                content_name: p.title || p.name,
+                                content_type: 'product',
+                                value: p.sellingPrice,
+                                currency,
+                              });
+                            }}
+                            disabled={!inStock}
+                            style={{
+                              backgroundColor: activeBtnColor,
+                              color: activeBtnTextColor,
+                            }}
+                            className={`px-4 py-2 ${activeBtnRadius} font-bold text-xs flex items-center gap-1.5 transition-all shadow-md hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap`}
+                          >
+                            <Ticket className="w-3.5 h-3.5" />
+                            <span>Commander</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1284,17 +1321,23 @@ export default function TenantStorefrontPage() {
 
                         {/* Product Icon & Title */}
                         <div className="flex items-start gap-3.5 mb-3">
-                          <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden hover:border-sky-500/50 transition-colors"
+                            title="Voir la fiche détaillée"
+                          >
                             {p.imageUrl ? (
                               <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
                             ) : (
                               <span className="font-black text-xl text-white">{p.title.charAt(0)}</span>
                             )}
-                          </div>
+                          </Link>
                           <div>
-                            <h3 className="font-black text-base text-white leading-tight" title={p.title}>
-                              {p.title}
-                            </h3>
+                            <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                              <h3 className="font-black text-base text-white hover:text-sky-400 transition-colors leading-tight" title={p.title}>
+                                {p.title}
+                              </h3>
+                            </Link>
                             {(p.deliveryType === 'AUTOMATIC' || p.category === 'Méthode') && (
                               <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-bold mt-0.5">
                                 <Zap className="w-3 h-3 fill-current" />
@@ -1316,13 +1359,25 @@ export default function TenantStorefrontPage() {
 
                         {/* Description */}
                         {p.description && (
-                          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
-                            {p.description}
-                          </p>
+                          <div className="mb-4">
+                            <p className={`text-xs text-slate-400 leading-relaxed ${expandedDescIds[p.id] ? 'whitespace-pre-line text-slate-300' : 'line-clamp-2'}`}>
+                              {p.description}
+                            </p>
+                            {p.description.length > 70 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandDesc(p.id)}
+                                className="text-[10px] text-sky-400 hover:text-sky-300 font-bold inline-flex items-center gap-0.5 mt-1 hover:underline"
+                              >
+                                <span>{expandedDescIds[p.id] ? 'Moins de détails' : 'Lire la description complète'}</span>
+                                {expandedDescIds[p.id] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+                            )}
+                          </div>
                         )}
 
                         {/* Checklist of verified guarantees */}
-                        <div className="space-y-2 mb-6 text-xs text-slate-300">
+                        <div className="space-y-2 mb-4 text-xs text-slate-300">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                             <span>Accès officiel vérifié &amp; activation directe</span>
@@ -1339,6 +1394,16 @@ export default function TenantStorefrontPage() {
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                             <span>Support direct 7j/7 réactif</span>
                           </div>
+                        </div>
+
+                        <div className="mb-4 text-center">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="text-xs text-sky-400 hover:text-sky-300 font-bold inline-flex items-center gap-1 hover:underline"
+                          >
+                            <span>Fiche complète &amp; avis clients</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
                         </div>
                       </div>
 
@@ -1406,7 +1471,11 @@ export default function TenantStorefrontPage() {
                         </div>
 
                         {/* Minimal 16:9 banner */}
-                        <div className="aspect-video w-full rounded-2xl bg-black/40 border border-white/5 overflow-hidden relative flex items-center justify-center">
+                        <Link
+                          href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                          className="aspect-video w-full rounded-2xl bg-black/40 border border-white/5 overflow-hidden relative flex items-center justify-center block hover:border-white/20 transition-colors"
+                          title="Voir la fiche détaillée"
+                        >
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -1423,17 +1492,40 @@ export default function TenantStorefrontPage() {
                               <Sparkles className="w-2.5 h-2.5" /> VIP
                             </span>
                           )}
-                        </div>
+                        </Link>
 
                         {/* Title */}
                         <div>
-                          <h3 className="font-bold text-sm text-white group-hover:text-sky-300 transition-colors line-clamp-2" title={p.title}>
-                            {p.title}
-                          </h3>
+                          <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                            <h3 className="font-bold text-sm text-white group-hover:text-sky-300 transition-colors line-clamp-2" title={p.title}>
+                              {p.title}
+                            </h3>
+                          </Link>
                           {p.description && (
-                            <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed mt-1">
-                              {p.description}
-                            </p>
+                            <div className="mt-1 space-y-1">
+                              <p className={`text-[11px] text-slate-400 leading-relaxed ${expandedDescIds[p.id] ? 'whitespace-pre-line text-slate-300' : 'line-clamp-2'}`}>
+                                {p.description}
+                              </p>
+                              <div className="flex items-center justify-between text-[10px] pt-0.5">
+                                {p.description.length > 70 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandDesc(p.id)}
+                                    className="text-sky-400 hover:text-sky-300 font-bold inline-flex items-center gap-0.5 hover:underline"
+                                  >
+                                    <span>{expandedDescIds[p.id] ? 'Moins' : 'Lire plus'}</span>
+                                    {expandedDescIds[p.id] ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                  </button>
+                                )}
+                                <Link
+                                  href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                                  className="text-slate-400 hover:text-white font-medium inline-flex items-center gap-1 ml-auto hover:underline"
+                                >
+                                  <span>Fiche</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </Link>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1447,32 +1539,42 @@ export default function TenantStorefrontPage() {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setQuantity(1);
-                            setCustomerEmail('');
-                            setCustomerName('');
-                            setCustomerAccounts('');
-                            setCreatedTicketResult(null);
-                            setTicketError(null);
-                            triggerPixelEvent('ViewContent', {
-                              content_name: p.title || p.name,
-                              content_type: 'product',
-                              value: p.sellingPrice,
-                              currency,
-                            });
-                          }}
-                          disabled={!inStock}
-                          style={{
-                            backgroundColor: activeBtnColor,
-                            color: activeBtnTextColor,
-                          }}
-                          className={`px-4 py-2 ${activeBtnRadius} font-bold text-xs shadow-md transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5`}
-                        >
-                          <span>Commander</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="p-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-white transition-all"
+                            title="Fiche complète"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setQuantity(1);
+                              setCustomerEmail('');
+                              setCustomerName('');
+                              setCustomerAccounts('');
+                              setCreatedTicketResult(null);
+                              setTicketError(null);
+                              triggerPixelEvent('ViewContent', {
+                                content_name: p.title || p.name,
+                                content_type: 'product',
+                                value: p.sellingPrice,
+                                currency,
+                              });
+                            }}
+                            disabled={!inStock}
+                            style={{
+                              backgroundColor: activeBtnColor,
+                              color: activeBtnTextColor,
+                            }}
+                            className={`px-4 py-2 ${activeBtnRadius} font-bold text-xs shadow-md transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5`}
+                          >
+                            <span>Commander</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1500,7 +1602,11 @@ export default function TenantStorefrontPage() {
 
                       <div className="space-y-3">
                         {/* Visual with countdown pill */}
-                        <div className="aspect-video w-full rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden relative flex items-center justify-center">
+                        <Link
+                          href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                          className="aspect-video w-full rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden relative flex items-center justify-center block hover:border-rose-500/50 transition-colors"
+                          title="Voir la fiche détaillée"
+                        >
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -1516,7 +1622,7 @@ export default function TenantStorefrontPage() {
                             <Flame className="w-3 h-3 text-rose-500 fill-current animate-pulse" />
                             <span>Vente Flash</span>
                           </div>
-                        </div>
+                        </Link>
 
                         {/* Category & Title */}
                         <div>
@@ -1527,9 +1633,11 @@ export default function TenantStorefrontPage() {
                               {inStock ? (p.badge || 'En Stock') : 'Épuisé'}
                             </span>
                           </div>
-                          <h3 className="font-extrabold text-sm text-white group-hover:text-rose-400 transition-colors line-clamp-1" title={p.title}>
-                            {p.title}
-                          </h3>
+                          <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                            <h3 className="font-extrabold text-sm text-white group-hover:text-rose-400 transition-colors line-clamp-1" title={p.title}>
+                              {p.title}
+                            </h3>
+                          </Link>
                         </div>
 
                         {/* Artificial Stock progress meter */}
@@ -1623,7 +1731,11 @@ export default function TenantStorefrontPage() {
                         </div>
 
                         {/* Futuristic Tech Visual */}
-                        <div className="aspect-video w-full rounded-2xl bg-black border border-cyan-500/10 overflow-hidden relative flex items-center justify-center">
+                        <Link
+                          href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                          className="aspect-video w-full rounded-2xl bg-black border border-cyan-500/10 overflow-hidden relative flex items-center justify-center block hover:border-cyan-500/40 transition-colors"
+                          title="Fiche produit"
+                        >
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -1636,16 +1748,29 @@ export default function TenantStorefrontPage() {
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60" />
-                        </div>
+                        </Link>
 
                         <div>
-                          <h3 className="font-bold text-sm text-white group-hover:text-cyan-300 transition-colors line-clamp-1" title={p.title}>
-                            {p.title}
-                          </h3>
+                          <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                            <h3 className="font-bold text-sm text-white group-hover:text-cyan-300 transition-colors line-clamp-1" title={p.title}>
+                              {p.title}
+                            </h3>
+                          </Link>
                           {p.description && (
-                            <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 font-mono">
-                              {p.description}
-                            </p>
+                            <div className="mt-1 space-y-1">
+                              <p className={`text-[11px] text-slate-400 font-mono leading-relaxed ${expandedDescIds[p.id] ? 'whitespace-pre-line text-slate-300' : 'line-clamp-2'}`}>
+                                {p.description}
+                              </p>
+                              {p.description.length > 70 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandDesc(p.id)}
+                                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-mono font-bold inline-flex items-center gap-0.5 hover:underline"
+                                >
+                                  <span>{expandedDescIds[p.id] ? '[-] RÉDUIRE' : '[+] DÉTAILS'}</span>
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1715,7 +1840,11 @@ export default function TenantStorefrontPage() {
                       className="bg-[#0b1713]/90 border border-emerald-900/50 hover:border-emerald-500/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-lg hover:shadow-emerald-950/20 group"
                     >
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 border border-emerald-900/40 shrink-0 relative flex items-center justify-center">
+                        <Link
+                          href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                          className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 border border-emerald-900/40 shrink-0 relative flex items-center justify-center hover:border-emerald-500/50 transition-colors"
+                          title="Fiche détaillée"
+                        >
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -1727,7 +1856,7 @@ export default function TenantStorefrontPage() {
                               {p.title.charAt(0)}
                             </span>
                           )}
-                        </div>
+                        </Link>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -1738,19 +1867,33 @@ export default function TenantStorefrontPage() {
                               Livraison WhatsApp &lt; 2 min
                             </span>
                           </div>
-                          <h3 className="font-extrabold text-sm sm:text-base text-white truncate group-hover:text-emerald-300 transition-colors">
-                            {p.title}
-                          </h3>
+                          <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                            <h3 className="font-extrabold text-sm sm:text-base text-white truncate group-hover:text-emerald-300 transition-colors">
+                              {p.title}
+                            </h3>
+                          </Link>
                           {p.description && (
-                            <p className="text-xs text-slate-400 truncate max-w-xl mt-0.5">
-                              {p.description}
-                            </p>
+                            <div className="mt-0.5">
+                              <p className={`text-xs text-slate-400 leading-relaxed ${expandedDescIds[p.id] ? 'whitespace-pre-line text-slate-300' : 'truncate max-w-xl'}`}>
+                                {p.description}
+                              </p>
+                              {p.description.length > 70 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandDesc(p.id)}
+                                  className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold inline-flex items-center gap-0.5 hover:underline mt-0.5"
+                                >
+                                  <span>{expandedDescIds[p.id] ? 'Réduire' : 'Détails de l\'offre'}</span>
+                                  {expandedDescIds[p.id] ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
 
                       {/* Price & Dual Actions */}
-                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-emerald-950/60 w-full sm:w-auto">
+                      <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-emerald-950/60 w-full sm:w-auto">
                         <div className="sm:text-right">
                           <span className="text-[10px] text-slate-400 block">Prix garanti</span>
                           <span className="text-base font-black font-mono text-emerald-400">
@@ -1759,6 +1902,14 @@ export default function TenantStorefrontPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="p-2 rounded-xl bg-slate-900/80 border border-emerald-900/40 text-slate-400 hover:text-white transition-all"
+                            title="Fiche produit détaillée"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+
                           {/* Direct WhatsApp CTA */}
                           {cleanWhatsApp ? (
                             <a
@@ -1815,7 +1966,11 @@ export default function TenantStorefrontPage() {
                     >
                       <div className="space-y-3">
                         {/* Image / Thumbnail */}
-                        <div className="aspect-video w-full rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden relative flex items-center justify-center">
+                        <Link
+                          href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                          className="aspect-video w-full rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden relative flex items-center justify-center block hover:border-sky-500/50 transition-colors"
+                          title="Voir la page détaillée du produit"
+                        >
                           {p.imageUrl ? (
                             <img
                               src={p.imageUrl}
@@ -1850,23 +2005,55 @@ export default function TenantStorefrontPage() {
                               {inStock ? (p.badge || 'EN STOCK') : 'ÉPUISÉ'}
                             </span>
                           </div>
-                        </div>
+                        </Link>
 
                         {/* Title & Category */}
                         <div>
                           <span className={`text-[10px] font-bold uppercase tracking-wider ${currentTheme.accentText}`}>
                             {p.category}
                           </span>
-                          <h3 className="font-bold text-sm text-white line-clamp-2 mt-0.5" title={p.title}>
-                            {p.title}
-                          </h3>
+                          <Link href={`/store/${subdomain}/p/${p.slug || p.id}`}>
+                            <h3 className="font-bold text-sm text-white hover:text-sky-400 transition-colors line-clamp-2 mt-0.5" title={p.title}>
+                              {p.title}
+                            </h3>
+                          </Link>
                         </div>
 
                         {/* Description */}
                         {p.description && (
-                          <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                            {p.description}
-                          </p>
+                          <div className="space-y-1.5">
+                            <p
+                              className={`text-[11px] text-slate-400 leading-relaxed ${
+                                expandedDescIds[p.id] ? 'whitespace-pre-line text-slate-300' : 'line-clamp-2'
+                              }`}
+                            >
+                              {p.description}
+                            </p>
+                            <div className="flex items-center justify-between text-[10px] pt-0.5">
+                              {p.description.length > 70 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggleExpandDesc(p.id);
+                                  }}
+                                  className="text-sky-400 hover:text-sky-300 font-bold inline-flex items-center gap-0.5 hover:underline"
+                                >
+                                  <span>{expandedDescIds[p.id] ? 'Moins de détails' : 'Lire la suite'}</span>
+                                  {expandedDescIds[p.id] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+                              )}
+                              <Link
+                                href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                                className="text-slate-400 hover:text-white font-medium inline-flex items-center gap-1 ml-auto hover:underline"
+                                title="Voir la page détaillée du produit"
+                              >
+                                <span>Fiche complète</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </Link>
+                            </div>
+                          </div>
                         )}
                       </div>
 
@@ -1879,32 +2066,42 @@ export default function TenantStorefrontPage() {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setQuantity(1);
-                            setCustomerEmail('');
-                            setCustomerName('');
-                            setCustomerAccounts('');
-                            setCreatedTicketResult(null);
-                            setTicketError(null);
-                            triggerPixelEvent('ViewContent', {
-                              content_name: p.title || p.name,
-                              content_type: 'product',
-                              value: p.sellingPrice,
-                              currency,
-                            });
-                          }}
-                          disabled={!inStock}
-                          style={{
-                            backgroundColor: activeBtnColor,
-                            color: activeBtnTextColor,
-                          }}
-                          className={`px-3.5 py-2 ${activeBtnRadius} font-bold text-xs flex items-center gap-1.5 transition-all shadow-md hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none`}
-                        >
-                          <Ticket className="w-3.5 h-3.5" />
-                          <span>Commander</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/store/${subdomain}/p/${p.slug || p.id}`}
+                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-all"
+                            title="Consulter la fiche détaillée"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setQuantity(1);
+                              setCustomerEmail('');
+                              setCustomerName('');
+                              setCustomerAccounts('');
+                              setCreatedTicketResult(null);
+                              setTicketError(null);
+                              triggerPixelEvent('ViewContent', {
+                                content_name: p.title || p.name,
+                                content_type: 'product',
+                                value: p.sellingPrice,
+                                currency,
+                              });
+                            }}
+                            disabled={!inStock}
+                            style={{
+                              backgroundColor: activeBtnColor,
+                              color: activeBtnTextColor,
+                            }}
+                            className={`px-3.5 py-2 ${activeBtnRadius} font-bold text-xs flex items-center gap-1.5 transition-all shadow-md hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none`}
+                          >
+                            <Ticket className="w-3.5 h-3.5" />
+                            <span>Commander</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -2307,26 +2504,88 @@ export default function TenantStorefrontPage() {
       {/* MODAL 1: PRODUCT TICKET CREATION                             */}
       {/* ============================================================ */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative space-y-4 my-auto max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedProduct(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors z-10"
+              title="Fermer"
             >
               <X className="w-5 h-5" />
             </button>
 
             {!createdTicketResult ? (
               <>
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                    <Ticket className="w-3 h-3" />
-                    <span>Création de Ticket de Commande</span>
+                <div className="space-y-3">
+                  {/* Badges row */}
+                  <div className="flex items-center gap-1.5 flex-wrap pr-8">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                      <Ticket className="w-3 h-3" />
+                      <span>Ticket de Commande</span>
+                    </div>
+                    {(selectedProduct.deliveryType === 'AUTOMATIC' || selectedProduct.category === 'Méthode') && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <Zap className="w-2.5 h-2.5 fill-current" /> Auto &lt; 2 min
+                      </span>
+                    )}
+                    {selectedProduct.category && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700">
+                        {selectedProduct.category}
+                      </span>
+                    )}
+                    {selectedProduct.isExclusive && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-purple-600 text-white shadow-sm flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" /> VIP
+                      </span>
+                    )}
                   </div>
-                  <h3 className="text-lg font-black text-white">{selectedProduct.title}</h3>
-                  <p className="text-xs text-slate-400">
-                    Complétez vos coordonnées pour générer votre ticket et recevoir vos accès.
-                  </p>
+
+                  {/* Product Header Card with Thumbnail & Title */}
+                  <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80">
+                    {selectedProduct.imageUrl ? (
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shrink-0">
+                        <img
+                          src={selectedProduct.imageUrl}
+                          alt={selectedProduct.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center text-white font-black text-xl">
+                        {selectedProduct.title?.charAt(0) || 'P'}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm sm:text-base font-black text-white leading-snug">{selectedProduct.title}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-400">Prix unitaire :</span>
+                        <span className="text-sm font-mono font-black text-white">{formatPrice(selectedProduct.sellingPrice)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Full Product Description & Details */}
+                  {selectedProduct.description ? (
+                    <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-3.5 space-y-2">
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                          <FileText className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Description &amp; Caractéristiques</span>
+                        </div>
+                        <Link
+                          href={`/store/${subdomain}/p/${selectedProduct.slug || selectedProduct.id}`}
+                          target="_blank"
+                          className="text-[11px] text-sky-400 hover:text-sky-300 font-bold inline-flex items-center gap-1 hover:underline shrink-0"
+                        >
+                          <span>Fiche complète</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
+                      <div className="text-xs text-slate-300 whitespace-pre-line leading-relaxed max-h-44 overflow-y-auto pr-1 select-text scrollbar-thin scrollbar-thumb-slate-700">
+                        {selectedProduct.description}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {ticketError && (
@@ -2571,11 +2830,12 @@ export default function TenantStorefrontPage() {
       {/* MODAL 2: OTP TICKET CREATION                                 */}
       {/* ============================================================ */}
       {selectedOtpService && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative space-y-4 my-auto max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedOtpService(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors"
+              title="Fermer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -2806,11 +3066,12 @@ export default function TenantStorefrontPage() {
       {/* MODAL 3: UNIVERSAL TICKET LOOKUP & CREDENTIALS / SMS VIEWER  */}
       {/* ============================================================ */}
       {showLookupModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative space-y-4 my-auto max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowLookupModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-slate-800"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors"
+              title="Fermer"
             >
               <X className="w-5 h-5" />
             </button>
